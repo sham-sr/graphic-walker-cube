@@ -21,6 +21,7 @@ import {
     GlobeAmericasIcon,
     DocumentPlusIcon,
     PaintBrushIcon,
+    SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { observer } from 'mobx-react-lite';
 import React, { SVGProps, useCallback, useMemo } from 'react';
@@ -345,6 +346,13 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
                 onSelect: (value) => {
                     vizStore.setVisualConfig('geoms', [value]);
                 },
+            },
+            {
+                key: 'autoviz',
+                label: t('autoviz'),
+                icon: SparklesIcon,
+                checked: vizStore.showAutoVizPanel,
+                onChange: (checked: boolean) => vizStore.setShowAutoVizPanel(checked),
             },
             {
                 key: 'stack_mode',

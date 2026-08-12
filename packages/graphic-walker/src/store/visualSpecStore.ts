@@ -14,6 +14,7 @@ import {
     redo,
     undo,
 } from '../models/visSpecHistory';
+import { create } from '../models/withHistory';
 import { emptyEncodings, forwardVisualConfigs, visSpecDecoder } from '../utils/save';
 import { feature } from 'topojson-client';
 import type { FeatureCollection } from 'geojson';
@@ -46,7 +47,7 @@ import { COUNT_FIELD_ID, DATE_TIME_DRILL_LEVELS, DATE_TIME_FEATURE_LEVELS, PAINT
 
 import { toWorkflow } from '../utils/workflow';
 import { KVTuple, uniqueId } from '../models/utils';
-import { INestNode } from '../components/pivotTable/inteface';
+import { INestNode } from '../components/pivotTable/interface';
 import { getSort, getSortedEncoding } from '../utils';
 import { getSQLItemAnalyticType, parseSQLExpr } from '../lib/sql';
 import { IPaintMapAdapter } from '../lib/paint';
@@ -56,10 +57,13 @@ import { getAllFields, getViewEncodingFields } from './storeStateLib';
 
 const encodingKeys = (Object.keys(emptyEncodings) as (keyof DraggableFieldState)[]).filter((dkey) => !GLOBAL_CONFIG.META_FIELD_KEYS.includes(dkey));
 
-const disposerRegister = (typeof FinalizationRegistry === 'undefined' ? null : new FinalizationRegistry(disposer => disposer())) as FinalizationRegistry<() => void> | null;
+const disposerRegister = (typeof FinalizationRegistry === 'undefined' ? null : new FinalizationRegistry((disposer) => disposer())) as FinalizationRegistry<
+    () => void
+> | null;
 export class VizSpecStore {
     instanceID: string = uniqueId();
     visList: VisSpecWithHistory[];
+    private pristineInitialCharts: Set<VisSpecWithHistory>;
     visIndex: number = 0;
     createdVis: number = 0;
     editingFilterIdx: number | null = null;
@@ -67,6 +71,8 @@ export class VizSpecStore {
     segmentKey: ISegmentKey = ISegmentKey.vis;
     showInsightBoard: boolean = false;
     showDataBoard: boolean = false;
+    // the Auto Viz dock on the right of the workspace starts expanded; the toolbar toggle collapses it
+    showAutoVizPanel: boolean = true;
     vizEmbededMenu: { show: boolean; position: [number, number] } = { show: false, position: [0, 0] };
     showDataConfig: boolean = false;
     showCodeExportPanel: boolean = false;
@@ -88,6 +94,8 @@ export class VizSpecStore {
     lastSpec: string = '';
     editingComputedFieldFid: string | undefined = undefined;
     defaultConfig: IDefaultConfig | undefined;
+    /** fields highlighted in the field list (Tableau-style multi-select feeding Auto Viz); UI state, not part of the undo timeline */
+    selectedFieldIds: string[] = [];
 
     onMetaChange?: (fid: string, diffMeta: Partial<IMutField>) => void;
 
@@ -97,15 +105,19 @@ export class VizSpecStore {
             empty?: boolean;
             onMetaChange?: (fid: string, diffMeta: Partial<IMutField>) => void;
             defaultConfig?: IDefaultConfig;
-        }
+        },
     ) {
         this.meta = meta;
         this.visList = options?.empty ? [] : [fromFields(meta, 'Chart 1', options?.defaultConfig)];
+        this.pristineInitialCharts = meta.length === 0 ? new Set(this.visList) : new Set();
         this.createdVis = this.visList.length;
         this.defaultConfig = options?.defaultConfig;
         this.onMetaChange = options?.onMetaChange;
-        makeAutoObservable(this, {
+        makeAutoObservable<this, 'pristineInitialCharts'>(this, {
             visList: observable.shallow,
+            // Identity distinguishes the untouched async-loading placeholder from
+            // imported or edited charts; it must not be wrapped by MobX.
+            pristineInitialCharts: false,
             allEncodings: computed.struct,
             filters: observable.ref,
             tableCollapsedHeaderMap: observable.ref,
@@ -119,9 +131,9 @@ export class VizSpecStore {
                             spec: this.currentVis,
                             instanceID: this.instanceID,
                         },
-                    })
+                    }),
                 );
-            }
+            },
         );
         disposerRegister?.register(this, disposer);
     }
@@ -227,7 +239,7 @@ export class VizSpecStore {
             this.sort,
             this.config.folds,
             this.config.limit,
-            this.config.timezoneDisplayOffset
+            this.config.timezoneDisplayOffset,
         );
     }
 
@@ -241,7 +253,7 @@ export class VizSpecStore {
 
     get canRedo() {
         const viz = this.visList[this.visIndex];
-        return viz.cursor !== viz.timeline.length;
+        return viz.cursor < viz.timeline.length;
     }
 
     get chatMessages() {
@@ -382,7 +394,16 @@ export class VizSpecStore {
     }
 
     setMeta(meta: IMutField[]) {
+        const pristineInitialChart =
+            this.visList.length === 1 && this.pristineInitialCharts.has(this.visList[0]) ? this.visList[0] : undefined;
         this.meta = meta;
+        if (meta.length === 0) return;
+
+        this.pristineInitialCharts.clear();
+        if (pristineInitialChart) {
+            const { name, visId } = pristineInitialChart.now;
+            this.visList[0] = create(newChart(meta, name ?? 'Chart 1', visId, this.defaultConfig));
+        }
     }
 
     setOnMetaChange(onMetaChange?: (fid: string, diffMeta: Partial<IMutField>) => void) {
@@ -394,19 +415,29 @@ export class VizSpecStore {
     }
 
     resetVisualization(name = 'Chart 1') {
+        const trackAsInitialPlaceholder = this.meta.length === 0 && this.pristineInitialCharts.size > 0;
         this.visList = [fromFields(this.meta, name, this.defaultConfig)];
+        if (trackAsInitialPlaceholder) {
+            this.pristineInitialCharts.clear();
+            this.pristineInitialCharts.add(this.visList[0]);
+        }
         this.createdVis = 1;
     }
 
     addVisualization(defaultName?: string | ((index: number) => string)) {
+        const trackAsInitialPlaceholder = this.meta.length === 0 && this.pristineInitialCharts.size > 0;
         const name = defaultName ? (typeof defaultName === 'function' ? defaultName(this.createdVis + 1) : defaultName) : 'Chart ' + (this.createdVis + 1);
         this.visList.push(fromFields(this.meta, name, this.defaultConfig));
+        if (trackAsInitialPlaceholder) {
+            this.pristineInitialCharts.add(this.visList[this.visList.length - 1]);
+        }
         this.createdVis += 1;
         this.visIndex = this.visList.length - 1;
     }
 
     removeVisualization(index: number) {
         if (this.visLength === 1) return;
+        this.pristineInitialCharts.delete(this.visList[index]);
         if (this.visIndex >= index && this.visIndex > 0) this.visIndex -= 1;
         this.visList.splice(index, 1);
     }
@@ -417,7 +448,7 @@ export class VizSpecStore {
                 ...this.visList[index].now,
                 name: this.visList[index].now.name + ' Copy',
                 visId: uniqueId(),
-            })
+            }),
         );
         this.createdVis += 1;
         this.visIndex = this.visList.length - 1;
@@ -486,7 +517,7 @@ export class VizSpecStore {
                     destinationKey,
                     destinationIndex,
                     uniqueId(),
-                    limit
+                    limit,
                 );
                 return;
             }
@@ -497,7 +528,7 @@ export class VizSpecStore {
                 destinationKey,
                 destinationIndex,
                 uniqueId(),
-                limit
+                limit,
             );
         }
     }
@@ -528,7 +559,7 @@ export class VizSpecStore {
                 f.expression &&
                 f.expression.op === binType &&
                 f.expression.params[0].value === state[stateKey][index].fid &&
-                f.expression.num === binNumber
+                f.expression.num === binNumber,
         );
         if (existedRelatedBinField) {
             return existedRelatedBinField.fid;
@@ -555,7 +586,7 @@ export class VizSpecStore {
         drillLevel: (typeof DATE_TIME_DRILL_LEVELS)[number],
         name: string,
         format: string,
-        offset: number | undefined
+        offset: number | undefined,
     ) {
         this.visList[this.visIndex] = performers.createDateDrillField(
             this.visList[this.visIndex],
@@ -565,7 +596,7 @@ export class VizSpecStore {
             uniqueId(),
             name,
             format,
-            offset ?? new Date().getTimezoneOffset()
+            offset ?? new Date().getTimezoneOffset(),
         );
     }
 
@@ -575,7 +606,7 @@ export class VizSpecStore {
         drillLevel: (typeof DATE_TIME_FEATURE_LEVELS)[number],
         name: string,
         format: string,
-        offset: number | undefined
+        offset: number | undefined,
     ) {
         this.visList[this.visIndex] = performers.createDateFeatureField(
             this.visList[this.visIndex],
@@ -585,7 +616,7 @@ export class VizSpecStore {
             uniqueId(),
             name,
             format,
-            offset ?? new Date().getTimezoneOffset()
+            offset ?? new Date().getTimezoneOffset(),
         );
     }
 
@@ -649,8 +680,17 @@ export class VizSpecStore {
         this.showAskvizFeedbackIndex = show ? this.visIndex : undefined;
     }
 
+    /** replace the current chart and RESET its history (used by controlled `spec` prop syncing) */
     replaceNow(chart: IChart) {
         this.visList[this.visIndex] = fromSnapshot(chart);
+    }
+
+    /** replace the current chart as an undoable/redoable timeline action (used by Auto Viz) */
+    applyChart(chart: IChart) {
+        // Timeline actions are serialized verbatim by exportFullRaw into persisted formats
+        // (IStoInfoV2.specDict), so the normalize() version stamp must not ride along.
+        const { $schema, ...payload } = chart;
+        this.visList[this.visIndex] = performers.replaceChart(this.visList[this.visIndex], payload);
     }
 
     selectVisualization(index: number) {
@@ -665,6 +705,30 @@ export class VizSpecStore {
     }
     setShowDataBoard(show: boolean) {
         this.showDataBoard = show;
+    }
+    setShowAutoVizPanel(show: boolean) {
+        this.showAutoVizPanel = show;
+    }
+    /** plain click: make this the only selected field; clicking the sole selected field deselects it */
+    selectField(fid: string) {
+        if (this.selectedFieldIds.length === 1 && this.selectedFieldIds[0] === fid) {
+            this.selectedFieldIds = [];
+        } else {
+            this.selectedFieldIds = [fid];
+        }
+    }
+    /** ctrl/cmd click: toggle this field in the selection */
+    toggleFieldSelection(fid: string) {
+        if (this.selectedFieldIds.includes(fid)) {
+            this.selectedFieldIds = this.selectedFieldIds.filter((x) => x !== fid);
+        } else {
+            this.selectedFieldIds = [...this.selectedFieldIds, fid];
+        }
+    }
+    clearFieldSelection() {
+        if (this.selectedFieldIds.length > 0) {
+            this.selectedFieldIds = [];
+        }
     }
     showEmbededMenu(position: [number, number]) {
         this.vizEmbededMenu.show = true;
@@ -738,7 +802,18 @@ export class VizSpecStore {
         const updatedMap = new Map(this.tableCollapsedHeaderMap);
         // if some child nodes of the incoming node are collapsed, remove them first
         updatedMap.forEach((existingPath, existingKey) => {
-            if (existingKey.startsWith(uniqueKey) && existingKey.length > uniqueKey.length) {
+            const isDescendant =
+                existingPath.length > node.path.length &&
+                node.path.every(
+                    (item, index) =>
+                        item.key === existingPath[index]?.key &&
+                        (item.value === existingPath[index]?.value ||
+                            (typeof item.value === 'number' &&
+                                typeof existingPath[index]?.value === 'number' &&
+                                Number.isNaN(item.value) &&
+                                Number.isNaN(existingPath[index]?.value)))
+                );
+            if (isDescendant) {
                 updatedMap.delete(existingKey);
             }
         });
@@ -829,6 +904,7 @@ export class VizSpecStore {
     }
 }
 
+/** @deprecated Superseded by `normalize()` with a {@link TerseSpec}; will be removed in the next major version. */
 export function renderSpec(spec: Specification, meta: IMutField[], name: string, visId: string) {
     const chart = newChart(meta, name, visId);
     const fields = chart.encodings.dimensions.concat(chart.encodings.measures);

@@ -1,6 +1,5 @@
 import { IRow, IMutField, Specification, IFilterFiledSimple, IExpression, IViewQuery, IViewField } from './interfaces';
-import { INestNode } from './components/pivotTable/inteface';
-import { PIVOT_TABLE_DEBUG } from './constants';
+import { INestNode } from './components/pivotTable/interface';
 /* eslint import/no-webpack-loader-syntax:0 */
 // @ts-ignore
 // eslint-disable-next-line
@@ -24,6 +23,7 @@ function workerService<T, R>(worker: Worker, data: R): Promise<T> {
                     success: false,
                     message: e.data,
                 });
+                return;
             }
             resolve(e.data);
         };
@@ -163,21 +163,10 @@ export const buildPivotTableService = async (
         type: 'ascending' | 'descending';
         mode: 'row' | 'column';
     }
-): Promise<{ lt: INestNode; tt: INestNode; metric: (IRow | null)[][] }> => {
-    const serviceStartTime = performance.now();
-    
-    if (PIVOT_TABLE_DEBUG) {
-        console.log('%c[Service] buildPivotTableService START', 'color: #748ffc; font-weight: bold');
-        console.log(`  Input: allData=${allData.length.toLocaleString()}, aggData=${aggData.length.toLocaleString()}`);
-    }
-    
-    // Always use worker for parallel execution (doesn't block UI)
-    const workerCreateStart = performance.now();
+): Promise<{ lt: INestNode; tt: INestNode; metric: (IRow | null | undefined)[][] }> => {
     const worker = new BuildMetricTableWorker();
-    const workerCreateTime = performance.now() - workerCreateStart;
-    
     try {
-        const payload = {
+        const res: { lt: INestNode; tt: INestNode; metric: (IRow | null | undefined)[][] } = await workerService(worker, {
             dimsInRow,
             dimsInColumn,
             allData,
@@ -185,24 +174,7 @@ export const buildPivotTableService = async (
             collapsedKeyList,
             showTableSummary,
             sort,
-        };
-        
-        const workerCallStart = performance.now();
-        const res: { lt: INestNode; tt: INestNode; metric: (IRow | null)[][] } = await workerService(worker, payload);
-        const workerCallTime = performance.now() - workerCallStart;
-        
-        const serviceEndTime = performance.now();
-        
-        if (PIVOT_TABLE_DEBUG) {
-            console.log('%c[Service] buildPivotTableService END', 'color: #748ffc; font-weight: bold');
-            console.log(`  ─────────────────────────────────`);
-            console.log(`  Worker create: ${workerCreateTime.toFixed(2)}ms`);
-            console.log(`  Worker call (postMessage → onmessage): ${workerCallTime.toFixed(2)}ms`);
-            console.log(`  Total service time: ${(serviceEndTime - serviceStartTime).toFixed(2)}ms`);
-            console.log(`  ─────────────────────────────────`);
-            console.log(`  Result matrix: ${res.metric?.length || 0} × ${res.metric?.[0]?.length || 0}`);
-        }
-        
+        });
         return res;
     } catch (error) {
         throw new Error('Uncaught error in TableBuilderDataWorker', { cause: error });

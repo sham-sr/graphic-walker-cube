@@ -1,8 +1,5 @@
 {
     "config": {
-        "colors": "Colors",
-        "scale": "Scale",
-        "select_scale": "Select Scale",
         "scheme": "Scheme",
         "primary_color": "Primary Color",
         "color_palette": "Color Palette",
@@ -49,7 +46,82 @@
         "svg_desc": "Use SVG renderer instead of Canvas for higher quality but potentially slower performance.",
         "timezone_settings": "Timezone Settings",
         "timezone_settings_desc": "Configure how time-based data is displayed across different timezones.",
-        "customOffset_desc": "Specify a custom timezone for displaying time-based data."
+        "customOffset_desc": "Specify a custom timezone for displaying time-based data.",
+        "colors": "Colors",
+        "colors_desc": "Customize the colors, theme and palette used by your charts.",
+        "primary_color_desc": "The default color of marks when no field is assigned to the Color channel.",
+        "background_desc": "The background color of the chart canvas. Transparent by default.",
+        "theme_desc": "The overall chart style preset, controlling axes, grid lines and default colors.",
+        "color_palette_desc": "The color scheme used when a field is assigned to the Color channel.",
+        "scale": "Scale",
+        "scale_desc": "Scales control how data values are mapped to visual properties such as position, size and opacity. They are computed automatically from your data тАФ turn on an override below only when you need manual control.",
+        "customize_scales": "Customize channels",
+        "scale_empty": "No channel selected. Use тАЬCustomize channelsтАЭ to pick a channel whose scale you want to adjust.",
+        "scale_column_desc": "The horizontal position scale (columns / x-axis).",
+        "scale_row_desc": "The vertical position scale (rows / y-axis).",
+        "scale_color_desc": "The scale mapping data values to the color gradient.",
+        "scale_theta_desc": "The angle scale used by arc and pie charts.",
+        "scale_radius_desc": "The radius scale used by arc and pie charts.",
+        "scale_opacity_desc": "The scale mapping data values to mark transparency.",
+        "scale_size_desc": "The scale mapping data values to mark size.",
+        "scale_type_desc": "Apply a mathematical transform (log, sqrt, тАж) when mapping data values. Useful for skewed data.",
+        "min_domain_desc": "Manually set the data value mapped to the low end of the scale.",
+        "max_domain_desc": "Manually set the data value mapped to the high end of the scale.",
+        "range_desc": "Limit the visual output between a minimum and maximum (e.g. the smallest and largest mark size).",
+        "format_desc": "Control how numbers and dates are displayed in axes, legends and tooltips using d3-format patterns. Leave a field empty to use the default formatting.",
+        "numberFormat_desc": "Applied to measure values. Example: ',.2f' displays 1234.5 as 1,234.50.",
+        "timeFormat_desc": "Applied to date and time values. Example: '%Y-%m-%d' displays dates as 2024-01-30.",
+        "normalizedNumberFormat_desc": "Applied to percentages when the stack mode is 'normalized'. Example: '.0%' displays 0.25 as 25%.",
+        "independence_desc": "When a chart is split into several subviews (facets), all subviews share the same scales by default so they are directly comparable. Turn on a channel to let each subview compute its own scale independently.",
+        "independent_channel_desc": "Each subview uses its own {{channel}} scale."
+    },
+    "explain": {
+        "title": "Explain Data",
+        "loading": "Analyzing...",
+        "empty": "No significant patterns found",
+        "detail": {
+            "empty": "Select an insight on the left"
+        },
+        "overview": {
+            "all": "All",
+            "skippedNote": "{{count}} analyses were skipped"
+        },
+        "type": {
+            "extremeValue": "Extreme values",
+            "contributingDimension": "Contributing dimensions",
+            "contributingMeasure": "Contributing measures",
+            "uniqueMark": "What's unique about this mark"
+        },
+        "strength": {
+            "strong": "Strong",
+            "moderate": "Moderate",
+            "weak": "Weak"
+        },
+        "skip": {
+            "noMark": "Select a mark before running Explain Data.",
+            "temporalMark": "Temporal marks are not analyzed for extreme values yet.",
+            "noSensitiveAgg": "The selected measure aggregation is not sensitive to extreme values.",
+            "noCandidates": "No eligible fields were available for comparison.",
+            "noDerivableTarget": "The view measure's aggregation cannot be modeled; only sum, mean, and count are supported."
+        },
+        "extremeValue": {
+            "desc": "{{outlierCount}} of {{rowCount}} records are extreme values; removing them changes {{agg}} of {{measure}} from {{before}} to {{after}} ({{changePercent}}%).",
+            "truncated": "{{measure}} has a large mark with mean and median values that differ; scan the {{rowCount}} rows before interpreting the aggregate."
+        },
+        "uniqueMark": {
+            "countDesc": "This mark's composition over {{dimension}} differs from other marks: {{markShare}}% falls in \"{{topCategory}}\" vs {{siblingShare}}% elsewhere.",
+            "measureDesc": "This mark's {{measure}} mass is distributed differently over {{dimension}} than other marks (heuristic)."
+        },
+        "contributingDimension": {
+            "desc": "The composition of {{dimension}} helps predict {{target}} across marks (cross-validated fit +{{cvGainPercent}}%); the share of \"{{topCategory}}\" is most associated."
+        },
+        "contributingMeasure": {
+            "desc": "{{candidate}} (aggregated per mark) helps predict {{target}} (cross-validated fit +{{cvGainPercent}}%). Association, not causation."
+        },
+        "truncation": {
+            "notice": "Scanned {{scanned}} of {{total}} candidate fields.",
+            "more": "Analyze more fields"
+        }
     },
     "constant": {
         "row_count": "Row count",
@@ -181,19 +253,37 @@
         },
         "dialog": {
             "create_data_source": "New Data Source",
-            "data_types": "DataSource Type",
-            "text_file_data": "Local Files",
-            "public_data": "Public Datasets",
-            "data_source_type": "Data Source Type: {{sourceType}}",
+            "or_demo": "or try a sample dataset",
             "file": {
-                "open": "Open...",
-                "submit": "Submit",
-                "dataset_name": "Dataset Name",
-                "choose_file": "Choose a Data File",
-                "get_start_desc": "Get started by creating a dataset."
+                "drop_title": "Drop your CSV or JSON file here",
+                "drop_desc": "or click to browse your files",
+                "charset": "Charset",
+                "parsing": "Reading {{file}}тАж",
+                "unsupported": "\"{{file}}\" is not supported. Please choose a .csv or .json file.",
+                "read_error": "Could not read \"{{file}}\". Make sure it is a valid CSV or JSON file."
             },
             "public": {
-                "submit": "Submit"
+                "loading": "LoadingтАж",
+                "meta": "{{rows}} rows ┬╖ {{cols}} fields",
+                "fetch_error": "Failed to load \"{{name}}\". Check your connection and click the dataset to try again.",
+                "datasets": {
+                    "CARS": "Classic dataset of 400+ car models: MPG, horsepower, weight, and origin.",
+                    "STUDENTS": "Exam scores of 1,000 students with gender, parental education, and test prep.",
+                    "BIKE_SHARING": "Hourly bike rentals with weather, season, and holiday context.",
+                    "EARTHQUAKE": "23,000+ earthquakes worldwide with location and magnitude.",
+                    "CAR_SALES": "Sales, prices, and engine specs for 157 vehicle models.",
+                    "COLLAGE": "US colleges compared by admission rate, SAT scores, and cost.",
+                    "KELPER": "NASA Kepler exoplanet candidates with orbital measurements.",
+                    "BTC_GOLD": "Daily Bitcoin and gold prices for comparing trading strategies.",
+                    "TITANIC": "Titanic passengers: survival, class, age, and fare."
+                }
+            },
+            "preview": {
+                "back": "Back",
+                "dataset_name": "Dataset Name",
+                "meta": "{{rows}} rows ┬╖ {{cols}} fields",
+                "use_data": "Use This Dataset",
+                "tip": "Tip: click a field's type icon in the table header to adjust it before importing."
             }
         }
     },
@@ -202,9 +292,6 @@
             "new": "+ New",
             "auto_title": "Chart {{idx}}",
             "chart_name": "Chart Name",
-            "edit": "Edit",
-            "duplicate": "Duplicate",
-            "remove": "Remove",
             "remove_confirm": "Are you sure you want to remove this chart?"
         },
         "tabpanel": {
@@ -223,6 +310,7 @@
                     "debug": "debugging"
                 },
                 "sort": "Sorting Order",
+                "autoviz": "Auto Viz",
                 "button": {
                     "ascending": "Sort in Ascending Order",
                     "descending": "Sort in Descending Order",
@@ -244,7 +332,6 @@
                     "eraser": "Eraser",
                     "color": "Brush Color",
                     "label": "Brush Label",
-                    "custom_feature": "Custom feature",
                     "brush_size": "Brush Size",
                     "save_paint": "Save Painting",
                     "reset_paint": "Reset Painting",
@@ -283,17 +370,6 @@
         "to_edit": "Edit This Rule",
         "empty_rule": "! (empty rule)",
         "editing": "Filter Rule Settings",
-        "placeholder_search_value": "Search Value...",
-        "placeholder_regexp": "Input Regular Expression...",
-        "match_case": "Match Case",
-        "match_whole_word": "Match Whole Word",
-        "use_regexp": "Use Regular Expression",
-        "select_values": "Select Values...",
-        "select_values_exclude": "Select Values to Exclude...",
-        "exclude": "exclude",
-        "rule_one_of": "oneOf",
-        "rule_not_in": "notIn",
-        "rule_range": "range",
         "form": {
             "name": "Field",
             "aggregation": "Aggregation",
@@ -317,51 +393,14 @@
             "end_value": "End Value"
         }
     },
-    "explain": {
-        "lg_than": "greater than",
-        "sm_than": "less than",
-        "expection": "expectation",
-        "unrecognized": "Unrecognized",
-        "score": "score",
-        "contains": "contains",
-        "reason": {
-            "selection_dim_distribution": "dimensions' clues",
-            "selection_mea_distribution": "measures' clues",
-            "children_major_factor": "major factor",
-            "children_outlier": "outlier"
-        }
-    },
-    "error_panel": {
-        "oops": "Oops!",
-        "chart_too_large": "The chart is too large to render. You can try options above:",
-        "option1": "1. Set the chart to a fixed size.",
-        "option2": "2. Change to SVG renderer.",
-        "option3": "3. Close this modal and edit the chart to reduce chart size.",
-        "set_now": "Set Now",
-        "computation_error": "There is some error with Computation service. Here is the Error message:",
-        "askviz_error": "There is some error with Askviz service. Here is the Error message:",
-        "unknown_error": "Unknown error (no details available)",
-        "close": "Close"
-    },
     "actions": {
         "prev": "Previous",
         "next": "Next",
         "drop_field": "Drop Field Here",
         "confirm": "Confirm",
-        "cancel": "Cancel",
-        "copy_to_clipboard": "Copy to Clipboard"
-    },
-    "code_export": {
-        "title": "Code Export"
-    },
-    "rename_field": {
-        "title": "Rename Field",
-        "description": "This action will rename this field's name in the chart.",
-        "new_name": "New Name"
+        "cancel": "Cancel"
     },
     "field_menu": {
-        "rename_field": "Rename Field",
-        "remove_field": "Remove Field",
         "to_dim": "Move to dimensions",
         "to_mea": "Move to measures",
         "semantic_type": {
@@ -398,14 +437,6 @@
             }
         }
     },
-    "dataTable": {
-        "pagination": {
-            "showing": "Showing",
-            "to": "to",
-            "of": "of",
-            "results": "results"
-        }
-    },
     "calc": {
         "bin_panel_title": "Bins",
         "bin_panel_desc": "Set bin config for field",
@@ -415,11 +446,86 @@
         "log_panel_title": "Logarithm Transformation",
         "log_panel_desc": "Set log config for field",
         "log_panel_number": "Logarithmic base"
-    }
-    ,
+    },
+    "autoviz": {
+        "title": "Auto Viz",
+        "description": "Pick the fields you care about; legal chart types light up and the best one is starred.",
+        "recommended": "Recommended",
+        "apply_best": "Apply recommended",
+        "hint": "{{count}} chart types match your selection",
+        "empty": "тАжor click any lit chart type to start",
+        "based_on_view": "Based on the fields in the current chart ┬╖ {{count}} types match",
+        "selected_count": "{{count}} fields selected in the field list",
+        "clear": "Clear",
+        "uses": "Uses: {{fields}}",
+        "select_hint": "Pick fields on the left ┬╖ <k></k>+click to multi-select",
+        "refine_hint": "Click or <k></k>+click fields on the left to refine",
+        "collapse": "Collapse panel",
+        "expand": "Show Auto Viz",
+        "charts": {
+            "table": "Text Table",
+            "highlight_table": "Highlight Table",
+            "heatmap": "Heat Map",
+            "bar": "Bar Chart",
+            "stacked_bar": "Stacked Bar",
+            "grouped_bar": "Grouped Bar",
+            "line": "Line Chart",
+            "area": "Area Chart",
+            "histogram": "Histogram",
+            "scatter": "Scatter Plot",
+            "circle_view": "Circle View",
+            "pie": "Pie Chart",
+            "boxplot": "Box Plot",
+            "poi_map": "Symbol Map",
+            "choropleth_map": "Filled Map"
+        },
+        "reason": {
+            "need_fields": "Select at least one field",
+            "need_dimension": "Needs at least 1 dimension",
+            "need_two_dimensions": "Needs at least 2 dimensions",
+            "too_many_dimensions": "Too many dimensions for this chart",
+            "need_measure": "Needs at least 1 measure",
+            "need_two_measures": "Needs at least 2 measures",
+            "need_single_measure": "Needs exactly 1 measure",
+            "too_many_measures": "Too many measures for this chart",
+            "need_temporal": "Needs a date/time dimension",
+            "need_temporal_or_ordinal": "Needs a date/time or ordinal dimension",
+            "need_raw_measure": "Needs a raw measure, not row count",
+            "need_lon_lat": "Needs longitude & latitude fields",
+            "need_geo_feature": "Needs a configured GeoJSON boundary"
+        }
+    },
+    "error_panel": {
+        "oops": "Oops!",
+        "chart_too_large": "The chart is too large to render. You can try options above:",
+        "option1": "1. Set the chart to a fixed size.",
+        "option2": "2. Change to SVG renderer.",
+        "option3": "3. Close this modal and edit the chart to reduce chart size.",
+        "set_now": "Set Now",
+        "computation_error": "There is some error with Computation service. Here is the Error message:",
+        "askviz_error": "There is some error with Askviz service. Here is the Error message:",
+        "unknown_error": "Unknown error (no details available)",
+        "close": "Close"
+    },
+    "dataTable": {
+        "pagination": {
+            "showing": "Showing",
+            "to": "to",
+            "of": "of",
+            "results": "results"
+        }
+    },
     "pivotTable": {
         "dataTruncated": "Data truncated to limit {{limit}}.",
         "rowLimit": "Showing first {{limit}} rows.",
         "columnLimit": "Maximum column count {{limit}}."
+    },
+    "code_export": {
+        "title": "Code Export"
+    },
+    "rename_field": {
+        "title": "Rename Field",
+        "description": "This action will rename this field's name in the chart.",
+        "new_name": "New Name"
     }
 }

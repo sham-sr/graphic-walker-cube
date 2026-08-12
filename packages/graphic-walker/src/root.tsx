@@ -1,4 +1,4 @@
-import React, { type ForwardedRef, forwardRef, useState } from 'react';
+﻿import React, { type ForwardedRef, forwardRef, useState } from 'react';
 import { DOMProvider } from '@kanaries/react-beautiful-dnd';
 import { observer } from 'mobx-react-lite';
 import { VizAppWithContext } from './App';
@@ -81,7 +81,15 @@ export type IRendererProps = {
 };
 
 export const GraphicRenderer = observer(
-    forwardRef<IGWHandler, IVizAppProps & IRendererProps & (ILocalComputationProps | IRemoteComputationProps)>((props, ref) => {
+    forwardRef<
+        IGWHandler,
+        IVizAppProps &
+            IRendererProps &
+            (ILocalComputationProps | IRemoteComputationProps) & {
+                className?: string;
+                style?: React.CSSProperties;
+            }
+    >((props, ref) => {
         const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null);
 
         const handleMount = (shadowRoot: ShadowRoot) => {
@@ -93,7 +101,13 @@ export const GraphicRenderer = observer(
 
         return (
             <AppRoot ref={ref as ForwardedRef<IGWHandlerInsider>}>
-                <ShadowDom onMount={handleMount} onUnmount={handleUnmount} uiTheme={props.uiTheme ?? props.colorConfig}>
+                <ShadowDom
+                    className={props.className}
+                    style={props.style}
+                    onMount={handleMount}
+                    onUnmount={handleUnmount}
+                    uiTheme={props.uiTheme ?? props.colorConfig}
+                >
                     <NotificationsProvider>
                         <DOMProvider value={{ head: shadowRoot ?? document.head, body: shadowRoot ?? document.body }}>
                             <RendererAppWithContext {...props} />

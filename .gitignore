@@ -16,3 +16,12 @@ app-dist
 .vercel
 chartinfo.json
 stoinfo_v2.json
+
+internal_docs
+
+**/playwright-report/
+**/test-results/
+
+# Local agent and browser automation artifacts
+/output/
+/.playwright-cli/

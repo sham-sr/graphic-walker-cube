@@ -2,7 +2,7 @@ import { formatDate } from '@/utils';
 import { parsedOffsetDate } from '@/lib/op/offset';
 import { getMeaAggKey } from '@/utils';
 import { IField, IRow } from '../interfaces';
-import { INestNode } from '../components/pivotTable/inteface';
+import { INestNode } from '../components/pivotTable/interface';
 import type { Range } from 'xlsx';
 import type { SheetCellValue } from './spreadsheetExport';
 
@@ -31,10 +31,10 @@ function getChildCount(node: INestNode): number {
 }
 
 function formatNodeValue(node: INestNode, field: IField | undefined, displayOffset?: number): string {
-    if (field?.semanticType === 'temporal') {
+    if (field?.semanticType === 'temporal' && node.value !== undefined && node.value !== null && typeof node.value !== 'boolean') {
         return formatDate(parsedOffsetDate(displayOffset, field.offset)(node.value));
     }
-    return `${node.value}`;
+    return node.value === undefined || node.value === null ? '' : `${node.value}`;
 }
 
 function renderLeftTree(

@@ -1,21 +1,39 @@
-import { INestNode } from '../components/pivotTable/inteface';
-import { buildMetricTableFromNestTree, buildNestTree } from '../components/pivotTable/utils';
+import { INestNode } from '../components/pivotTable/interface';
+import { buildMetricTableFromNestTree, buildNestTree, createPivotPathKey, pivotTableValuesEqual } from '../components/pivotTable/utils';
 import { IViewField, IRow } from '../interfaces';
-import { PIVOT_TABLE_DEBUG } from '../constants';
 
-const getFirsts = (item: INestNode): INestNode[] => {
-    if (item.children.length > 0) {
-        return [item, ...getFirsts(item.children[0])];
+const getFirstVisibleValuePath = (item: INestNode): INestNode[] => {
+    const child = item.children.find((node) => node.kind === 'value');
+    if (child) {
+        return child.isCollapsed ? [child] : [child, ...getFirstVisibleValuePath(child)];
     }
-    return [item];
+    return [];
 };
 
-function countTreeNodes(node: INestNode): number {
-    let count = 1;
-    for (const child of node.children) {
-        count += countTreeNodes(child);
-    }
-    return count;
+function getVisibleSlice(
+    data: IRow[],
+    visiblePrimaryData: IRow[],
+    primaryDimensions: IViewField[],
+    oppositeDimensions: IViewField[],
+    oppositePath: INestNode[]
+): IRow[] {
+    const visibleDimensions = oppositeDimensions.slice(0, oppositePath.length);
+    const hiddenDimensions = oppositeDimensions.slice(oppositePath.length);
+    const visiblePrimaryKeys = new Set(
+        visiblePrimaryData
+            .filter((row) => primaryDimensions.every((field) => Object.prototype.hasOwnProperty.call(row, field.fid)))
+            .map((row) => createPivotPathKey(primaryDimensions.map((field) => ({ key: field.fid, value: row[field.fid] }))))
+    );
+    return data.filter(
+        (row) =>
+            primaryDimensions.every((field) => Object.prototype.hasOwnProperty.call(row, field.fid)) &&
+            visiblePrimaryKeys.has(createPivotPathKey(primaryDimensions.map((field) => ({ key: field.fid, value: row[field.fid] })))) &&
+            visibleDimensions.every(
+                (field, index) =>
+                    Object.prototype.hasOwnProperty.call(row, field.fid) && pivotTableValuesEqual(row[field.fid], oppositePath[index].value)
+            ) &&
+            hiddenDimensions.every((field) => !Object.prototype.hasOwnProperty.call(row, field.fid))
+    );
 }
 
 export function buildPivotTable(
@@ -30,44 +48,21 @@ export function buildPivotTable(
         type: 'ascending' | 'descending';
         mode: 'row' | 'column';
     }
-): { lt: INestNode; tt: INestNode; metric: (IRow | null)[][] } {
-    const totalStart = performance.now();
-    
-    if (PIVOT_TABLE_DEBUG) {
-        console.log('%c[buildPivotTable] START', 'color: #be4bdb; font-weight: bold');
-        console.log(`  Input: allData=${allData.length.toLocaleString()}, aggData=${aggData.length.toLocaleString()}`);
-        console.log(`  DimsInRow: ${dimsInRow.length}, DimsInColumn: ${dimsInColumn.length}`);
-        console.log(`  Sort mode: ${sort?.mode || 'none'}`);
-    }
-    
+): { lt: INestNode; tt: INestNode; metric: (IRow | null | undefined)[][] } {
     let lt: INestNode;
     let tt: INestNode;
-    
-    let ltBuildTime = 0;
-    let ttBuildTime = 0;
-    let dataSplitTime = 0;
-    
     if (sort?.mode === 'row') {
-        const ttStart = performance.now();
         tt = buildNestTree(
             dimsInColumn.map((d) => d.fid),
             allData,
             collapsedKeyList,
             showTableSummary
         );
-        ttBuildTime = performance.now() - ttStart;
-        
-        if (dimsInColumn.length > 0) {
-            const splitStart = performance.now();
-            const ks = dimsInColumn.map((x) => x.fid);
-            const vs = getFirsts(tt.children[0]).map((x) => x.value);
-            // move data of First column to first
-            const mentioned: IRow[] = [];
-            const rest: IRow[] = [];
-            allData.forEach((x) => (ks.every((k, i) => x[k] === vs[i]) ? mentioned.push(x) : rest.push(x)));
-            dataSplitTime = performance.now() - splitStart;
-            
-            const ltStart = performance.now();
+        const firstColumnPath = getFirstVisibleValuePath(tt);
+        if (dimsInColumn.length > 0 && firstColumnPath.length > 0) {
+            const mentioned = getVisibleSlice([...allData, ...aggData], allData, dimsInRow, dimsInColumn, firstColumnPath);
+            const mentionedSet = new Set(mentioned);
+            const rest = allData.filter((row) => !mentionedSet.has(row));
             lt = buildNestTree(
                 dimsInRow.map((d) => d.fid),
                 mentioned,
@@ -76,9 +71,7 @@ export function buildPivotTable(
                 sort,
                 rest
             );
-            ltBuildTime = performance.now() - ltStart;
         } else {
-            const ltStart = performance.now();
             lt = buildNestTree(
                 dimsInRow.map((d) => d.fid),
                 allData,
@@ -86,29 +79,19 @@ export function buildPivotTable(
                 showTableSummary,
                 sort
             );
-            ltBuildTime = performance.now() - ltStart;
         }
     } else {
-        const ltStart = performance.now();
         lt = buildNestTree(
             dimsInRow.map((d) => d.fid),
             allData,
             collapsedKeyList,
             showTableSummary
         );
-        ltBuildTime = performance.now() - ltStart;
-        
-        if (sort && dimsInRow.length > 0) {
-            const splitStart = performance.now();
-            const ks = dimsInRow.map((x) => x.fid);
-            const vs = getFirsts(lt.children[0]).map((x) => x.value);
-            // move data of First row to first
-            const mentioned: IRow[] = [];
-            const rest: IRow[] = [];
-            allData.forEach((x) => (ks.every((k, i) => x[k] === vs[i]) ? mentioned.push(x) : rest.push(x)));
-            dataSplitTime = performance.now() - splitStart;
-            
-            const ttStart = performance.now();
+        const firstRowPath = getFirstVisibleValuePath(lt);
+        if (sort && dimsInRow.length > 0 && firstRowPath.length > 0) {
+            const mentioned = getVisibleSlice([...allData, ...aggData], allData, dimsInColumn, dimsInRow, firstRowPath);
+            const mentionedSet = new Set(mentioned);
+            const rest = allData.filter((row) => !mentionedSet.has(row));
             tt = buildNestTree(
                 dimsInColumn.map((d) => d.fid),
                 mentioned,
@@ -117,9 +100,7 @@ export function buildPivotTable(
                 sort,
                 rest
             );
-            ttBuildTime = performance.now() - ttStart;
         } else {
-            const ttStart = performance.now();
             tt = buildNestTree(
                 dimsInColumn.map((d) => d.fid),
                 allData,
@@ -127,37 +108,9 @@ export function buildPivotTable(
                 showTableSummary,
                 sort
             );
-            ttBuildTime = performance.now() - ttStart;
         }
     }
 
-    if (PIVOT_TABLE_DEBUG) {
-        console.log(`  ─────────────────────────────────`);
-        console.log(`  buildNestTree (left): ${ltBuildTime.toFixed(2)}ms → ${countTreeNodes(lt).toLocaleString()} nodes`);
-        console.log(`  buildNestTree (top): ${ttBuildTime.toFixed(2)}ms → ${countTreeNodes(tt).toLocaleString()} nodes`);
-        if (dataSplitTime > 0) {
-            console.log(`  Data split: ${dataSplitTime.toFixed(2)}ms`);
-        }
-    }
-
-    // Merge data for metric table
-    const mergeStart = performance.now();
-    const mergedData = [...allData, ...aggData];
-    const mergeTime = performance.now() - mergeStart;
-    
-    // Use optimized hash_index algorithm O(D + N*M)
-    const metricStart = performance.now();
-    const metric = buildMetricTableFromNestTree(lt, tt, mergedData);
-    const metricTime = performance.now() - metricStart;
-    
-    const totalTime = performance.now() - totalStart;
-    
-    if (PIVOT_TABLE_DEBUG) {
-        console.log(`  Data merge: ${mergeTime.toFixed(2)}ms (${mergedData.length.toLocaleString()} rows)`);
-        console.log(`  buildMetricTable: ${metricTime.toFixed(2)}ms`);
-        console.log(`  ─────────────────────────────────`);
-        console.log(`  TOTAL buildPivotTable: ${totalTime.toFixed(2)}ms`);
-    }
-    
+    const metric = buildMetricTableFromNestTree(lt, tt, [...allData, ...aggData]);
     return { lt, tt, metric };
 }

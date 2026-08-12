@@ -1,0 +1,178 @@
+import { DraggableFieldState, IChart, IChartSchemaUrl, IMutField, IVisSpec, PartialChart, TerseSpec, TerseSpecSchemaUrl } from '../interfaces';
+import { fillChart, lintExtraFields, newChart, parseChart } from './visSpecHistory';
+import { uniqueId } from './utils';
+import { VegaliteMapper } from '../lib/vl2gw';
+import { algebraLint } from '../lib/gog';
+import { expandTerse } from './terse';
+import { assertValidWorkflowFields } from '../utils/workflowValidate';
+
+/**
+ * The kind of spec accepted by {@link normalize}:
+ * - `chart`: a (possibly partial) modern spec that already has a `layout` key. Routed through
+ *   `parseChart` passthrough, then completed with defaults.
+ * - `vis-spec`: the deprecated `IVisSpec` format (single `config` object carrying layout-ish
+ *   fields). Routed through the `forwardVisualConfigs` → `visSpecDecoder` → `convertChart`
+ *   migration chain inside `parseChart`.
+ * - `vega-lite`: a Vega-Lite-like spec. Routed through `VegaliteMapper`; requires `meta` to
+ *   resolve field names, otherwise unresolved fields fall back to the count field.
+ * - `terse`: the human-authored TerseSpec authoring format (docs/terse-spec-design.md).
+ *   Expanded via `expandTerse`; requires `meta` to resolve field names.
+ * - `partial-chart`: everything else — treated as `PartialChart` and completed with defaults.
+ */
+export type ISpecKind = 'chart' | 'vis-spec' | 'vega-lite' | 'terse' | 'partial-chart';
+
+// Structural keys that exist on Vega-Lite specs but never on IChart / IVisSpec / PartialChart /
+// TerseSpec. `layer` is detected so layered specs fail loudly in VegaliteMapper territory instead
+// of silently normalizing into an empty default chart via the partial-chart path. `mark` is NOT
+// in this list because TerseSpec shares it; a bare `mark` with no terse channel keys still routes
+// to vega-lite (see detectSpecKind).
+const VEGA_LITE_EXCLUSIVE_KEYS = ['encoding', 'spec', 'layer', 'concat', 'hconcat', 'vconcat'] as const;
+
+// Top-level keys that exist on TerseSpec but never on IChart / IVisSpec / PartialChart
+// (canonical specs keep fields and filters inside `encodings`). All terse channel keys
+// are triggers so charts that use no x/y (pie: theta+color, geo: longitude/latitude)
+// still route to the terse branch.
+const TERSE_TRIGGER_KEYS = [
+    'x',
+    'y',
+    'color',
+    'opacity',
+    'size',
+    'shape',
+    'text',
+    'details',
+    'theta',
+    'radius',
+    'longitude',
+    'latitude',
+    'geoId',
+    'computed',
+    'filters',
+] as const;
+
+// Keys of the deprecated IVisualConfig that IVisualConfigNew does not have. Real-world IVisSpec
+// exports always carry them because they were serialized from initVisualConfig()-filled configs;
+// their presence is what distinguishes a legacy spec from a PartialChart that has a `config` but
+// no `layout`. A config without any of these keys is safer to treat as partial (fillChart keeps
+// defaults for absent keys, while convertChart would overwrite them with `undefined`).
+const LEGACY_CONFIG_KEYS = [
+    'showTableSummary',
+    'stack',
+    'showActions',
+    'interactiveScale',
+    'sorted',
+    'zeroScale',
+    'size',
+    'format',
+    'geoKey',
+    'resolve',
+    'scaleIncludeUnmatchedChoropleth',
+    'background',
+    'colorPalette',
+    'primaryColor',
+    'scale',
+    'geojson',
+    'geoUrl',
+    'useSvg',
+] as const;
+
+/**
+ * Detect which input format a spec is in. The rules are ordered and explicit:
+ * 1. a `$schema` pointing at vega.github.io → `vega-lite`; the tersespec URL → `terse`;
+ * 2. any Vega-Lite-exclusive structural key (`encoding` / `spec` / `layer` / `concat` /
+ *    `hconcat` / `vconcat`) → `vega-lite`;
+ * 3. any terse trigger key (`x` / `y` / `computed` / `filters`) without an `encodings`
+ *    key → `terse` (this runs before the `layout` rule so the canonical `layout`
+ *    escape hatch inside a terse spec does not shadow it);
+ * 4. a bare `mark` (shared key, no terse channels present) → `vega-lite`;
+ * 5. a `layout` key → `chart` (same duck-typing as `parseChart` / `importCode`);
+ * 6. a `config` carrying legacy-only keys (`stack`, `size`, `resolve`, …) → `vis-spec`;
+ * 7. anything else → `partial-chart`.
+ */
+export function detectSpecKind(input: object): ISpecKind {
+    if (input === null || typeof input !== 'object' || Array.isArray(input)) {
+        throw new TypeError('normalize() expects a single spec object; got ' + (Array.isArray(input) ? 'an array' : String(input)));
+    }
+    const spec = input as Record<string, unknown>;
+    if (typeof spec.$schema === 'string' && spec.$schema.includes('vega.github.io')) {
+        return 'vega-lite';
+    }
+    if (spec.$schema === TerseSpecSchemaUrl) {
+        return 'terse';
+    }
+    if (VEGA_LITE_EXCLUSIVE_KEYS.some((key) => key in spec)) {
+        return 'vega-lite';
+    }
+    if (TERSE_TRIGGER_KEYS.some((key) => key in spec) && !('encodings' in spec)) {
+        return 'terse';
+    }
+    if ('mark' in spec) {
+        return 'vega-lite';
+    }
+    if ('layout' in spec) {
+        return 'chart';
+    }
+    if (spec.config && typeof spec.config === 'object' && LEGACY_CONFIG_KEYS.some((key) => key in (spec.config as object))) {
+        return 'vis-spec';
+    }
+    return 'partial-chart';
+}
+
+/**
+ * Normalize any accepted spec input into a complete, canonical IChart:
+ * every encoding channel present, config/layout defaults filled, `visId` generated when missing,
+ * spatial channels linted by `algebraLint`, and a `$schema` version stamp attached.
+ *
+ * This is a pure function (no store, no React, no side effects) and is idempotent:
+ * `normalize(normalize(x, meta), meta)` deep-equals `normalize(x, meta)`.
+ *
+ * Existing import/export paths do not call this function; it is a purely additive entry point.
+ * As a strict entry it also runs the workflow field validation pass and throws on structurally
+ * corrupt field sets (dangling computed references, cyclic dependencies, duplicate fids) that
+ * would otherwise compute silently wrong data downstream.
+ *
+ * @param input a full or partial IChart, a deprecated IVisSpec, or a Vega-Lite-like spec.
+ * @param meta dataset fields; required to resolve field names for the Vega-Lite path.
+ */
+export function normalize(input: IChart | IVisSpec | PartialChart | TerseSpec | Record<string, unknown>, meta: IMutField[] = []): IChart {
+    const kind = detectSpecKind(input);
+    let chart: IChart;
+    switch (kind) {
+        case 'vega-lite': {
+            const vl = input as Record<string, unknown>;
+            const base = newChart(meta, '');
+            const allFields = [...base.encodings.dimensions, ...base.encodings.measures];
+            const name = typeof vl.title === 'string' ? vl.title : 'Chart';
+            chart = VegaliteMapper(vl, allFields, uniqueId(), name);
+            break;
+        }
+        case 'terse':
+            chart = fillChart(expandTerse(input as TerseSpec, meta));
+            break;
+        case 'chart':
+        case 'vis-spec':
+            chart = parseChart(input as IChart | IVisSpec);
+            break;
+        case 'partial-chart':
+        default:
+            chart = fillChart(input as PartialChart);
+            break;
+    }
+    const filled = fillChart(chart);
+    // Existence can only be judged against the dataset schema, so that check activates
+    // only when meta is supplied; cycle/duplicate checks are intrinsic and always run.
+    assertValidWorkflowFields([...filled.encodings.dimensions, ...filled.encodings.measures], meta.length > 0 ? meta : undefined);
+    const geom = filled.config.geoms[0] ?? 'auto';
+    // Same lint pass the store reducer applies on every encoding change (diffLinter middleware),
+    // so normalized output matches what the UI would converge to for the same spec.
+    const encodings: DraggableFieldState = {
+        ...filled.encodings,
+        ...algebraLint(geom, filled.encodings),
+        ...lintExtraFields(filled.encodings),
+    };
+    return {
+        ...filled,
+        encodings,
+        $schema: IChartSchemaUrl,
+    };
+}

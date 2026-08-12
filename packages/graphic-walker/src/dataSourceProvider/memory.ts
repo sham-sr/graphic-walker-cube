@@ -3,31 +3,29 @@ import { getDuckDBComputation, isDuckDBEnabled } from '../computation/duckdbComp
 import { DUCKDB_DEBUG } from '../constants';
 import { IComputationFunction, IDataSourceEventType, IDataSourceListener, IDataSourceProvider, IRow } from '../interfaces';
 import { DataStore } from '../store/dataStore';
+import { createListenerRegistry } from './listeners';
 
-// Debug logging helper
-const log = (...args: unknown[]) => { if (DUCKDB_DEBUG) console.log(...args); };
+const log = (...args: unknown[]) => {
+    if (DUCKDB_DEBUG) console.log(...args);
+};
 
-// Cache for DuckDB computations per dataset
 const duckDBComputationCache = new Map<string, IComputationFunction>();
 
-// Get computation function - uses DuckDB when enabled, falls back to client computation
 async function getComputation(data: IRow[], datasetId: string): Promise<IComputationFunction> {
     log(`%c[MemoryProvider] getComputation called`, 'color: #339af0');
     log(`  Dataset: ${datasetId}, Rows: ${data.length}, DuckDB enabled: ${isDuckDBEnabled()}`);
-    
+
     if (!isDuckDBEnabled()) {
         log('  → Using client computation (DuckDB disabled)');
         return getClientComputation(data);
     }
-    
-    // Check cache first
+
     const cached = duckDBComputationCache.get(datasetId);
     if (cached) {
         log('  → Using cached DuckDB computation');
         return cached;
     }
-    
-    // Try to get DuckDB computation
+
     log('  → Attempting to get DuckDB computation...');
     const duckDBComp = await getDuckDBComputation(data);
     if (duckDBComp) {
@@ -35,17 +33,15 @@ async function getComputation(data: IRow[], datasetId: string): Promise<IComputa
         duckDBComputationCache.set(datasetId, duckDBComp);
         return duckDBComp;
     }
-    
-    // Fallback to client computation
+
     log('%c  → Fallback to client computation', 'color: #868e96');
     return getClientComputation(data);
 }
 
 export function createMemoryProvider(initData?: string | null): IDataSourceProvider & { exportData(): string } {
     const store = new DataStore();
-    const listeners: IDataSourceListener[] = [];
-    
-    // Log provider creation (only when debug enabled)
+    const listeners = createListenerRegistry<IDataSourceListener>();
+
     if (DUCKDB_DEBUG) {
         if (isDuckDBEnabled()) {
             console.log('%c[MemoryProvider] DuckDB mode enabled', 'color: #40c057; font-weight: bold');
@@ -69,7 +65,7 @@ export function createMemoryProvider(initData?: string | null): IDataSourceProvi
                 fields: meta,
                 name,
             });
-            listeners.forEach((cb) => cb(IDataSourceEventType.updateList, ''));
+            listeners.emit(IDataSourceEventType.updateList, '');
             return id;
         },
         async getMeta(datasetId) {
@@ -91,7 +87,7 @@ export function createMemoryProvider(initData?: string | null): IDataSourceProvi
             }
             const metaId = dataSet.metaId;
             store.metaDict[metaId] = meta;
-            listeners.forEach((cb) => cb(IDataSourceEventType.updateMeta, dataSet.id));
+            listeners.emit(IDataSourceEventType.updateMeta, dataSet.id);
         },
         async getSpecs(datasetId) {
             const dataSet = store.dataSources.find((x) => x.id === datasetId);
@@ -112,7 +108,7 @@ export function createMemoryProvider(initData?: string | null): IDataSourceProvi
             }
             const metaId = dataSet.metaId;
             store.visDict[metaId] = JSON.parse(value);
-            listeners.forEach((cb) => cb(IDataSourceEventType.updateSpec, dataSet.id));
+            listeners.emit(IDataSourceEventType.updateSpec, dataSet.id);
         },
         async queryData(query, datasetIds) {
             log('%c[MemoryProvider] queryData called', 'color: #339af0', { datasetIds, query });
@@ -134,13 +130,10 @@ export function createMemoryProvider(initData?: string | null): IDataSourceProvi
         async onImportFile(file) {
             const data = await file.text();
             store.importData(JSON.parse(data));
-            listeners.forEach((cb) => cb(IDataSourceEventType.updateList, ''));
+            listeners.emit(IDataSourceEventType.updateList, '');
         },
         registerCallback(cb) {
-            listeners.push(cb);
-            return () => {
-                listeners.filter((x) => x !== cb);
-            };
+            return listeners.add(cb);
         },
         exportData() {
             return JSON.stringify(store.exportData());
