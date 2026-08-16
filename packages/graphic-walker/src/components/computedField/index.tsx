@@ -1,5 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useVizStore } from '../../store';
 import { isNotEmpty, parseErrorMessage } from '../../utils';
 import { highlightField } from '../highlightField';
@@ -18,6 +19,7 @@ const stringRegex = /('[^']*'?)/g;
 
 const ComputedFieldDialog: React.FC = observer(() => {
     const vizStore = useVizStore();
+    const { t } = useTranslation();
     const { editingComputedFieldFid } = vizStore;
     const [name, setName] = useState<string>('');
     const [sql, setSql] = useState<string>('');
@@ -98,37 +100,39 @@ const ComputedFieldDialog: React.FC = observer(() => {
             <DialogContent aria-describedby={undefined}>
                 <div className="flex flex-col space-y-2">
                     <div>
-                        <div className="text-xl font-bold">{editingComputedFieldFid === '' ? 'Add Computed Field' : 'Edit Computed Field'}</div>
+                        <div className="text-xl font-bold">
+                            {editingComputedFieldFid === '' ? t('computed_field.add_title') : t('computed_field.edit_title')}
+                        </div>
                         <span className="text-xs text-muted-foreground">
-                            Computed fields guide:{' '}
+                            {t('computed_field.guide')}{' '}
                             <a
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="underline text-primary"
                                 href="https://github.com/Kanaries/graphic-walker/wiki/How-to-Create-Computed-field-in-Graphic-Walker"
                             >
-                                read here
+                                {t('computed_field.read_here')}
                             </a>
                         </span>
                     </div>
                     <div className="flex flex-col space-y-2">
-                        <label className="text-ml whitespace-nowrap">Name</label>
+                        <label className="text-ml whitespace-nowrap">{t('computed_field.name')}</label>
                         <Input
                             type="text"
                             value={name}
-                            placeholder="Enter Field Name..."
+                            placeholder={t('computed_field.name_placeholder')}
                             onChange={(e) => {
                                 setName(e.target.value);
                             }}
                         />
-                        <label className="text-ml whitespace-nowrap">SQL</label>
-                        <SQLField ref={ref} value={sql} onChange={setSql} placeholder="Enter SQL..." />
+                        <label className="text-ml whitespace-nowrap">{t('computed_field.sql')}</label>
+                        <SQLField ref={ref} value={sql} onChange={setSql} placeholder={t('computed_field.sql_placeholder')} />
                     </div>
                     {error && <div className="text-xs text-red-500">{error}</div>}
                     <div className="flex justify-end space-x-2">
                         <Button
                             disabled={!sql || !name}
-                            children={editingComputedFieldFid === '' ? 'Add' : 'Edit'}
+                            children={editingComputedFieldFid === '' ? t('computed_field.add') : t('computed_field.edit')}
                             onClick={() => {
                                 try {
                                     vizStore.upsertComputedField(editingComputedFieldFid!, name, sql);
@@ -138,7 +142,7 @@ const ComputedFieldDialog: React.FC = observer(() => {
                                 }
                             }}
                         ></Button>
-                        <Button variant="outline" children="Cancel" onClick={() => vizStore.setComputedFieldFid()}></Button>
+                        <Button variant="outline" children={t('actions.cancel')} onClick={() => vizStore.setComputedFieldFid()}></Button>
                     </div>
                 </div>
             </DialogContent>

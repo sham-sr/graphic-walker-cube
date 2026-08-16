@@ -54,9 +54,9 @@
         "theme_desc": "The overall chart style preset, controlling axes, grid lines and default colors.",
         "color_palette_desc": "The color scheme used when a field is assigned to the Color channel.",
         "scale": "Scale",
-        "scale_desc": "Scales control how data values are mapped to visual properties such as position, size and opacity. They are computed automatically from your data тАФ turn on an override below only when you need manual control.",
+        "scale_desc": "Scales control how data values are mapped to visual properties such as position, size and opacity. They are computed automatically from your data — turn on an override below only when you need manual control.",
         "customize_scales": "Customize channels",
-        "scale_empty": "No channel selected. Use тАЬCustomize channelsтАЭ to pick a channel whose scale you want to adjust.",
+        "scale_empty": "No channel selected. Use “Customize channels” to pick a channel whose scale you want to adjust.",
         "scale_column_desc": "The horizontal position scale (columns / x-axis).",
         "scale_row_desc": "The vertical position scale (rows / y-axis).",
         "scale_color_desc": "The scale mapping data values to the color gradient.",
@@ -64,7 +64,7 @@
         "scale_radius_desc": "The radius scale used by arc and pie charts.",
         "scale_opacity_desc": "The scale mapping data values to mark transparency.",
         "scale_size_desc": "The scale mapping data values to mark size.",
-        "scale_type_desc": "Apply a mathematical transform (log, sqrt, тАж) when mapping data values. Useful for skewed data.",
+        "scale_type_desc": "Apply a mathematical transform (log, sqrt, …) when mapping data values. Useful for skewed data.",
         "min_domain_desc": "Manually set the data value mapped to the low end of the scale.",
         "max_domain_desc": "Manually set the data value mapped to the high end of the scale.",
         "range_desc": "Limit the visual output between a minimum and maximum (e.g. the smallest and largest mark size).",
@@ -133,10 +133,10 @@
             "measure": "measure"
         },
         "semantic_type": {
-            "nominal": "nominal",
-            "ordinal": "ordinal",
-            "temporal": "temporal",
-            "quantitative": "quantitative"
+            "nominal": "Nominal",
+            "ordinal": "Ordinal",
+            "temporal": "Temporal",
+            "quantitative": "Quantitative"
         },
         "mark_type": {
             "__enum__": "Mark Type",
@@ -248,6 +248,7 @@
         },
         "buttons": {
             "create_dataset": "Create Dataset",
+            "remove_dataset": "Remove Dataset",
             "export_as_file": "Save As File",
             "import_file": "Import Graphic Walker File"
         },
@@ -258,13 +259,13 @@
                 "drop_title": "Drop your CSV or JSON file here",
                 "drop_desc": "or click to browse your files",
                 "charset": "Charset",
-                "parsing": "Reading {{file}}тАж",
+                "parsing": "Reading {{file}}…",
                 "unsupported": "\"{{file}}\" is not supported. Please choose a .csv or .json file.",
                 "read_error": "Could not read \"{{file}}\". Make sure it is a valid CSV or JSON file."
             },
             "public": {
-                "loading": "LoadingтАж",
-                "meta": "{{rows}} rows ┬╖ {{cols}} fields",
+                "loading": "Loading…",
+                "meta": "{{rows}} rows · {{cols}} fields",
                 "fetch_error": "Failed to load \"{{name}}\". Check your connection and click the dataset to try again.",
                 "datasets": {
                     "CARS": "Classic dataset of 400+ car models: MPG, horsepower, weight, and origin.",
@@ -281,7 +282,7 @@
             "preview": {
                 "back": "Back",
                 "dataset_name": "Dataset Name",
-                "meta": "{{rows}} rows ┬╖ {{cols}} fields",
+                "meta": "{{rows}} rows · {{cols}} fields",
                 "use_data": "Use This Dataset",
                 "tip": "Tip: click a field's type icon in the table header to adjust it before importing."
             }
@@ -292,7 +293,10 @@
             "new": "+ New",
             "auto_title": "Chart {{idx}}",
             "chart_name": "Chart Name",
-            "remove_confirm": "Are you sure you want to remove this chart?"
+            "remove_confirm": "Are you sure you want to remove this chart?",
+            "duplicate": "Duplicate",
+            "edit": "Edit",
+            "remove": "Remove"
         },
         "tabpanel": {
             "menubar": {
@@ -325,7 +329,8 @@
                         "aggergation": "disable aggregation to create a paint",
                         "temporal": "painter doesn't support temporal fields now",
                         "count": "drag single field on x and y to create a paint"
-                    }
+                    },
+                    "add_computed_field": "Add Computed Field"
                 },
                 "paint": {
                     "palette": "Palette",
@@ -336,7 +341,8 @@
                     "save_paint": "Save Painting",
                     "reset_paint": "Reset Painting",
                     "cancel": "Cancel",
-                    "delete_paint": "Delete Painting"
+                    "delete_paint": "Delete Painting",
+                    "custom_feature": "Custom feature"
                 },
                 "limit": "enable query limit (rows)",
                 "size": "Resize",
@@ -358,8 +364,11 @@
                     "href": "{{format}} URL",
                     "hrefPlaceholder": "Enter {{format}} URL",
                     "load": "Load",
-                    "loading": "Loading Geographic Data..."
-                }
+                    "loading": "Loading Geographic Data...",
+                    "select_data": "Select a Geographic Data",
+                    "manual_config": "Manual Configuration"
+                },
+                "kanaries_docs": "Kanaries Docs"
             },
             "DatasetFields": {
                 "field_list": "Field List"
@@ -391,14 +400,26 @@
         "range": {
             "start_value": "Start Value",
             "end_value": "End Value"
-        }
+        },
+        "exclude": "exclude",
+        "match_case": "Match Case",
+        "match_whole_word": "Match Whole Word",
+        "placeholder_regexp": "Input Regular Expression...",
+        "placeholder_search_value": "Search Value...",
+        "rule_not_in": "notIn",
+        "rule_one_of": "oneOf",
+        "rule_range": "range",
+        "select_values": "Select Values...",
+        "select_values_exclude": "Select Values to Exclude...",
+        "use_regexp": "Use Regular Expression"
     },
     "actions": {
         "prev": "Previous",
         "next": "Next",
         "drop_field": "Drop Field Here",
         "confirm": "Confirm",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "copy_to_clipboard": "Copy to Clipboard"
     },
     "field_menu": {
         "to_dim": "Move to dimensions",
@@ -435,7 +456,10 @@
                 "iso_week": "ISO Week",
                 "iso_weekday": "ISO Weekday"
             }
-        }
+        },
+        "rename_field": "Rename Field",
+        "remove_field": "Remove Field",
+        "edit_computed_field": "Edit Computed Field"
     },
     "calc": {
         "bin_panel_title": "Bins",
@@ -453,12 +477,12 @@
         "recommended": "Recommended",
         "apply_best": "Apply recommended",
         "hint": "{{count}} chart types match your selection",
-        "empty": "тАжor click any lit chart type to start",
-        "based_on_view": "Based on the fields in the current chart ┬╖ {{count}} types match",
+        "empty": "…or click any lit chart type to start",
+        "based_on_view": "Based on the fields in the current chart · {{count}} types match",
         "selected_count": "{{count}} fields selected in the field list",
         "clear": "Clear",
         "uses": "Uses: {{fields}}",
-        "select_hint": "Pick fields on the left ┬╖ <k></k>+click to multi-select",
+        "select_hint": "Pick fields on the left · <k></k>+click to multi-select",
         "refine_hint": "Click or <k></k>+click fields on the left to refine",
         "collapse": "Collapse panel",
         "expand": "Show Auto Viz",
@@ -505,14 +529,21 @@
         "computation_error": "There is some error with Computation service. Here is the Error message:",
         "askviz_error": "There is some error with Askviz service. Here is the Error message:",
         "unknown_error": "Unknown error (no details available)",
-        "close": "Close"
+        "close": "Close",
+        "something_went_wrong": "Something went wrong"
     },
     "dataTable": {
         "pagination": {
             "showing": "Showing",
             "to": "to",
             "of": "of",
-            "results": "results"
+            "results": "results",
+            "more_pages": "More pages"
+        },
+        "profiling": {
+            "value": "Value",
+            "count": "Count",
+            "loading": "Loading..."
         }
     },
     "pivotTable": {
@@ -521,11 +552,32 @@
         "columnLimit": "Maximum column count {{limit}}."
     },
     "code_export": {
-        "title": "Code Export"
+        "title": "Code Export",
+        "tabs": {
+            "graphic_walker": "Graphic-Walker",
+            "vega_lite": "Vega-Lite",
+            "workflow": "Workflow"
+        }
     },
     "rename_field": {
         "title": "Rename Field",
         "description": "This action will rename this field's name in the chart.",
         "new_name": "New Name"
+    },
+    "computed_field": {
+        "add_title": "Add Computed Field",
+        "edit_title": "Edit Computed Field",
+        "guide": "Computed fields guide:",
+        "read_here": "read here",
+        "name": "Name",
+        "name_placeholder": "Enter Field Name...",
+        "sql": "SQL",
+        "sql_placeholder": "Enter SQL...",
+        "add": "Add",
+        "edit": "Edit"
+    },
+    "chat": {
+        "you": "You",
+        "expand_auto_message": "Click to expand auto generated message"
     }
 }

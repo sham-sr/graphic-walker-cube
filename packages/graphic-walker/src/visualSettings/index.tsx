@@ -411,7 +411,7 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
                 },
             },
             ...(experimentalFeatures?.computedField
-                ? [{ key: 'field:add', label: 'Add Computed Field', icon: DocumentPlusIcon, onClick: () => vizStore.setComputedFieldFid('') }]
+                ? [{ key: 'field:add', label: t('button.add_computed_field'), icon: DocumentPlusIcon, onClick: () => vizStore.setComputedFieldFid('') }]
                 : []),
             '-',
             {
@@ -688,7 +688,7 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
             '-',
             {
                 key: 'kanaries',
-                label: 'kanaries docs',
+                label: t('kanaries_docs'),
                 href: 'https://docs.kanaries.net',
                 // Kanaries brand info is not allowed to be removed or changed unless you are granted with special permission.
                 icon: KanariesIcon,

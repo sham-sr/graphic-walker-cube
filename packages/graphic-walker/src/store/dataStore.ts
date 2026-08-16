@@ -98,6 +98,10 @@ export class DataStore {
         }
         return id;
     }
+
+    removeDataSource(id: string) {
+        this.dataSources = this.dataSources.filter((source) => source.id !== id);
+    }
 }
 
 function encodeMeta(

@@ -1,5 +1,6 @@
 import { IRow, IMutField, Specification, IFilterFiledSimple, IExpression, IViewQuery, IViewField } from './interfaces';
-import { INestNode } from './components/pivotTable/interface';
+import { INestNode, IPivotCube } from './components/pivotTable/interface';
+import type { IPivotRollupMeasure } from './components/pivotTable/cube';
 /* eslint import/no-webpack-loader-syntax:0 */
 // @ts-ignore
 // eslint-disable-next-line
@@ -162,11 +163,12 @@ export const buildPivotTableService = async (
         fid: string;
         type: 'ascending' | 'descending';
         mode: 'row' | 'column';
-    }
-): Promise<{ lt: INestNode; tt: INestNode; metric: (IRow | null | undefined)[][] }> => {
+    },
+    rollupMeasures?: IPivotRollupMeasure[]
+): Promise<{ lt: INestNode; tt: INestNode; cube: IPivotCube }> => {
     const worker = new BuildMetricTableWorker();
     try {
-        const res: { lt: INestNode; tt: INestNode; metric: (IRow | null | undefined)[][] } = await workerService(worker, {
+        const res: { lt: INestNode; tt: INestNode; cube: IPivotCube } = await workerService(worker, {
             dimsInRow,
             dimsInColumn,
             allData,
@@ -174,6 +176,7 @@ export const buildPivotTableService = async (
             collapsedKeyList,
             showTableSummary,
             sort,
+            rollupMeasures,
         });
         return res;
     } catch (error) {

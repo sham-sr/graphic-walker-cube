@@ -1,5 +1,5 @@
 import type { IViewField } from '../interfaces';
-import { createPivotPathKey } from '../components/pivotTable/utils';
+import { createPivotPathKey, materializeMetricMatrix } from '../components/pivotTable/utils';
 import { buildPivotTable } from './buildPivotTable';
 
 const dimension = (fid: string): IViewField => ({
@@ -27,7 +27,7 @@ describe('buildPivotTable', () => {
 
         expect(result.lt.children.find((node) => node.value === 'West')?.isCollapsed).toBe(true);
         expect(result.tt.children.map((node) => node.value)).toEqual(['2024']);
-        expect(result.metric.map((row) => row[0]?.sales_sum)).toEqual([9, 30]);
+        expect(materializeMetricMatrix(result.lt, result.tt, result.cube).map((row) => row[0]?.sales_sum)).toEqual([9, 30]);
     });
 
     test('sorts the opposite axis using the selected measure', () => {
@@ -56,6 +56,6 @@ describe('buildPivotTable', () => {
 
         expect(result.lt.children).toEqual([]);
         expect(result.tt.children).toEqual([]);
-        expect(result.metric).toEqual([[undefined]]);
+        expect(materializeMetricMatrix(result.lt, result.tt, result.cube)).toEqual([[undefined]]);
     });
 });

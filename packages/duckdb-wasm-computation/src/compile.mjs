@@ -1,10 +1,8 @@
-'use strict';
-
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const quoteIdentifier = (identifier) => `"${identifier.replace(/"/g, '""')}"`;
 const NUMBER_LITERAL = '-?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?';
 
-function correctOpenRangeSQL(sql, payload) {
+export function correctOpenRangeSQL(sql, payload) {
     // gw-dsl-parser <= 0.1.51 emits strict comparisons for one-sided range
     // filters. Keep this correction scoped to generated WHERE/AND predicates;
     // remove it once the parser itself implements inclusive boundaries.
@@ -28,9 +26,6 @@ function correctOpenRangeSQL(sql, payload) {
     return result;
 }
 
-function compileWorkflowToSQL(parser, tableName, payload) {
+export function compileWorkflowToSQL(parser, tableName, payload) {
     return correctOpenRangeSQL(parser(tableName, JSON.stringify(payload)), payload);
 }
-
-exports.correctOpenRangeSQL = correctOpenRangeSQL;
-exports.compileWorkflowToSQL = compileWorkflowToSQL;

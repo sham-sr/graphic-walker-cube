@@ -3,7 +3,7 @@
         "target": "ES2022",
         "lib": ["ES2022", "DOM"],
         "module": "ESNext",
-        "moduleResolution": "Node",
+        "moduleResolution": "bundler",
         "jsx": "react",
         "allowJs": true,
         "isolatedModules": true,
@@ -11,9 +11,9 @@
         "allowSyntheticDefaultImports": true,
         "resolveJsonModule": true,
         "strict": true,
+        "forceConsistentCasingInFileNames": true,
         "noImplicitAny": false,
         "skipLibCheck": true,
-        "baseUrl": ".",
         "paths": {
             "@/*": ["../graphic-walker/src/*"]
         }

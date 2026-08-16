@@ -35,7 +35,7 @@ describe('PivotTableView', () => {
         );
         const markup = renderToStaticMarkup(
             <PivotTableView
-                model={{ leftTree: result.lt, topTree: result.tt, metric: result.metric, isEmpty: false }}
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
                 rows={[region, city]}
                 columns={[year, measure]}
                 numberFormat=",.1f"
@@ -59,7 +59,7 @@ describe('PivotTableView', () => {
         const result = buildPivotTable([region], [], [{ region: 'East', sales_sum: 1234 }], [], [], false);
         const markup = renderToStaticMarkup(
             <PivotTableView
-                model={{ leftTree: result.lt, topTree: result.tt, metric: result.metric, isEmpty: false }}
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
                 rows={[region, measure]}
                 columns={[]}
                 numberFormat="not-a-d3-format"
@@ -68,7 +68,7 @@ describe('PivotTableView', () => {
             />
         );
 
-        expect(markup).toContain('1,234');
+        expect(markup).toContain((1234).toLocaleString());
     });
 
     test('renders raw measure keys and unaggregated headers when aggregation is disabled', () => {
@@ -76,7 +76,7 @@ describe('PivotTableView', () => {
         const result = buildPivotTable([region], [], [{ region: 'East', sales: 1234 }], [], [], false);
         const markup = renderToStaticMarkup(
             <PivotTableView
-                model={{ leftTree: result.lt, topTree: result.tt, metric: result.metric, isEmpty: false }}
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
                 rows={[region, measure]}
                 columns={[]}
                 defaultAggregated={false}
@@ -105,7 +105,7 @@ describe('PivotTableView', () => {
         );
         const markup = renderToStaticMarkup(
             <PivotTableView
-                model={{ leftTree: result.lt, topTree: result.tt, metric: result.metric, isEmpty: false }}
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
                 rows={[region, city, measure]}
                 columns={[]}
                 enableCollapse
@@ -133,7 +133,7 @@ describe('PivotTableView', () => {
         );
         const markup = renderToStaticMarkup(
             <PivotTableView
-                model={{ leftTree: result.lt, topTree: result.tt, metric: result.metric, isEmpty: false }}
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
                 rows={[region, occurredAt, measure]}
                 columns={[]}
                 timezoneDisplayOffset={123}
@@ -166,7 +166,7 @@ describe('PivotTableView', () => {
         );
         const markup = renderToStaticMarkup(
             <PivotTableView
-                model={{ leftTree: result.lt, topTree: result.tt, metric: result.metric, isEmpty: false }}
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
                 rows={[occurredAt]}
                 columns={[completedAt, measure]}
                 timezoneDisplayOffset={0}
@@ -177,5 +177,110 @@ describe('PivotTableView', () => {
 
         expect(markup).toContain('root(total)');
         expect(markup).not.toContain('NaN-NaN-NaN');
+    });
+
+    test('renders Excel-style nested row headers with rowspan and collapse controls', () => {
+        const region = dimension('region', 'Region');
+        const city = dimension('city', 'City');
+        const year = dimension('year', 'Year');
+        const result = buildPivotTable(
+            [region, city],
+            [year],
+            [
+                { region: 'East', city: 'Boston', year: '2024', sales_sum: 9 },
+                { region: 'East', city: 'NYC', year: '2024', sales_sum: 11 },
+                { region: 'West', city: 'Seattle', year: '2024', sales_sum: 18 },
+            ],
+            [],
+            [],
+            false
+        );
+        const markup = renderToStaticMarkup(
+            <PivotTableView
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
+                rows={[region, city]}
+                columns={[year, measure]}
+                enableCollapse
+                onHeaderCollapse={() => {}}
+            />
+        );
+
+        expect(markup).toContain('East');
+        expect(markup).toContain('Boston');
+        expect(markup).toContain('NYC');
+        expect(markup).toContain('rowSpan="2"');
+        expect(markup).toContain('aria-label="Collapse East"');
+        expect(markup).toContain('aria-label="Collapse West"');
+        expect(markup).toContain('scope="col"');
+        expect(markup).toContain('2024');
+    });
+
+    test('collapsing a row group hides children and shows the group subtotal', () => {
+        const region = dimension('region', 'Region');
+        const city = dimension('city', 'City');
+        const year = dimension('year', 'Year');
+        const result = buildPivotTable(
+            [region, city],
+            [year],
+            [
+                { region: 'East', city: 'Boston', year: '2024', sales_sum: 9 },
+                { region: 'East', city: 'NYC', year: '2024', sales_sum: 11 },
+                { region: 'West', city: 'Seattle', year: '2024', sales_sum: 18 },
+            ],
+            [],
+            [],
+            false,
+            undefined,
+            [{ field: 'sales_sum', agg: 'sum', asFieldKey: 'sales_sum' }]
+        );
+        const markup = renderToStaticMarkup(
+            <PivotTableView
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
+                rows={[region, city]}
+                columns={[year, measure]}
+                enableCollapse
+                collapsedPaths={[[{ key: 'region', value: 'East' }]]}
+                onHeaderCollapse={() => {}}
+            />
+        );
+
+        expect(markup).toContain('aria-label="Expand East"');
+        expect(markup).not.toContain('Boston');
+        expect(markup).not.toContain('NYC');
+        expect(markup).toContain('Seattle');
+        expect(markup).toContain('20');
+        expect(markup).toContain('18');
+    });
+
+    test('renders nested column headers with colspan', () => {
+        const region = dimension('region', 'Region');
+        const year = dimension('year', 'Year');
+        const quarter = dimension('quarter', 'Quarter');
+        const result = buildPivotTable(
+            [region],
+            [year, quarter],
+            [
+                { region: 'East', year: '2024', quarter: 'Q1', sales_sum: 9 },
+                { region: 'East', year: '2024', quarter: 'Q2', sales_sum: 11 },
+            ],
+            [],
+            [],
+            false
+        );
+        const markup = renderToStaticMarkup(
+            <PivotTableView
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
+                rows={[region]}
+                columns={[year, quarter, measure]}
+                enableCollapse
+                onHeaderCollapse={() => {}}
+            />
+        );
+
+        expect(markup).toContain('2024');
+        expect(markup).toContain('Q1');
+        expect(markup).toContain('Q2');
+        expect(markup).toContain('colSpan="2"');
+        expect(markup).toContain('aria-label="Collapse 2024"');
     });
 });

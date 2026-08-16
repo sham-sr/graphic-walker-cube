@@ -49,7 +49,32 @@
         "svg_desc": "SVG вместо Canvas: выше качество, ниже скорость.",
         "timezone_settings": "Часовой пояс",
         "timezone_settings_desc": "Отображение времени по выбранному поясу.",
-        "customOffset_desc": "Задать часовой пояс для времени."
+        "customOffset_desc": "Задать часовой пояс для времени.",
+        "colors_desc": "Цвета диаграммы, фона и темы.",
+        "primary_color_desc": "Основной цвет меток и акцентов.",
+        "background_desc": "Цвет фона области визуализации.",
+        "theme_desc": "Предустановленная цветовая тема.",
+        "color_palette_desc": "Палитра для категориальных значений.",
+        "scale_desc": "Настройте домены и диапазоны шкал по каналам.",
+        "customize_scales": "Настроить шкалы",
+        "scale_empty": "Шкалы не выбраны. Нажмите «Настроить шкалы», чтобы добавить.",
+        "scale_column_desc": "The horizontal position scale (columns / x-axis).",
+        "scale_row_desc": "The vertical position scale (rows / y-axis).",
+        "scale_color_desc": "The scale mapping data values to the color gradient.",
+        "scale_theta_desc": "The angle scale used by arc and pie charts.",
+        "scale_radius_desc": "The radius scale used by arc and pie charts.",
+        "scale_opacity_desc": "The scale mapping data values to mark transparency.",
+        "scale_size_desc": "The scale mapping data values to mark size.",
+        "scale_type_desc": "Тип шкалы (linear, log, sqrt и т.д.).",
+        "min_domain_desc": "Минимальное значение домена шкалы.",
+        "max_domain_desc": "Максимальное значение домена шкалы.",
+        "range_desc": "Ограничить визуальный диапазон (мин/макс).",
+        "format_desc": "Форматирование чисел и дат (шаблоны d3-format). Пустое поле — формат по умолчанию.",
+        "numberFormat_desc": "Applied to measure values. Example: ',.2f' displays 1234.5 as 1,234.50.",
+        "timeFormat_desc": "Applied to date and time values. Example: '%Y-%m-%d' displays dates as 2024-01-30.",
+        "normalizedNumberFormat_desc": "Applied to percentages when the stack mode is 'normalized'. Example: '.0%' displays 0.25 as 25%.",
+        "independence_desc": "При разбиении на подвиды шкалы общие. Включите канал, чтобы каждый подвид считал шкалу отдельно.",
+        "independent_channel_desc": "Каждый подвид использует свою шкалу {{channel}}."
     },
     "constant": {
         "row_count": "Число строк",
@@ -176,6 +201,7 @@
         },
         "buttons": {
             "create_dataset": "Создать набор",
+            "remove_dataset": "Удалить набор",
             "export_as_file": "Сохранить в файл",
             "import_file": "Импорт файла Graphic Walker"
         },
@@ -190,10 +216,38 @@
                 "submit": "Применить",
                 "dataset_name": "Имя набора",
                 "choose_file": "Выберите файл данных",
-                "get_start_desc": "Создайте набор данных для начала."
+                "get_start_desc": "Создайте набор данных для начала.",
+                "drop_title": "Перетащите файл сюда",
+                "drop_desc": "Поддерживаются CSV и JSON",
+                "charset": "Кодировка",
+                "parsing": "Разбор файла...",
+                "unsupported": "Неподдерживаемый формат файла",
+                "read_error": "Не удалось прочитать файл"
             },
             "public": {
-                "submit": "Применить"
+                "submit": "Применить",
+                "loading": "Загрузка...",
+                "meta": "Описание",
+                "fetch_error": "Не удалось загрузить демо-данные",
+                "datasets": {
+                    "CARS": "Classic dataset of 400+ car models: MPG, horsepower, weight, and origin.",
+                    "STUDENTS": "Exam scores of 1,000 students with gender, parental education, and test prep.",
+                    "BIKE_SHARING": "Hourly bike rentals with weather, season, and holiday context.",
+                    "EARTHQUAKE": "23,000+ earthquakes worldwide with location and magnitude.",
+                    "CAR_SALES": "Sales, prices, and engine specs for 157 vehicle models.",
+                    "COLLAGE": "US colleges compared by admission rate, SAT scores, and cost.",
+                    "KELPER": "NASA Kepler exoplanet candidates with orbital measurements.",
+                    "BTC_GOLD": "Daily Bitcoin and gold prices for comparing trading strategies.",
+                    "TITANIC": "Titanic passengers: survival, class, age, and fare."
+                }
+            },
+            "or_demo": "или выберите демо-набор",
+            "preview": {
+                "back": "Назад",
+                "dataset_name": "Имя набора данных",
+                "meta": "Метаданные",
+                "use_data": "Использовать данные",
+                "tip": "Проверьте типы полей перед использованием"
             }
         }
     },
@@ -237,7 +291,8 @@
                         "aggergation": "отключите агрегацию для холста",
                         "temporal": "холст пока не поддерживает время",
                         "count": "перетащите одно поле на X и Y для холста"
-                    }
+                    },
+                    "add_computed_field": "Добавить вычисляемое поле"
                 },
                 "paint": {
                     "palette": "Палитра",
@@ -271,8 +326,12 @@
                     "href": "URL {{format}}",
                     "hrefPlaceholder": "Введите URL {{format}}",
                     "load": "Загрузить",
-                    "loading": "Загрузка геоданных…"
-                }
+                    "loading": "Загрузка геоданных…",
+                    "select_data": "Выберите географические данные",
+                    "manual_config": "Ручная настройка"
+                },
+                "autoviz": "Авто-виз",
+                "kanaries_docs": "Документация Kanaries"
             },
             "DatasetFields": {
                 "field_list": "Список полей"
@@ -318,17 +377,51 @@
         }
     },
     "explain": {
-        "lg_than": "больше чем",
-        "sm_than": "меньше чем",
-        "expection": "ожидание",
-        "unrecognized": "Не распознано",
-        "score": "оценка",
-        "contains": "содержит",
-        "reason": {
-            "selection_dim_distribution": "подсказки по измерениям",
-            "selection_mea_distribution": "подсказки по мерам",
-            "children_major_factor": "основной фактор",
-            "children_outlier": "выброс"
+        "title": "Объяснить данные",
+        "loading": "Анализ...",
+        "empty": "Значимых закономерностей не найдено",
+        "detail": {
+            "empty": "Выберите инсайт слева"
+        },
+        "overview": {
+            "all": "Все",
+            "skippedNote": "Пропущено анализов: {{count}}"
+        },
+        "type": {
+            "extremeValue": "Extreme values",
+            "contributingDimension": "Contributing dimensions",
+            "contributingMeasure": "Contributing measures",
+            "uniqueMark": "What's unique about this mark"
+        },
+        "strength": {
+            "strong": "Strong",
+            "moderate": "Moderate",
+            "weak": "Weak"
+        },
+        "skip": {
+            "noMark": "Select a mark before running Explain Data.",
+            "temporalMark": "Temporal marks are not analyzed for extreme values yet.",
+            "noSensitiveAgg": "The selected measure aggregation is not sensitive to extreme values.",
+            "noCandidates": "No eligible fields were available for comparison.",
+            "noDerivableTarget": "The view measure's aggregation cannot be modeled; only sum, mean, and count are supported."
+        },
+        "extremeValue": {
+            "desc": "{{outlierCount}} of {{rowCount}} records are extreme values; removing them changes {{agg}} of {{measure}} from {{before}} to {{after}} ({{changePercent}}%).",
+            "truncated": "{{measure}} has a large mark with mean and median values that differ; scan the {{rowCount}} rows before interpreting the aggregate."
+        },
+        "uniqueMark": {
+            "countDesc": "This mark's composition over {{dimension}} differs from other marks: {{markShare}}% falls in \"{{topCategory}}\" vs {{siblingShare}}% elsewhere.",
+            "measureDesc": "This mark's {{measure}} mass is distributed differently over {{dimension}} than other marks (heuristic)."
+        },
+        "contributingDimension": {
+            "desc": "The composition of {{dimension}} helps predict {{target}} across marks (cross-validated fit +{{cvGainPercent}}%); the share of \"{{topCategory}}\" is most associated."
+        },
+        "contributingMeasure": {
+            "desc": "{{candidate}} (aggregated per mark) helps predict {{target}} (cross-validated fit +{{cvGainPercent}}%). Association, not causation."
+        },
+        "truncation": {
+            "notice": "Показана только часть результатов",
+            "more": "Ещё {{count}}"
         }
     },
     "error_panel": {
@@ -341,7 +434,8 @@
         "computation_error": "Ошибка сервиса вычислений. Сообщение:",
         "askviz_error": "Ошибка сервиса Askviz. Сообщение:",
         "unknown_error": "Неизвестная ошибка (подробности недоступны)",
-        "close": "Закрыть"
+        "close": "Закрыть",
+        "something_went_wrong": "Что-то пошло не так"
     },
     "actions": {
         "prev": "Назад",
@@ -352,7 +446,12 @@
         "copy_to_clipboard": "Копировать"
     },
     "code_export": {
-        "title": "Экспорт кода"
+        "title": "Экспорт кода",
+        "tabs": {
+            "graphic_walker": "Graphic-Walker",
+            "vega_lite": "Vega-Lite",
+            "workflow": "Workflow"
+        }
     },
     "rename_field": {
         "title": "Переименовать поле",
@@ -396,14 +495,21 @@
                 "iso_week": "ISO неделя",
                 "iso_weekday": "ISO день недели"
             }
-        }
+        },
+        "edit_computed_field": "Редактировать вычисляемое поле"
     },
     "dataTable": {
         "pagination": {
             "showing": "Показано с",
             "to": "по",
             "of": "из",
-            "results": "записей"
+            "results": "записей",
+            "more_pages": "Ещё страницы"
+        },
+        "profiling": {
+            "value": "Значение",
+            "count": "Количество",
+            "loading": "Загрузка..."
         }
     },
     "calc": {
@@ -415,11 +521,74 @@
         "log_panel_title": "Логарифм",
         "log_panel_desc": "Настройка логарифма для поля",
         "log_panel_number": "Основание логарифма"
-    }
-    ,
+    },
     "pivotTable": {
         "dataTruncated": "Данные урезаны до лимита {{limit}}.",
         "rowLimit": "Выведены первые {{limit}} строк.",
         "columnLimit": "Максимальное количество колонок {{limit}}."
+    },
+    "autoviz": {
+        "title": "Авто-виз",
+        "description": "Выберите поля — доступные типы диаграмм подсветятся, лучший будет отмечен.",
+        "recommended": "Рекомендуется",
+        "apply_best": "Применить рекомендуемую",
+        "hint": "Подходит типов диаграмм: {{count}}",
+        "empty": "...или выберите любой активный тип диаграммы",
+        "based_on_view": "По полям текущего графика · подходит типов: {{count}}",
+        "selected_count": "Выбрано полей: {{count}}",
+        "clear": "Очистить",
+        "uses": "Использует: {{fields}}",
+        "select_hint": "Pick fields on the left · <k></k>+click to multi-select",
+        "refine_hint": "Click or <k></k>+click fields on the left to refine",
+        "collapse": "Свернуть",
+        "expand": "Развернуть",
+        "charts": {
+            "table": "Text Table",
+            "highlight_table": "Highlight Table",
+            "heatmap": "Heat Map",
+            "bar": "Bar Chart",
+            "stacked_bar": "Stacked Bar",
+            "grouped_bar": "Grouped Bar",
+            "line": "Line Chart",
+            "area": "Area Chart",
+            "histogram": "Histogram",
+            "scatter": "Scatter Plot",
+            "circle_view": "Circle View",
+            "pie": "Pie Chart",
+            "boxplot": "Box Plot",
+            "poi_map": "Symbol Map",
+            "choropleth_map": "Filled Map"
+        },
+        "reason": {
+            "need_fields": "Select at least one field",
+            "need_dimension": "Needs at least 1 dimension",
+            "need_two_dimensions": "Needs at least 2 dimensions",
+            "too_many_dimensions": "Too many dimensions for this chart",
+            "need_measure": "Needs at least 1 measure",
+            "need_two_measures": "Needs at least 2 measures",
+            "need_single_measure": "Needs exactly 1 measure",
+            "too_many_measures": "Too many measures for this chart",
+            "need_temporal": "Needs a date/time dimension",
+            "need_temporal_or_ordinal": "Needs a date/time or ordinal dimension",
+            "need_raw_measure": "Needs a raw measure, not row count",
+            "need_lon_lat": "Needs longitude & latitude fields",
+            "need_geo_feature": "Needs a configured GeoJSON boundary"
+        }
+    },
+    "computed_field": {
+        "add_title": "Добавить вычисляемое поле",
+        "edit_title": "Редактировать вычисляемое поле",
+        "guide": "Руководство по вычисляемым полям:",
+        "read_here": "читать здесь",
+        "name": "Имя",
+        "name_placeholder": "Введите имя поля...",
+        "sql": "SQL",
+        "sql_placeholder": "Введите SQL...",
+        "add": "Добавить",
+        "edit": "Изменить"
+    },
+    "chat": {
+        "you": "Вы",
+        "expand_auto_message": "Нажмите, чтобы раскрыть автосообщение"
     }
 }

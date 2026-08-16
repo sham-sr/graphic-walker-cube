@@ -7,6 +7,8 @@
   "devDependencies": {},
   "scripts": {
     "build": "yarn workspace @kanaries/graphic-walker build",
+    "build:embed": "yarn workspace @kanaries/graphic-walker build && yarn workspace @kanaries/duckdb-computation build && yarn workspace @cube/graphic-walker-embed build",
+    "test:embed": "yarn workspace @cube/graphic-walker-embed test",
     "test:consumer": "node scripts/consumer-smoke-test.mjs",
     "deploy": "yarn workspace playground deploy",
     "sync:datasets": "node scripts/demo-datasets.mjs"

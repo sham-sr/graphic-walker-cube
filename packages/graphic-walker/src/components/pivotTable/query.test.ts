@@ -3,6 +3,7 @@ import { getComputation } from '../../computation/clientComputation';
 import { buildPivotTable } from '../../workers/buildPivotTable';
 import { MEA_KEY_ID, MEA_VAL_ID } from '../../constants';
 import { getPivotGroupByCombinations, queryPivotTable, type PivotTableModelBuilder } from './query';
+import { materializeMetricMatrix } from './utils';
 
 jest.mock('../../services', () => {
     const { queryView } = jest.requireActual('../../lib/viewQuery') as typeof import('../../lib/viewQuery');
@@ -36,6 +37,10 @@ const leafRows = [
 ];
 
 const buildModel: PivotTableModelBuilder = async (...args) => buildPivotTable(...args);
+
+function metricOf(model: Awaited<ReturnType<typeof queryPivotTable>>) {
+    return materializeMetricMatrix(model.leftTree, model.topTree, model.cube);
+}
 
 function groupByOf(payload: IDataQueryPayload): string[] {
     const view = payload.workflow.find((step) => step.type === 'view');
@@ -98,12 +103,9 @@ describe('pivot table query orchestration', () => {
             buildModel
         );
 
-        expect(calls.map(groupByOf)).toEqual([
-            ['region', 'city', 'year'],
-            ['year', 'region'],
-        ]);
+        expect(calls.map(groupByOf)).toEqual([['region', 'city', 'year']]);
         expect(result.leftTree.children.find((node) => node.value === 'West')?.isCollapsed).toBe(true);
-        expect(result.metric.map((row) => row[0]?.sales_sum)).toEqual([9, 30]);
+        expect(metricOf(result).map((row) => row[0]?.sales_sum)).toEqual([9, 30]);
     });
 
     test('uses precomputed view data without repeating the leaf query', async () => {
@@ -131,8 +133,8 @@ describe('pivot table query orchestration', () => {
             buildModel
         );
 
-        expect(calls.map(groupByOf)).toEqual([['year', 'region']]);
-        expect(result.metric.map((row) => row[0]?.sales_sum)).toEqual([9, 30]);
+        expect(calls.map(groupByOf)).toEqual([]);
+        expect(metricOf(result).map((row) => row[0]?.sales_sum)).toEqual([9, 30]);
     });
 
     test('propagates computation failures to the component boundary', async () => {
@@ -220,7 +222,7 @@ describe('pivot table query orchestration', () => {
 
         expect(result.leftTree.children.map((node) => node.value)).toEqual(['East', 'West']);
         expect(result.topTree.children.map((node) => node.value)).toEqual(['Notebook', 'Phone']);
-        expect(result.metric.map((row) => row.map((cell) => cell?.sales_sum ?? null))).toEqual([
+        expect(metricOf(result).map((row) => row.map((cell) => cell?.sales_sum ?? null))).toEqual([
             [12, 11],
             [13, null],
         ]);
@@ -244,7 +246,7 @@ describe('pivot table query orchestration', () => {
             buildModel
         );
 
-        expect(result.metric.map((row) => row[0]?.sales)).toEqual([9, 30]);
+        expect(metricOf(result).map((row) => row[0]?.sales)).toEqual([9, 30]);
     });
 
     test('sorts raw-mode dimensions by the unaggregated measure key', async () => {
@@ -292,7 +294,7 @@ describe('pivot table query orchestration', () => {
         );
 
         expect(result.topTree.children.map((node) => node.value)).toEqual(['profit', 'sales']);
-        expect(result.metric.map((row) => row.map((cell) => cell?.[MEA_VAL_ID]))).toEqual([
+        expect(metricOf(result).map((row) => row.map((cell) => cell?.[MEA_VAL_ID]))).toEqual([
             [3, 9],
             [8, 30],
         ]);
@@ -320,7 +322,7 @@ describe('pivot table query orchestration', () => {
         expect(west?.isCollapsed).toBe(false);
         expect(west?.children.every((node) => node.kind === 'value')).toBe(true);
         expect(result.leftTree.children.some((node) => node.kind === 'summary')).toBe(false);
-        expect(result.metric.map((row) => row[0]?.sales).sort()).toEqual([12, 18]);
+        expect(metricOf(result).map((row) => row[0]?.sales).sort()).toEqual([12, 18]);
     });
 
     test('rejects duplicate raw records that would map to the same pivot cell', async () => {
@@ -384,7 +386,7 @@ describe('pivot table query orchestration', () => {
         expect(computation).not.toHaveBeenCalled();
         expect(result.leftTree.children).toEqual([]);
         expect(result.topTree.children).toEqual([]);
-        expect(result.metric).toEqual([[undefined]]);
+        expect(metricOf(result)).toEqual([[undefined]]);
         expect(result.isEmpty).toBe(true);
     });
 
@@ -441,7 +443,7 @@ describe('pivot table query orchestration', () => {
         );
 
         expect(result.leftTree.children.filter((node) => node.kind === 'value').map((node) => node.value)).toEqual(['A']);
-        expect(result.metric.flat().some((cell) => cell?.region === 'A' && cell.city === undefined && cell.sales_sum === 100)).toBe(true);
+        expect(metricOf(result).flat().some((cell) => cell?.region === 'A' && cell.city === undefined && cell.sales_sum === 100)).toBe(true);
     });
 
     test('sorts by the visible subtotal when the opposite hierarchy is collapsed', async () => {
@@ -466,7 +468,7 @@ describe('pivot table query orchestration', () => {
         );
 
         expect(result.leftTree.children.map((node) => node.value)).toEqual(['B', 'A']);
-        expect(result.metric.map((row) => row[0]?.sales_sum)).toEqual([120, 100]);
+        expect(metricOf(result).map((row) => row[0]?.sales_sum)).toEqual([120, 100]);
     });
 
     test('does not reintroduce rows excluded by the leaf limit when sorting a collapsed subtotal', async () => {
@@ -492,6 +494,6 @@ describe('pivot table query orchestration', () => {
         );
 
         expect(result.leftTree.children.map((node) => node.value)).toEqual(['A']);
-        expect(result.metric.map((row) => row[0]?.sales_sum)).toEqual([100]);
+        expect(metricOf(result).map((row) => row[0]?.sales_sum)).toEqual([100]);
     });
 });

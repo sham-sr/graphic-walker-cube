@@ -1,530 +1,587 @@
 {
     "config": {
-        "scheme": "цЦ╣цбИ",
-        "primary_color": "ф╕╗шжБщвЬшЙ▓",
-        "color_palette": "ш░ГшЙ▓цЭ┐",
-        "theme": "ф╕╗щвШ",
-        "opacity": "ф╕НщАПцШОх║ж",
-        "default_color_palette": "щ╗Шшод",
-        "size": "х░║хп╕",
-        "min_domain": "цЬАх░ПхЯЯхА╝",
-        "max_domain": "цЬАхдзхЯЯхА╝",
-        "range": "шМГхЫ┤",
-        "format": "ца╝х╝П",
-        "numberFormat": "цХ░хнЧца╝х╝П",
-        "timeFormat": "цЧ╢щЧ┤ца╝х╝П",
-        "normalizedNumberFormat": "цаЗхЗЖхМЦцХ░хнЧца╝х╝П",
-        "background": "шГМцЩп",
-        "color": "щвЬшЙ▓",
-        "independence": "чЛмчлЛцАз",
-        "x": "xш╜┤",
-        "y": "yш╜┤",
-        "zeroScale": "щЫ╢хИ╗х║ж",
-        "misc": "хЕ╢ф╗Ц",
-        "formatGuidesDocs": "ца╝х╝ПцМЗхНЧ",
-        "readHere": "щШЕшп╗цндхдД",
-        "svg": "ф╜┐чФиSVG",
-        "customTile": "ф╜┐чФишЗкхоЪф╣ЙчЪДхЬ░хЫ╛хМ║хЭЧ",
-        "customOffset": "ф╜┐чФишЗкхоЪф╣ЙчЪДцЧ╢хМ║",
-        "map_settings": "хЬ░хЫ╛шо╛ч╜о",
-        "map_settings_desc": "щЕНч╜охЬ░хЫ╛хПпшзЖхМЦцШ╛чд║цЦ╣х╝ПхТМф╜┐чФишЗкхоЪф╣ЙхЬ░хЫ╛чУжчЙЗцЬНхКбуАВ",
-        "customTile_desc": "ф╕║хЬ░чРЖхПпшзЖхМЦцМЗхоЪшЗкхоЪф╣ЙхЬ░хЫ╛чУжчЙЗURLуАВ",
-        "choropleth_settings": "хМ║хЯЯхЫ╛шо╛ч╜о",
-        "choropleth_settings_desc": "цОзхИ╢хМ║хЯЯхЫ╛ф╕нхЬ░чРЖх╜вчК╢хТМцХ░цНочЪДцШ╛чд║цЦ╣х╝ПуАВ",
-        "include_unmatched": "хЬицпФф╛Лх░║ф╕нхМЕхРлцЬкхМ╣щЕНчЪДхМ║хЯЯ",
-        "include_unmatched_desc": "хЬишобчоЧщвЬшЙ▓цпФф╛Лх░║цЧ╢хМЕхРлц▓бцЬЙцХ░цНохМ╣щЕНчЪДхМ║хЯЯуАВ",
-        "include_shapes": "хМЕхРлц▓бцЬЙцХ░цНочЪДх╜вчК╢",
-        "include_shapes_desc": "цШ╛чд║цЙАцЬЙхЬ░чРЖх╜вчК╢я╝МхН│ф╜┐хоГф╗мц▓бцЬЙхЕ│шБФчЪДцХ░цНохА╝уАВ",
-        "visualization_settings": "хПпшзЖхМЦшо╛ч╜о",
-        "visualization_settings_desc": "щЕНч╜оцЙАцЬЙхПпшзЖхМЦчЪДщАЪчФишо╛ч╜оуАВ",
-        "zeroScale_desc": "х╝║хИ╢цХ░хА╝ш╜┤ф╗ОщЫ╢х╝АхзЛя╝МшАМф╕НцШпца╣цНоцХ░цНошМГхЫ┤шЗкхКич╝йцФ╛уАВ",
-        "svg_desc": "ф╜┐чФиSVGц╕▓цЯУхЩиф╗гцЫ┐Canvasя╝МхПпшО╖х╛ЧцЫ┤щлШш┤ищЗПф╜ЖхПпшГ╜щЩНф╜ОцАзшГ╜уАВ",
-        "timezone_settings": "цЧ╢хМ║шо╛ч╜о",
-        "timezone_settings_desc": "щЕНч╜оцЧ╢щЧ┤цХ░цНохЬиф╕НхРМцЧ╢хМ║ф╣ЛщЧ┤чЪДцШ╛чд║цЦ╣х╝ПуАВ",
-        "customOffset_desc": "ф╕║цШ╛чд║хЯ║ф║ОцЧ╢щЧ┤чЪДцХ░цНоцМЗхоЪшЗкхоЪф╣ЙцЧ╢хМ║уАВ",
-        "row": "шбМ",
-        "column": "хИЧ",
-        "theta": "шзТх║ж",
-        "radius": "хНКх╛Д",
-        "colors": "щвЬшЙ▓",
-        "colors_desc": "шЗкхоЪф╣ЙхЫ╛шбиф╜┐чФичЪДщвЬшЙ▓уАБф╕╗щвШф╕Ош░ГшЙ▓цЭ┐уАВ",
-        "primary_color_desc": "цЬкх░ЖхнЧцо╡хИЖщЕНхИ░щвЬшЙ▓щАЪщБУцЧ╢я╝МхЫ╛х╜вф╜┐чФичЪДщ╗ШшодщвЬшЙ▓уАВ",
-        "background_desc": "хЫ╛шбичФ╗х╕ГчЪДшГМцЩпщвЬшЙ▓я╝Мщ╗Шшодф╕║щАПцШОуАВ",
-        "theme_desc": "хЫ╛шбичЪДцХ┤ф╜Уца╖х╝ПщвДшо╛я╝МцОзхИ╢хЭРцаЗш╜┤уАБч╜Сца╝ч║┐хТМщ╗ШшодщвЬшЙ▓уАВ",
-        "color_palette_desc": "х░ЖхнЧцо╡хИЖщЕНхИ░щвЬшЙ▓щАЪщБУцЧ╢ф╜┐чФичЪДщЕНшЙ▓цЦ╣цбИуАВ",
-        "scale": "цпФф╛Лх░║",
-        "scale_desc": "цпФф╛Лх░║хЖ│хоЪцХ░цНохА╝хжВф╜ХцШах░ДхИ░ф╜Нч╜оуАБхдзх░ПуАБщАПцШОх║жчнЙшзЖшзЙх▒ЮцАзуАВцпФф╛Лх░║щ╗Шшодца╣цНоцХ░цНошЗкхКишобчоЧя╝Мф╗ЕхЬищЬАшжБцЙЛхКицОзхИ╢цЧ╢х╝АхРпф╕ЛцЦ╣чЪДшжЖчЫЦщб╣уАВ",
-        "customize_scales": "щАЙцЛйщАЪщБУ",
-        "scale_empty": "х░ЪцЬкщАЙцЛйщАЪщБУуАВчВ╣хЗ╗тАЬщАЙцЛйщАЪщБУтАЭцЭецМСщАЙщЬАшжБш░ГцХ┤цпФф╛Лх░║чЪДщАЪщБУуАВ",
-        "scale_column_desc": "ц░┤х╣│ф╜Нч╜оцпФф╛Лх░║я╝ИхИЧ / xш╜┤я╝ЙуАВ",
-        "scale_row_desc": "хЮВчЫ┤ф╜Нч╜оцпФф╛Лх░║я╝ИшбМ / yш╜┤я╝ЙуАВ",
-        "scale_color_desc": "х░ЖцХ░цНохА╝цШах░ДхИ░щвЬшЙ▓ц╕РхПШчЪДцпФф╛Лх░║уАВ",
-        "scale_theta_desc": "х╝зх╜вхЫ╛хТМще╝хЫ╛ф╜┐чФичЪДшзТх║жцпФф╛Лх░║уАВ",
-        "scale_radius_desc": "х╝зх╜вхЫ╛хТМще╝хЫ╛ф╜┐чФичЪДхНКх╛ДцпФф╛Лх░║уАВ",
-        "scale_opacity_desc": "х░ЖцХ░цНохА╝цШах░ДхИ░хЫ╛х╜вщАПцШОх║жчЪДцпФф╛Лх░║уАВ",
-        "scale_size_desc": "х░ЖцХ░цНохА╝цШах░ДхИ░хЫ╛х╜вхдзх░ПчЪДцпФф╛Лх░║уАВ",
-        "scale_type_desc": "хЬицШах░ДцХ░цНохА╝цЧ╢х║ФчФицХ░хнжхПШцНвя╝ИlogуАБsqrt чнЙя╝Йя╝МщАВчФиф║ОхБПцАБхИЖх╕ГчЪДцХ░цНоуАВ",
-        "min_domain_desc": "цЙЛхКишо╛ч╜оцШах░ДхИ░цпФф╛Лх░║ф╜ОчлпчЪДцХ░цНохА╝уАВ",
-        "max_domain_desc": "цЙЛхКишо╛ч╜оцШах░ДхИ░цпФф╛Лх░║щлШчлпчЪДцХ░цНохА╝уАВ",
-        "range_desc": "щЩРхИ╢шзЖшзЙш╛УхЗ║чЪДцЬАх░ПхА╝хТМцЬАхдзхА╝я╝Иф╛ЛхжВцЬАх░ПхТМцЬАхдзчЪДхЫ╛х╜вх░║хп╕я╝ЙуАВ",
-        "format_desc": "ф╜┐чФи d3-format ца╝х╝ПцОзхИ╢хЭРцаЗш╜┤уАБхЫ╛ф╛ЛхТМцПРчд║цбЖф╕нцХ░хнЧф╕ОцЧецЬЯчЪДцШ╛чд║цЦ╣х╝ПуАВчХЩчй║хИЩф╜┐чФищ╗Шшодца╝х╝ПуАВ",
-        "numberFormat_desc": "х║ФчФиф║Ох║жщЗПхА╝уАВф╛ЛхжВ ',.2f' ф╝Ъх░Ж 1234.5 цШ╛чд║ф╕║ 1,234.50уАВ",
-        "timeFormat_desc": "х║ФчФиф║ОцЧецЬЯцЧ╢щЧ┤хА╝уАВф╛ЛхжВ '%Y-%m-%d' ф╝Ъх░ЖцЧецЬЯцШ╛чд║ф╕║ 2024-01-30уАВ",
-        "normalizedNumberFormat_desc": "хЬихаЖхПацибх╝Пф╕║тАЬх╜Тф╕АхМЦтАЭцЧ╢х║ФчФиф║ОчЩ╛хИЖцпФуАВф╛ЛхжВ '.0%' ф╝Ъх░Ж 0.25 цШ╛чд║ф╕║ 25%уАВ",
-        "independence_desc": "х╜УхЫ╛шбишвлцЛЖхИЖф╕║хдЪф╕кхнРшзЖхЫ╛я╝ИхИЖщЭвя╝ЙцЧ╢я╝Мщ╗ШшодцЙАцЬЙхнРшзЖхЫ╛хЕ▒ф║лчЫ╕хРМчЪДцпФф╛Лх░║ф╗еф╛┐чЫ┤цОецпФш╛ГуАВх╝АхРпцЯРф╕кщАЪщБУхРОя╝МцпПф╕кхнРшзЖхЫ╛х░ЖчЛмчлЛшобчоЧшЗкх╖▒чЪДцпФф╛Лх░║уАВ",
-        "independent_channel_desc": "цпПф╕кхнРшзЖхЫ╛ф╜┐чФичЛмчлЛчЪД{{channel}}цпФф╛Лх░║уАВ"
+        "scheme": "方案",
+        "primary_color": "主要颜色",
+        "color_palette": "调色板",
+        "theme": "主题",
+        "opacity": "不透明度",
+        "default_color_palette": "默认",
+        "size": "尺寸",
+        "min_domain": "最小域值",
+        "max_domain": "最大域值",
+        "range": "范围",
+        "format": "格式",
+        "numberFormat": "数字格式",
+        "timeFormat": "时间格式",
+        "normalizedNumberFormat": "标准化数字格式",
+        "background": "背景",
+        "color": "颜色",
+        "independence": "独立性",
+        "x": "x轴",
+        "y": "y轴",
+        "zeroScale": "零刻度",
+        "misc": "其他",
+        "formatGuidesDocs": "格式指南",
+        "readHere": "阅读此处",
+        "svg": "使用SVG",
+        "customTile": "使用自定义的地图区块",
+        "customOffset": "使用自定义的时区",
+        "map_settings": "地图设置",
+        "map_settings_desc": "配置地图可视化显示方式和使用自定义地图瓦片服务。",
+        "customTile_desc": "为地理可视化指定自定义地图瓦片URL。",
+        "choropleth_settings": "区域图设置",
+        "choropleth_settings_desc": "控制区域图中地理形状和数据的显示方式。",
+        "include_unmatched": "在比例尺中包含未匹配的区域",
+        "include_unmatched_desc": "在计算颜色比例尺时包含没有数据匹配的区域。",
+        "include_shapes": "包含没有数据的形状",
+        "include_shapes_desc": "显示所有地理形状，即使它们没有关联的数据值。",
+        "visualization_settings": "可视化设置",
+        "visualization_settings_desc": "配置所有可视化的通用设置。",
+        "zeroScale_desc": "强制数值轴从零开始，而不是根据数据范围自动缩放。",
+        "svg_desc": "使用SVG渲染器代替Canvas，可获得更高质量但可能降低性能。",
+        "timezone_settings": "时区设置",
+        "timezone_settings_desc": "配置时间数据在不同时区之间的显示方式。",
+        "customOffset_desc": "为显示基于时间的数据指定自定义时区。",
+        "row": "行",
+        "column": "列",
+        "theta": "角度",
+        "radius": "半径",
+        "colors": "颜色",
+        "colors_desc": "自定义图表使用的颜色、主题与调色板。",
+        "primary_color_desc": "未将字段分配到颜色通道时，图形使用的默认颜色。",
+        "background_desc": "图表画布的背景颜色，默认为透明。",
+        "theme_desc": "图表的整体样式预设，控制坐标轴、网格线和默认颜色。",
+        "color_palette_desc": "将字段分配到颜色通道时使用的配色方案。",
+        "scale": "比例尺",
+        "scale_desc": "比例尺决定数据值如何映射到位置、大小、透明度等视觉属性。比例尺默认根据数据自动计算，仅在需要手动控制时开启下方的覆盖项。",
+        "customize_scales": "选择通道",
+        "scale_empty": "尚未选择通道。点击“选择通道”来挑选需要调整比例尺的通道。",
+        "scale_column_desc": "水平位置比例尺（列 / x轴）。",
+        "scale_row_desc": "垂直位置比例尺（行 / y轴）。",
+        "scale_color_desc": "将数据值映射到颜色渐变的比例尺。",
+        "scale_theta_desc": "弧形图和饼图使用的角度比例尺。",
+        "scale_radius_desc": "弧形图和饼图使用的半径比例尺。",
+        "scale_opacity_desc": "将数据值映射到图形透明度的比例尺。",
+        "scale_size_desc": "将数据值映射到图形大小的比例尺。",
+        "scale_type_desc": "在映射数据值时应用数学变换（log、sqrt 等），适用于偏态分布的数据。",
+        "min_domain_desc": "手动设置映射到比例尺低端的数据值。",
+        "max_domain_desc": "手动设置映射到比例尺高端的数据值。",
+        "range_desc": "限制视觉输出的最小值和最大值（例如最小和最大的图形尺寸）。",
+        "format_desc": "使用 d3-format 格式控制坐标轴、图例和提示框中数字与日期的显示方式。留空则使用默认格式。",
+        "numberFormat_desc": "应用于度量值。例如 ',.2f' 会将 1234.5 显示为 1,234.50。",
+        "timeFormat_desc": "应用于日期时间值。例如 '%Y-%m-%d' 会将日期显示为 2024-01-30。",
+        "normalizedNumberFormat_desc": "在堆叠模式为“归一化”时应用于百分比。例如 '.0%' 会将 0.25 显示为 25%。",
+        "independence_desc": "当图表被拆分为多个子视图（分面）时，默认所有子视图共享相同的比例尺以便直接比较。开启某个通道后，每个子视图将独立计算自己的比例尺。",
+        "independent_channel_desc": "每个子视图使用独立的{{channel}}比例尺。",
+        "type": "Scale Type"
     },
     "explain": {
-        "title": "цХ░цНошзгщЗК",
-        "loading": "цнгхЬихИЖцЮР...",
-        "empty": "цЬкхПСчО░цШ╛шСЧцибх╝П",
+        "title": "数据解释",
+        "loading": "正在分析...",
+        "empty": "未发现显著模式",
         "detail": {
-            "empty": "хЬих╖жф╛зщАЙцЛйф╕АцЭбц┤ЮхпЯ"
+            "empty": "在左侧选择一条洞察"
         },
         "overview": {
-            "all": "хЕищГи",
-            "skippedNote": "{{count}} щб╣хИЖцЮРшвлш╖│ш┐З"
+            "all": "全部",
+            "skippedNote": "{{count}} 项分析被跳过"
         },
         "type": {
-            "extremeValue": "цЮБчлпхА╝",
-            "contributingDimension": "ш┤бчМоч╗┤х║ж",
-            "contributingMeasure": "ш┤бчМох║жщЗП",
-            "uniqueMark": "цаЗшо░чЪДчЛмчЙ╣ф╣ЛхдД"
+            "extremeValue": "极端值",
+            "contributingDimension": "贡献维度",
+            "contributingMeasure": "贡献度量",
+            "uniqueMark": "标记的独特之处"
         },
         "strength": {
-            "strong": "х╝║",
-            "moderate": "ф╕н",
-            "weak": "х╝▒"
+            "strong": "强",
+            "moderate": "中",
+            "weak": "弱"
         },
         "skip": {
-            "noMark": "шп╖хЕИщАЙцЛйф╕Аф╕кцаЗшо░хЖНш┐РшбМцХ░цНошзгщЗКуАВ",
-            "temporalMark": "цЪВф╕Нхп╣цЧ╢щЧ┤цаЗшо░хИЖцЮРцЮБчлпхА╝уАВ",
-            "noSensitiveAgg": "цЙАщАЙх║жщЗПшБЪхРИхп╣цЮБчлпхА╝ф╕НцХПцДЯуАВ",
-            "noCandidates": "ц▓бцЬЙхПпчФиф║ОцпФш╛ГчЪДхАЩщАЙхнЧцо╡уАВ",
-            "noDerivableTarget": "цЧац│Ххп╣цндшзЖхЫ╛х║жщЗПчЪДшБЪхРИх╗║цибя╝Ыф╗ЕцФпцМБ sumуАБmean хТМ countуАВ"
+            "noMark": "请先选择一个标记再运行数据解释。",
+            "temporalMark": "暂不对时间标记分析极端值。",
+            "noSensitiveAgg": "所选度量聚合对极端值不敏感。",
+            "noCandidates": "没有可用于比较的候选字段。",
+            "noDerivableTarget": "无法对此视图度量的聚合建模；仅支持 sum、mean 和 count。"
         },
         "extremeValue": {
-            "desc": "{{rowCount}} цЭбшо░х╜Хф╕нцЬЙ {{outlierCount}} цЭбцШпцЮБчлпхА╝я╝Ычз╗щЩдш┐Щф║Ышо░х╜ХхРОя╝М{{measure}} чЪД {{agg}} ф╗О {{before}} хПШф╕║ {{after}}я╝И{{changePercent}}%я╝ЙуАВ",
-            "truncated": "{{measure}} цЙАхЬицаЗшо░хМЕхРл {{rowCount}} шбМя╝МхЭЗхА╝хТМф╕нф╜НцХ░хнШхЬих╖ох╝Вя╝Ышзгшп╗шпешБЪхРИхА╝хЙНшп╖хЕИцЯечЬЛш┐Щф║ЫшбМуАВ"
+            "desc": "{{rowCount}} 条记录中有 {{outlierCount}} 条是极端值；移除这些记录后，{{measure}} 的 {{agg}} 从 {{before}} 变为 {{after}}（{{changePercent}}%）。",
+            "truncated": "{{measure}} 所在标记包含 {{rowCount}} 行，均值和中位数存在差异；解读该聚合值前请先查看这些行。"
         },
         "uniqueMark": {
-            "countDesc": "цндцаЗшо░хЬи {{dimension}} ф╕КчЪДцЮДцИРф╕ОхЕ╢ф╗ЦцаЗшо░ф╕НхРМя╝Ъ{{markShare}}% х▒Юф║ОтАЬ{{topCategory}}тАЭя╝МхЕ╢ф╗ЦцаЗшо░ф╕║ {{siblingShare}}%уАВ",
-            "measureDesc": "цндцаЗшо░чЪД {{measure}} хЬи {{dimension}} ф╕КчЪДхИЖх╕Гф╕ОхЕ╢ф╗ЦцаЗшо░ф╕НхРМя╝ИхРпхПСх╝Пя╝ЙуАВ"
+            "countDesc": "此标记在 {{dimension}} 上的构成与其他标记不同：{{markShare}}% 属于“{{topCategory}}”，其他标记为 {{siblingShare}}%。",
+            "measureDesc": "此标记的 {{measure}} 在 {{dimension}} 上的分布与其他标记不同（启发式）。"
         },
         "contributingDimension": {
-            "desc": "{{dimension}} чЪДцЮДцИРцЬЙхКйф║ОщвДц╡ЛхРДцаЗшо░ф╕КчЪД {{target}}я╝Иф║дхПЙщкМшпБцЛЯхРИх║ж +{{cvGainPercent}}%я╝Йя╝ЫтАЬ{{topCategory}}тАЭчЪДхНацпФхЕ│шБФцЬАцШОцШ╛уАВ"
+            "desc": "{{dimension}} 的构成有助于预测各标记上的 {{target}}（交叉验证拟合度 +{{cvGainPercent}}%）；“{{topCategory}}”的占比关联最明显。"
         },
         "contributingMeasure": {
-            "desc": "{{candidate}}я╝ИцМЙцаЗшо░шБЪхРИя╝ЙцЬЙхКйф║ОщвДц╡Л {{target}}я╝Иф║дхПЙщкМшпБцЛЯхРИх║ж +{{cvGainPercent}}%я╝ЙуАВш┐ЩцШпхЕ│шБФя╝Мф╕Нф╗гшбихЫацЮЬуАВ"
+            "desc": "{{candidate}}（按标记聚合）有助于预测 {{target}}（交叉验证拟合度 +{{cvGainPercent}}%）。这是关联，不代表因果。"
         },
         "truncation": {
-            "notice": "х╖▓цЙлцПП {{scanned}} / {{total}} ф╕кхАЩщАЙхнЧцо╡уАВ",
-            "more": "хИЖцЮРцЫ┤хдЪхнЧцо╡"
+            "notice": "已扫描 {{scanned}} / {{total}} 个候选字段。",
+            "more": "分析更多字段"
         }
     },
     "constant": {
-        "row_count": "шбМцХ░",
-        "mea_key": "х║жщЗПхРНчз░",
-        "mea_val": "х║жщЗПхА╝",
-        "paint_key": "ч╗ШхИ╢хнЧцо╡",
+        "row_count": "行数",
+        "mea_key": "度量名称",
+        "mea_val": "度量值",
+        "paint_key": "绘制字段",
         "analytic_type": {
-            "dimension": "ч╗┤х║ж",
-            "measure": "х║жщЗП"
+            "dimension": "维度",
+            "measure": "度量"
         },
         "semantic_type": {
-            "nominal": "ч▒╗хИлч▒╗хЮЛ",
-            "ordinal": "цЬЙх║Пч▒╗хЮЛ",
-            "temporal": "цЧ╢щЧ┤ч▒╗хЮЛ",
-            "quantitative": "цХ░хА╝ч▒╗хЮЛ"
+            "nominal": "类别类型",
+            "ordinal": "有序类型",
+            "temporal": "时间类型",
+            "quantitative": "数值类型"
         },
         "mark_type": {
-            "__enum__": "цаЗшо░ч▒╗хЮЛ",
-            "auto": "шЗкхКи",
-            "bar": "цЭбх╜в",
-            "line": "цКШч║┐",
-            "area": "щЭвчзп",
-            "trail": "чЧХш┐╣",
-            "point": "цХгчВ╣",
-            "circle": "хЬЖ",
-            "tick": "цаЗшо░",
-            "rect": "чЯйх╜в",
-            "arc": "х╝зх╜в",
-            "boxplot": "ч╗Яшобчо▒",
-            "table": "шбица╝",
-            "text": "цЦЗцЬм",
-            "poi": "хЕ┤ш╢гчВ╣",
-            "choropleth": "хМ║хЯЯхЫ╛"
+            "__enum__": "标记类型",
+            "auto": "自动",
+            "bar": "条形",
+            "line": "折线",
+            "area": "面积",
+            "trail": "痕迹",
+            "point": "散点",
+            "circle": "圆",
+            "tick": "标记",
+            "rect": "矩形",
+            "arc": "弧形",
+            "boxplot": "统计箱",
+            "table": "表格",
+            "text": "文本",
+            "poi": "兴趣点",
+            "choropleth": "区域图"
         },
         "coord_system": {
-            "__enum__": "хЭРцаЗч│╗ч╗Я",
-            "generic": "щАЪчФи",
-            "geographic": "хЬ░чРЖ"
+            "__enum__": "坐标系统",
+            "generic": "通用",
+            "geographic": "地理"
         },
         "layout_type": {
-            "__enum__": "х░║хп╕цибх╝П",
-            "auto": "шЗкхКи",
-            "fixed": "хЫ║хоЪ",
-            "full": "хо╣хЩи"
+            "__enum__": "尺寸模式",
+            "auto": "自动",
+            "fixed": "固定",
+            "full": "容器"
         },
         "exploration_mode": {
-            "__enum__": "цОвч┤вф║дф║Т",
-            "none": "хЕ│",
-            "brush": "шМГхЫ┤",
-            "point": "чЫоцаЗ"
+            "__enum__": "探索交互",
+            "none": "关",
+            "brush": "范围",
+            "point": "目标"
         },
         "brush_mode": {
-            "__enum__": "цбЖщАЙцЦ╣хРС",
-            "default": "цЙАцЬЙ",
-            "x": "ф╗Е X ш╜┤",
-            "y": "ф╗Е Y ш╜┤"
+            "__enum__": "框选方向",
+            "default": "所有",
+            "x": "仅 X 轴",
+            "y": "仅 Y 轴"
         },
         "stack_mode": {
-            "__enum__": "хаЖхПацибх╝П",
-            "none": "хЕ│щЧн",
-            "stack": "хаЖхПа",
-            "normalize": "х╜Тф╕АхМЦ",
-            "center": "ф╕нхдо"
+            "__enum__": "堆叠模式",
+            "none": "关闭",
+            "stack": "堆叠",
+            "normalize": "归一化",
+            "center": "中央"
         },
         "draggable_key": {
-            "fields": "хнЧцо╡",
-            "columns": "хИЧ",
-            "rows": "шбМ",
-            "color": "щвЬшЙ▓",
-            "opacity": "щАПцШОх║ж",
-            "size": "хдзх░П",
-            "shape": "х╜вчК╢",
-            "theta": "шзТх║ж",
-            "radius": "хНКх╛Д",
-            "filters": "чнЫщАЙхЩи",
-            "details": "ф┐бцБп",
-            "text": "цЦЗцЬм",
-            "longitude": "ч╗Пх║ж",
-            "latitude": "ч║мх║ж",
-            "geoId": "хЬ░чРЖ ID"
+            "fields": "字段",
+            "columns": "列",
+            "rows": "行",
+            "color": "颜色",
+            "opacity": "透明度",
+            "size": "大小",
+            "shape": "形状",
+            "theta": "角度",
+            "radius": "半径",
+            "filters": "筛选器",
+            "details": "信息",
+            "text": "文本",
+            "longitude": "经度",
+            "latitude": "纬度",
+            "geoId": "地理 ID"
         },
         "aggregator": {
-            "sum": "ц▒ВхТМ",
-            "mean": "х╣│хЭЗхА╝",
-            "count": "шобцХ░",
-            "median": "ф╕нф╜НцХ░",
-            "min": "цЬАх░ПхА╝",
-            "max": "цЬАхдзхА╝",
+            "sum": "求和",
+            "mean": "平均值",
+            "count": "计数",
+            "median": "中位数",
+            "min": "最小值",
+            "max": "最大值",
             "q1": "Q1",
             "q3": "Q3",
-            "stdev": "цаЗхЗЖх╖о",
-            "variance": "цЦ╣х╖о"
+            "stdev": "标准差",
+            "variance": "方差"
         },
         "filter_type": {
-            "one_of": "цМЙхА╝чнЫщАЙ",
-            "one_of_desc": "щАЙцЛйцМЗхоЪчЪДхА╝",
-            "range": "цМЙшМГхЫ┤чнЫщАЙ",
-            "range_desc": "щАЙцЛйшМГхЫ┤хЖЕчЪДхА╝ [х╝АхзЛ, ч╗УцЭЯ]",
-            "temporal_range": "цМЙцЧецЬЯшМГхЫ┤чнЫщАЙ",
-            "temporal_range_desc": "щАЙцЛйцЧецЬЯшМГхЫ┤хЖЕчЪДхА╝ [х╝АхзЛ, ч╗УцЭЯ]"
+            "one_of": "按值筛选",
+            "one_of_desc": "选择指定的值",
+            "range": "按范围筛选",
+            "range_desc": "选择范围内的值 [开始, 结束]",
+            "temporal_range": "按日期范围筛选",
+            "temporal_range_desc": "选择日期范围内的值 [开始, 结束]"
         }
     },
     "App": {
         "labels": {
-            "data_interpretation": "цХ░цНошзгшп╗",
-            "data_view": "цЯечЬЛцХ░цНо"
+            "data_interpretation": "数据解读",
+            "data_view": "查看数据"
         },
         "segments": {
-            "vis": "хПпшзЖхМЦ",
-            "data": "цХ░цНо",
-            "chat": "ф╝ЪшпЭ"
+            "vis": "可视化",
+            "data": "数据",
+            "chat": "会话"
         },
         "feedback": {
-            "vote": "хп╣AskvizчЪДч╗УцЮЬц╗бцДПхРЧя╝Я",
-            "voteup": "ц╗бцДП",
-            "votedown": "ф╕Нц╗бцДП",
-            "report": "ф╕║ф║ЖцФ╣ш┐ЫAskVizя╝Мшп╖х░ЖцнгчбочЪДхЫ╛шбихПНщжИч╗ЩцИСф╗м",
-            "report_button": "хПНщжИ"
+            "vote": "对Askviz的结果满意吗？",
+            "voteup": "满意",
+            "votedown": "不满意",
+            "report": "为了改进AskViz，请将正确的图表反馈给我们",
+            "report_button": "反馈"
         }
     },
     "DataSource": {
         "labels": {
-            "cur_dataset": "х╜УхЙНцХ░цНощЫЖ"
+            "cur_dataset": "当前数据集"
         },
         "buttons": {
-            "create_dataset": "хИЫх╗║цХ░цНощЫЖ",
-            "export_as_file": "ф┐ЭхнШхИ░цЦЗф╗╢",
-            "import_file": "хп╝хЕецЦЗф╗╢"
+            "create_dataset": "创建数据集",
+            "remove_dataset": "删除数据集",
+            "export_as_file": "保存到文件",
+            "import_file": "导入文件"
         },
         "dialog": {
-            "create_data_source": "хИЫх╗║цХ░цНоц║Р",
-            "or_demo": "цИЦф╗Очд║ф╛ЛцХ░цНощЫЖх╝АхзЛ",
+            "create_data_source": "创建数据源",
+            "or_demo": "或从示例数据集开始",
             "file": {
-                "drop_title": "цЛЦцФ╛ CSV цИЦ JSON цЦЗф╗╢хИ░ш┐ЩщЗМ",
-                "drop_desc": "цИЦчВ╣хЗ╗щАЙцЛйцЦЗф╗╢",
-                "charset": "цЦЗф╗╢ч╝ЦчаБ",
-                "parsing": "цнгхЬишп╗хПЦ {{file}}тАж",
-                "unsupported": "ф╕НцФпцМБтАЬ{{file}}тАЭчЪДцЦЗф╗╢ч▒╗хЮЛя╝Мшп╖щАЙцЛй .csv цИЦ .json цЦЗф╗╢уАВ",
-                "read_error": "цЧац│Хшп╗хПЦтАЬ{{file}}тАЭя╝Мшп╖чбошодхоГцШпцЬЙцХИчЪД CSV цИЦ JSON цЦЗф╗╢уАВ"
+                "drop_title": "拖放 CSV 或 JSON 文件到这里",
+                "drop_desc": "或点击选择文件",
+                "charset": "文件编码",
+                "parsing": "正在读取 {{file}}…",
+                "unsupported": "不支持“{{file}}”的文件类型，请选择 .csv 或 .json 文件。",
+                "read_error": "无法读取“{{file}}”，请确认它是有效的 CSV 或 JSON 文件。"
             },
             "public": {
-                "loading": "цнгхЬихКаш╜╜тАж",
-                "meta": "{{rows}} шбМ ┬╖ {{cols}} ф╕кхнЧцо╡",
-                "fetch_error": "тАЬ{{name}}тАЭхКаш╜╜хд▒ш┤ея╝Мшп╖цгАцЯеч╜Сч╗ЬхРОчВ╣хЗ╗щЗНшпХуАВ",
+                "loading": "正在加载…",
+                "meta": "{{rows}} 行 · {{cols}} 个字段",
+                "fetch_error": "“{{name}}”加载失败，请检查网络后点击重试。",
                 "datasets": {
-                    "CARS": "400 хдЪф╕кч╗ПхЕ╕ш╜жхЮЛя╝Ъц▓╣шАЧуАБщймхКЫуАБщЗНщЗПф╕Оф║зхЬ░уАВ",
-                    "STUDENTS": "1000 хРНхнжчФЯчЪДшАГшпХцИРч╗йя╝МхРлцАзхИлуАБчИ╢цпНцХЩшВ▓чиЛх║жф╕ОхдЗшАГцГЕхЖ╡уАВ",
-                    "BIKE_SHARING": "хЕ▒ф║лхНХш╜жцпПх░ПцЧ╢чзЯхАЯщЗПя╝МхРлхдйц░ФуАБхнгшКВф╕ОшКВхБЗцЧеф┐бцБпуАВ",
-                    "EARTHQUAKE": "хЕичРГ 2.3 ф╕Зф╜ЩцмбхЬ░щЬЗчЪДф╜Нч╜оф╕ОщЬЗч║зшо░х╜ХуАВ",
-                    "CAR_SALES": "157 цм╛ш╜жхЮЛчЪДщФАщЗПуАБф╗╖ца╝ф╕ОхПСхКицЬ║хПВцХ░уАВ",
-                    "COLLAGE": "ч╛ОхЫ╜щлШцабцХ░цНоя╝Ъх╜ХхПЦчОЗуАБSAT хИЖцХ░ф╕Ош┤╣чФиуАВ",
-                    "KELPER": "NASA х╝АцЩохЛТч│╗хдЦшбМцШЯхАЩщАЙф╜УхПКш╜ищБУхПВцХ░уАВ",
-                    "BTC_GOLD": "цпФчЙ╣х╕Бф╕Ощ╗ДщЗСцпПцЧеф╗╖ца╝я╝МщАВхРИхп╣цпФф║дцШУчнЦчХеуАВ",
-                    "TITANIC": "ц│░хЭжх░╝хЕЛхП╖ф╣Шховя╝ЪчФЯш┐ШцГЕхЖ╡уАБшИ▒ф╜НуАБх╣┤щ╛Дф╕Очеиф╗╖уАВ"
+                    "CARS": "400 多个经典车型：油耗、马力、重量与产地。",
+                    "STUDENTS": "1000 名学生的考试成绩，含性别、父母教育程度与备考情况。",
+                    "BIKE_SHARING": "共享单车每小时租借量，含天气、季节与节假日信息。",
+                    "EARTHQUAKE": "全球 2.3 万余次地震的位置与震级记录。",
+                    "CAR_SALES": "157 款车型的销量、价格与发动机参数。",
+                    "COLLAGE": "美国高校数据：录取率、SAT 分数与费用。",
+                    "KELPER": "NASA 开普勒系外行星候选体及轨道参数。",
+                    "BTC_GOLD": "比特币与黄金每日价格，适合对比交易策略。",
+                    "TITANIC": "泰坦尼克号乘客：生还情况、舱位、年龄与票价。"
                 }
             },
             "preview": {
-                "back": "ш┐ФхЫЮ",
-                "dataset_name": "цХ░цНощЫЖхРНчз░",
-                "meta": "{{rows}} шбМ ┬╖ {{cols}} ф╕кхнЧцо╡",
-                "use_data": "ф╜┐чФицндцХ░цНощЫЖ",
-                "tip": "цПРчд║я╝Ъхп╝хЕехЙНхПпчВ╣хЗ╗шбихд┤ф╕нчЪДхнЧцо╡ч▒╗хЮЛхЫ╛цаЗш┐ЫшбМш░ГцХ┤уАВ"
+                "back": "返回",
+                "dataset_name": "数据集名称",
+                "meta": "{{rows}} 行 · {{cols}} 个字段",
+                "use_data": "使用此数据集",
+                "tip": "提示：导入前可点击表头中的字段类型图标进行调整。"
             }
         }
     },
     "main": {
         "tablist": {
-            "new": "+ цЦ░х╗║",
-            "auto_title": "хЫ╛шби {{idx}}",
-            "chart_name": "хЫ╛шбихРНчз░",
-            "remove_confirm": "ф╜ачбохоЪшжБхИащЩдш┐Щф╕кхЫ╛шбихРЧя╝Я"
+            "new": "+ 新建",
+            "auto_title": "图表 {{idx}}",
+            "chart_name": "图表名称",
+            "remove_confirm": "你确定要删除这个图表吗？",
+            "duplicate": "复制",
+            "edit": "编辑",
+            "remove": "删除"
         },
         "askviz": {
-            "placeholder": "цГ│ф╗ОцХ░цНощЫЖф╕нч╗ШхИ╢хУкчзНхПпшзЖхМЦхСв?"
+            "placeholder": "想从数据集中绘制哪种可视化呢?"
         },
         "tabpanel": {
             "menubar": {
-                "undo": "цТдщФА",
-                "redo": "щЗНхБЪ"
+                "undo": "撤销",
+                "redo": "重做"
             },
             "settings": {
                 "toggle": {
-                    "aggregation": "шБЪхРИх║жщЗП",
-                    "stack": "х╝АхРпхаЖхПа",
-                    "axes_resize": "хЭРцаЗч│╗ч╝йцФ╛",
-                    "debug": "хЫ╛шбиш░ГшпХ"
+                    "aggregation": "聚合度量",
+                    "stack": "开启堆叠",
+                    "axes_resize": "坐标系缩放",
+                    "debug": "图表调试"
                 },
-                "sort": "цОТх║П",
-                "autoviz": "хЫ╛шбицОишНР",
+                "sort": "排序",
+                "autoviz": "图表推荐",
                 "button": {
-                    "ascending": "хНЗх║ПцОТх║П",
-                    "descending": "щЩНх║ПцОТх║П",
-                    "transpose": "ш╜мч╜о",
-                    "config": "щЕНч╜о",
-                    "export_chart": "хп╝хЗ║",
-                    "export_chart_as": "хп╝хЗ║ {{type}}",
-                    "export_code": "хп╝хЗ║ф╗гчаБ",
-                    "geojson": "хЬ░чРЖф┐бцБпщЕНч╜о",
-                    "painter": "цЙУх╝АцХ░цНоч╗ШцЭ┐",
+                    "ascending": "升序排序",
+                    "descending": "降序排序",
+                    "transpose": "转置",
+                    "config": "配置",
+                    "export_chart": "导出",
+                    "export_chart_as": "导出 {{type}}",
+                    "export_code": "导出代码",
+                    "geojson": "地理信息配置",
+                    "painter": "打开数据绘板",
                     "disabled_painter": {
-                        "aggergation": "хИЫх╗║ч╗ШхИ╢хнЧцо╡щЬАшжБхЕ│щЧншБЪхРИ",
-                        "temporal": "ч╗ШхИ╢хнЧцо╡цЪВф╕НцФпцМБцЧ╢щЧ┤хнЧцо╡",
-                        "count": "хЬиxхТМyш╜┤ф╕КхИЖхИлцФ╛ч╜оф╕Аф╕кхнЧцо╡цЭехИЫх╗║ч╗ШхИ╢хнЧцо╡"
-                    }
+                        "aggergation": "创建绘制字段需要关闭聚合",
+                        "temporal": "绘制字段暂不支持时间字段",
+                        "count": "在x和y轴上分别放置一个字段来创建绘制字段"
+                    },
+                    "add_computed_field": "添加计算字段"
                 },
                 "paint": {
-                    "palette": "шЙ▓цЭ┐",
-                    "eraser": "цйбчЪо",
-                    "color": "щвЬшЙ▓",
-                    "label": "цаЗчн╛",
-                    "brush_size": "чмФхИ╖хдзх░П",
-                    "save_paint": "ф┐ЭхнШчФ╗цЭ┐",
-                    "reset_paint": "щЗНч╜очФ╗цЭ┐",
-                    "cancel": "хПЦц╢ИцФ╣хКи",
-                    "delete_paint": "хИащЩдчФ╗цЭ┐"
+                    "palette": "色板",
+                    "eraser": "橡皮",
+                    "color": "颜色",
+                    "label": "标签",
+                    "brush_size": "笔刷大小",
+                    "save_paint": "保存画板",
+                    "reset_paint": "重置画板",
+                    "cancel": "取消改动",
+                    "delete_paint": "删除画板",
+                    "custom_feature": "自定义特征"
                 },
-                "limit": "хРпчФицЯешпвщЩРхИ╢я╝ИшбМя╝Й",
-                "size": "ш░ГцХ┤х░║хп╕",
+                "limit": "启用查询限制（行）",
+                "size": "调整尺寸",
                 "size_setting": {
-                    "width": "хо╜х║ж",
-                    "height": "щлШх║ж"
+                    "width": "宽度",
+                    "height": "高度"
                 },
                 "table": {
-                    "summary": "цШ╛чд║цСШшжБ"
+                    "summary": "显示摘要"
                 },
-                "geography": "хЬ░чРЖф┐бцБпщЕНч╜о",
+                "geography": "地理信息配置",
                 "geography_settings": {
-                    "geoKey": "хЬ░чРЖ ID",
-                    "format": "цХ░цНоца╝х╝П",
+                    "geoKey": "地理 ID",
+                    "format": "数据格式",
                     "geojson": "GeoJSON",
                     "topojson": "TopoJSON",
-                    "objectKey": "цПРхПЦшжБч┤ащФо",
-                    "jsonInputPlaceholder": "цЛЦхКи{{format}}цЦЗф╗╢хИ░цнд",
+                    "objectKey": "提取要素键",
+                    "jsonInputPlaceholder": "拖动{{format}}文件到此",
                     "href": "{{format}} URL",
-                    "hrefPlaceholder": "ш╛УхЕехЬич║┐ш╡Дц║РхЬ░хЭА",
-                    "load": "хКаш╜╜",
-                    "loading": "хКаш╜╜хЬ░чРЖцХ░цНоф╕н..."
-                }
+                    "hrefPlaceholder": "输入在线资源地址",
+                    "load": "加载",
+                    "loading": "加载地理数据中...",
+                    "select_data": "选择地理数据",
+                    "manual_config": "手动配置"
+                },
+                "kanaries_docs": "Kanaries 文档"
             },
             "DatasetFields": {
-                "field_list": "хнЧцо╡хИЧшби"
+                "field_list": "字段列表"
+            },
+            "askviz": {
+                "placeholder": "What visualization your want to draw from the dataset"
             }
         }
     },
     "filters": {
-        "to_edit": "ч╝Цш╛Сш┐ЩцЭбшзДхИЩ",
-        "empty_rule": "! (чй║чЪДшзДхИЩ)",
-        "editing": "чнЫщАЙхЩишзДхИЩшо╛хоЪ",
+        "to_edit": "编辑这条规则",
+        "empty_rule": "! (空的规则)",
+        "editing": "筛选器规则设定",
         "form": {
-            "name": "хнЧцо╡",
-            "aggregation": "шБЪхРИ",
-            "rule": "шзДхИЩ"
+            "name": "字段",
+            "aggregation": "聚合",
+            "rule": "规则"
         },
         "header": {
-            "visibility": "хПпшзБ",
-            "value": "цаЗчн╛",
-            "count": "шобцХ░"
+            "visibility": "可见",
+            "value": "标签",
+            "count": "计数"
         },
-        "selected_keys": "{{ count }} ф╕кцаЗчн╛х╖▓щАЙцЛй",
+        "selected_keys": "{{ count }} 个标签已选择",
         "btn": {
-            "select_all": "хЕищГищАЙф╕н",
-            "unselect_all": "хЕищГихПЦц╢И",
-            "reverse": "щАЙцЛйхПНхРС",
-            "confirm": "чбошод",
-            "cancel": "хПЦц╢И"
+            "select_all": "全部选中",
+            "unselect_all": "全部取消",
+            "reverse": "选择反向",
+            "confirm": "确认",
+            "cancel": "取消"
         },
         "range": {
-            "start_value": "ш╡╖хзЛхА╝",
-            "end_value": "ч╗ИцнвхА╝"
-        }
+            "start_value": "起始值",
+            "end_value": "终止值"
+        },
+        "exclude": "排除",
+        "match_case": "区分大小写",
+        "match_whole_word": "全字匹配",
+        "placeholder_regexp": "输入正则表达式…",
+        "placeholder_search_value": "搜索值…",
+        "rule_not_in": "notIn",
+        "rule_one_of": "oneOf",
+        "rule_range": "range",
+        "select_values": "选择值…",
+        "select_values_exclude": "选择要排除的值…",
+        "use_regexp": "使用正则表达式"
     },
     "actions": {
-        "prev": "хРСхЙН",
-        "next": "хРСхРО",
-        "drop_field": "цЛЦцЛ╜хнЧцо╡шЗ│цнд",
-        "confirm": "чбошод",
-        "cancel": "хПЦц╢И"
+        "prev": "向前",
+        "next": "向后",
+        "drop_field": "拖拽字段至此",
+        "confirm": "确认",
+        "cancel": "取消",
+        "copy_to_clipboard": "复制到剪贴板"
     },
     "field_menu": {
-        "to_dim": "чз╗хКихИ░ч╗┤х║ж",
-        "to_mea": "чз╗хКихИ░х║жщЗП",
-        "new_calc": "цЦ░чЪДшобчоЧхнЧцо╡",
-        "bin": "хИЖчо▒",
-        "binCount": "шобцХ░хИЖчо▒",
-        "log": "хп╣цХ░я╝И{{ base }}я╝Й",
-        "binCustom": "шЗкхоЪф╣ЙхИЖчо▒",
-        "logCustom": "шЗкхоЪф╣Йхп╣цХ░",
+        "to_dim": "移动到维度",
+        "to_mea": "移动到度量",
+        "new_calc": "新的计算字段",
+        "bin": "分箱",
+        "binCount": "计数分箱",
+        "log": "对数（{{ base }}）",
+        "binCustom": "自定义分箱",
+        "logCustom": "自定义对数",
         "semantic_type": {
-            "name": "цЫ┤цФ╣шпнф╣Йч▒╗хЮЛ",
+            "name": "更改语义类型",
             "types": {
-                "nominal": "хРНф╣Й",
-                "ordinal": "х║ПцХ░",
-                "quantitative": "шобщЗП",
-                "temporal": "цЧ╢щЧ┤"
+                "nominal": "名义",
+                "ordinal": "序数",
+                "quantitative": "计量",
+                "temporal": "时间"
             }
         },
         "drill": {
-            "name": "цЧ╢щЧ┤ч▓Тх║ж",
-            "feature_name": "цЧ╢щЧ┤чЙ╣х╛Б",
+            "name": "时间粒度",
+            "feature_name": "时间特征",
             "levels": {
-                "year": "х╣┤",
-                "quarter": "хнгх║ж",
-                "month": "цЬИ",
-                "week": "хСи",
-                "weekdat": "цШЯцЬЯхЗа",
-                "day": "цЧе",
-                "hour": "цЧ╢",
-                "minute": "хИЖ",
-                "second": "чзТ",
-                "iso_year": "ISOх╣┤",
-                "iso_week": "ISOхСи",
-                "iso_weekday": "ISOцШЯцЬЯхЗа"
+                "year": "年",
+                "quarter": "季度",
+                "month": "月",
+                "week": "周",
+                "weekdat": "星期几",
+                "day": "日",
+                "hour": "时",
+                "minute": "分",
+                "second": "秒",
+                "iso_year": "ISO年",
+                "iso_week": "ISO周",
+                "iso_weekday": "ISO星期几",
+                "weekday": "Weekday"
             }
-        }
+        },
+        "rename_field": "重命名字段",
+        "remove_field": "删除字段",
+        "edit_computed_field": "编辑计算字段"
     },
     "calc": {
-        "bin_panel_title": "хИЖчо▒",
-        "bin_panel_desc": "шо╛ч╜охнЧцо╡чЪДчо▒ф╜УщЕНч╜о",
-        "bin_panel_option_widths": "чнЙхо╜чо▒ф╜У",
-        "bin_panel_option_counts": "чнЙщЗПчо▒ф╜У",
-        "bin_panel_number": "чо▒ф╜УцХ░щЗП",
-        "log_panel_title": "хп╣цХ░хПШцНв",
-        "log_panel_desc": "шо╛ч╜охнЧцо╡чЪДхп╣цХ░щЕНч╜о",
-        "log_panel_number": "хп╣цХ░х║ХцХ░"
+        "bin_panel_title": "分箱",
+        "bin_panel_desc": "设置字段的箱体配置",
+        "bin_panel_option_widths": "等宽箱体",
+        "bin_panel_option_counts": "等量箱体",
+        "bin_panel_number": "箱体数量",
+        "log_panel_title": "对数变换",
+        "log_panel_desc": "设置字段的对数配置",
+        "log_panel_number": "对数底数"
     },
     "autoviz": {
-        "title": "Auto Viz ┬╖ хЫ╛шбицОишНР",
-        "description": "хЛ╛щАЙф╜ахЕ│х┐ГчЪДхнЧцо╡я╝МхПпчФичЪДхЫ╛шбич▒╗хЮЛф╝Ъф║ош╡╖я╝МцЬАф╜│цОишНРх╕жцШЯцаЗуАВ",
-        "recommended": "цОишНР",
-        "apply_best": "х║ФчФицОишНР",
-        "hint": "х╜УхЙНщАЙцЛйхМ╣щЕН {{count}} чзНхЫ╛шбич▒╗хЮЛ",
-        "empty": "цИЦчЫ┤цОечВ╣хЗ╗ф╗╗цДПф║ош╡╖чЪДхЫ╛шбих╝АхзЛ",
-        "based_on_view": "хЯ║ф║Ох╜УхЙНхЫ╛шбиф╕нчЪДхнЧцо╡ ┬╖ хМ╣щЕН {{count}} чзНч▒╗хЮЛ",
-        "selected_count": "хнЧцо╡хИЧшбиф╕нх╖▓щАЙф╕н {{count}} ф╕кхнЧцо╡",
-        "clear": "ц╕ЕщЩд",
-        "uses": "х░Жф╜┐чФия╝Ъ{{fields}}",
-        "select_hint": "чВ╣хЗ╗х╖жф╛зхнЧцо╡ш┐ЫшбМщАЙцЛй ┬╖ <k></k>+чВ╣хЗ╗хПпхдЪщАЙ",
-        "refine_hint": "чВ╣хЗ╗цИЦ <k></k>+чВ╣хЗ╗х╖жф╛зхнЧцо╡хПпч╗ЖхМЦцОишНР",
-        "collapse": "цФ╢ш╡╖щЭвцЭ┐",
-        "expand": "х▒Хх╝АхЫ╛шбицОишНР",
+        "title": "Auto Viz · 图表推荐",
+        "description": "勾选你关心的字段，可用的图表类型会亮起，最佳推荐带星标。",
+        "recommended": "推荐",
+        "apply_best": "应用推荐",
+        "hint": "当前选择匹配 {{count}} 种图表类型",
+        "empty": "或直接点击任意亮起的图表开始",
+        "based_on_view": "基于当前图表中的字段 · 匹配 {{count}} 种类型",
+        "selected_count": "字段列表中已选中 {{count}} 个字段",
+        "clear": "清除",
+        "uses": "将使用：{{fields}}",
+        "select_hint": "点击左侧字段进行选择 · <k></k>+点击可多选",
+        "refine_hint": "点击或 <k></k>+点击左侧字段可细化推荐",
+        "collapse": "收起面板",
+        "expand": "展开图表推荐",
         "charts": {
-            "table": "цЦЗцЬмшби",
-            "highlight_table": "щлШф║ошби",
-            "heatmap": "чГнхКЫхЫ╛",
-            "bar": "цЭбх╜вхЫ╛",
-            "stacked_bar": "хаЖхПацЭбх╜вхЫ╛",
-            "grouped_bar": "х╣╢хИЧцЭбх╜вхЫ╛",
-            "line": "цКШч║┐хЫ╛",
-            "area": "щЭвчзпхЫ╛",
-            "histogram": "чЫ┤цЦ╣хЫ╛",
-            "scatter": "цХгчВ╣хЫ╛",
-            "circle_view": "хЬЖчВ╣шзЖхЫ╛",
-            "pie": "ще╝хЫ╛",
-            "boxplot": "чо▒ч║┐хЫ╛",
-            "poi_map": "чмжхП╖хЬ░хЫ╛",
-            "choropleth_map": "хблхЕЕхЬ░хЫ╛"
+            "table": "文本表",
+            "highlight_table": "高亮表",
+            "heatmap": "热力图",
+            "bar": "条形图",
+            "stacked_bar": "堆叠条形图",
+            "grouped_bar": "并列条形图",
+            "line": "折线图",
+            "area": "面积图",
+            "histogram": "直方图",
+            "scatter": "散点图",
+            "circle_view": "圆点视图",
+            "pie": "饼图",
+            "boxplot": "箱线图",
+            "poi_map": "符号地图",
+            "choropleth_map": "填充地图"
         },
         "reason": {
-            "need_fields": "шп╖шЗ│х░СщАЙцЛйф╕Аф╕кхнЧцо╡",
-            "need_dimension": "щЬАшжБшЗ│х░С 1 ф╕кч╗┤х║ж",
-            "need_two_dimensions": "щЬАшжБшЗ│х░С 2 ф╕кч╗┤х║ж",
-            "too_many_dimensions": "ч╗┤х║жцХ░щЗПш┐ЗхдЪ",
-            "need_measure": "щЬАшжБшЗ│х░С 1 ф╕кх║жщЗП",
-            "need_two_measures": "щЬАшжБшЗ│х░С 2 ф╕кх║жщЗП",
-            "need_single_measure": "хПкшГ╜щАЙцЛй 1 ф╕кх║жщЗП",
-            "too_many_measures": "х║жщЗПцХ░щЗПш┐ЗхдЪ",
-            "need_temporal": "щЬАшжБф╕Аф╕кцЧецЬЯ/цЧ╢щЧ┤ч╗┤х║ж",
-            "need_temporal_or_ordinal": "щЬАшжБф╕Аф╕кцЧецЬЯ/цЧ╢щЧ┤цИЦцЬЙх║Пч╗┤х║ж",
-            "need_raw_measure": "щЬАшжБхОЯхзЛх║жщЗПя╝Иф╕НшГ╜цШпшбМцХ░я╝Й",
-            "need_lon_lat": "щЬАшжБч╗Пх║жхТМч║мх║жхнЧцо╡",
-            "need_geo_feature": "щЬАшжБхЕИщЕНч╜о GeoJSON ш╛╣чХМ"
+            "need_fields": "请至少选择一个字段",
+            "need_dimension": "需要至少 1 个维度",
+            "need_two_dimensions": "需要至少 2 个维度",
+            "too_many_dimensions": "维度数量过多",
+            "need_measure": "需要至少 1 个度量",
+            "need_two_measures": "需要至少 2 个度量",
+            "need_single_measure": "只能选择 1 个度量",
+            "too_many_measures": "度量数量过多",
+            "need_temporal": "需要一个日期/时间维度",
+            "need_temporal_or_ordinal": "需要一个日期/时间或有序维度",
+            "need_raw_measure": "需要原始度量（不能是行数）",
+            "need_lon_lat": "需要经度和纬度字段",
+            "need_geo_feature": "需要先配置 GeoJSON 边界"
         }
     },
     "error_panel": {
-        "oops": "хУОхСАя╝Б",
-        "chart_too_large": "хЫ╛шбиш┐ЗхдзцЧац│Хц╕▓цЯУуАВхПпф╗ех░ЭшпХф╗еф╕ЛщАЙщб╣я╝Ъ",
-        "option1": "1. х░ЖхЫ╛шбишо╛ч╜оф╕║хЫ║хоЪхдзх░ПуАВ",
-        "option2": "2. хИЗцНвхИ░ SVG ц╕▓цЯУхЩиуАВ",
-        "option3": "3. хЕ│щЧнцндчкЧхПгх╣╢хЬич╝Цш╛СхЩиф╕нхЗПх░ПхЫ╛шбих░║хп╕уАВ",
-        "set_now": "члЛхН│шо╛ч╜о",
-        "computation_error": "шобчоЧцЬНхКбхЗ║чО░щФЩшппуАВщФЩшппф┐бцБпя╝Ъ",
-        "askviz_error": "Askviz цЬНхКбхЗ║чО░щФЩшппуАВщФЩшппф┐бцБпя╝Ъ",
-        "unknown_error": "цЬкчЯещФЩшппя╝ИцЧашпжч╗Жф┐бцБпя╝Й",
-        "close": "хЕ│щЧн"
+        "oops": "哎呀！",
+        "chart_too_large": "图表过大无法渲染。可以尝试以下选项：",
+        "option1": "1. 将图表设置为固定大小。",
+        "option2": "2. 切换到 SVG 渲染器。",
+        "option3": "3. 关闭此窗口并在编辑器中减小图表尺寸。",
+        "set_now": "立即设置",
+        "computation_error": "计算服务出现错误。错误信息：",
+        "askviz_error": "Askviz 服务出现错误。错误信息：",
+        "unknown_error": "未知错误（无详细信息）",
+        "close": "关闭",
+        "something_went_wrong": "出错了"
     },
     "dataTable": {
         "pagination": {
-            "showing": "цШ╛чд║чмм",
-            "to": "шЗ│",
-            "of": "цЭбя╝МхЕ▒",
-            "results": "цЭб"
+            "showing": "显示第",
+            "to": "至",
+            "of": "条，共",
+            "results": "条",
+            "more_pages": "更多页"
+        },
+        "profiling": {
+            "value": "值",
+            "count": "计数",
+            "loading": "加载中..."
         }
     },
     "pivotTable": {
-        "dataTruncated": "цХ░цНох╖▓цИкцЦнхИ░ {{limit}} цЭбуАВ",
-        "rowLimit": "ф╗ЕцШ╛чд║хЙН {{limit}} шбМуАВ",
-        "columnLimit": "цЬАхдзхИЧцХ░ {{limit}}уАВ"
+        "dataTruncated": "数据已截断到 {{limit}} 条。",
+        "rowLimit": "仅显示前 {{limit}} 行。",
+        "columnLimit": "最大列数 {{limit}}。"
     },
     "code_export": {
-        "title": "ф╗гчаБхп╝хЗ║"
+        "title": "代码导出",
+        "tabs": {
+            "graphic_walker": "Graphic-Walker",
+            "vega_lite": "Vega-Lite",
+            "workflow": "Workflow"
+        }
     },
     "rename_field": {
-        "title": "щЗНхС╜хРНхнЧцо╡",
-        "description": "цндцУНф╜Ьх░ЖщЗНхС╜хРНхЫ╛шбиф╕ншпехнЧцо╡чЪДхРНчз░уАВ",
-        "new_name": "цЦ░хРНчз░"
+        "title": "重命名字段",
+        "description": "此操作将重命名图表中该字段的名称。",
+        "new_name": "新名称"
+    },
+    "computed_field": {
+        "add_title": "添加计算字段",
+        "edit_title": "编辑计算字段",
+        "guide": "计算字段指南：",
+        "read_here": "阅读文档",
+        "name": "名称",
+        "name_placeholder": "输入字段名称...",
+        "sql": "SQL",
+        "sql_placeholder": "输入 SQL...",
+        "add": "添加",
+        "edit": "编辑"
+    },
+    "chat": {
+        "you": "你",
+        "expand_auto_message": "点击展开自动生成的消息"
     }
 }

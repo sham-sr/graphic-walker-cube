@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, DotsHorizontalIcon } from '@radix-ui/react-icons';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/utils';
 import { ButtonProps, buttonVariants } from '@/components/ui/button';
@@ -55,12 +56,15 @@ const PaginationNext = ({ className, children, ...props }: React.ComponentProps<
 );
 PaginationNext.displayName = 'PaginationNext';
 
-const PaginationEllipsis = ({ className, ...props }: React.ComponentProps<'span'>) => (
-    <span aria-hidden className={cn('flex h-9 w-9 items-center justify-center', className)} {...props}>
-        <DotsHorizontalIcon className="h-4 w-4" />
-        <span className="sr-only">More pages</span>
-    </span>
-);
+const PaginationEllipsis = ({ className, ...props }: React.ComponentProps<'span'>) => {
+    const { t } = useTranslation();
+    return (
+        <span aria-hidden className={cn('flex h-9 w-9 items-center justify-center', className)} {...props}>
+            <DotsHorizontalIcon className="h-4 w-4" />
+            <span className="sr-only">{t('dataTable.pagination.more_pages')}</span>
+        </span>
+    );
+};
 PaginationEllipsis.displayName = 'PaginationEllipsis';
 
 export { Pagination, PaginationContent, PaginationLink, PaginationItem, PaginationPrevious, PaginationNext, PaginationEllipsis };

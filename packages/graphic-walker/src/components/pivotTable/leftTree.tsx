@@ -4,58 +4,52 @@ import { IField } from '../../interfaces';
 import { MinusCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 import { formatDate, getMeaAggName } from '@/utils';
 import { parsedOffsetDate } from '@/lib/op/offset';
+import { collectPivotLeafChains, windowedHeaderCells } from './headerWindow';
+import { isPivotNodeCollapsed } from './treeWalk';
 
-function getChildCount(node: INestNode): number {
-    if (node.isCollapsed || node.children.length === 0) {
-        return 1;
-    }
-    return node.children.map(getChildCount).reduce((a, b) => a + b, 0);
-}
-
-/**
- * render pivot table left tree table
- * @param node
- * @param dimsInRow
- * @param depth
- * @param cellRows
- * @returns
- */
-function renderTree(
-    node: INestNode,
-    dimsInRow: IField[],
-    depth: number,
-    cellRows: ReactNode[][],
-    meaNumber: number,
-    onHeaderCollapse: (node: INestNode) => void,
-    enableCollapse: boolean,
-    displayOffset?: number
-) {
-    const childrenSize = getChildCount(node);
-    const { isCollapsed } = node;
-    if (depth > dimsInRow.length) {
-        return;
-    }
-    const field = depth > 0 ? dimsInRow[depth - 1] : undefined;
+function formatHeaderValue(node: INestNode, field: IField | undefined, displayOffset?: number): string {
     const formatter =
         node.kind === 'value' && field?.semanticType === 'temporal'
             ? (x) => formatDate(parsedOffsetDate(displayOffset, field.offset)(x))
             : (x) => `${x}`;
+    return formatter(node.value);
+}
 
-    cellRows[cellRows.length - 1].push(
+function LeftHeaderCell({
+    node,
+    field,
+    rowSpan,
+    colSpan,
+    enableCollapse,
+    isCollapsed,
+    displayOffset,
+    onHeaderCollapse,
+}: {
+    node: INestNode;
+    field: IField | undefined;
+    rowSpan: number;
+    colSpan: number;
+    enableCollapse: boolean;
+    isCollapsed: boolean;
+    displayOffset?: number;
+    onHeaderCollapse: (node: INestNode) => void;
+}) {
+    const label = formatHeaderValue(node, field, displayOffset);
+    return (
         <th
-            key={`${depth}-${node.uniqueKey}`}
+            key={node.uniqueKey}
             scope="row"
             className="bg-secondary text-secondary-foreground align-top whitespace-nowrap p-2 text-xs m-1 border font-normal text-left"
-            colSpan={isCollapsed ? node.height + 1 : 1}
-            rowSpan={isCollapsed ? Math.max(meaNumber, 1) : childrenSize * Math.max(meaNumber, 1)}
+            colSpan={colSpan}
+            rowSpan={rowSpan}
         >
             <div className="flex">
-                <div>{formatter(node.value)}</div>
+                <div>{label}</div>
                 {node.kind === 'value' && node.height > 0 && enableCollapse && (
                     <button
                         type="button"
                         className="ml-1 self-center cursor-pointer"
-                        aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${formatter(node.value)}`}
+                        aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${label}`}
                         aria-expanded={!isCollapsed}
                         onClick={() => onHeaderCollapse(node)}
                     >
@@ -65,14 +59,6 @@ function renderTree(
             </div>
         </th>
     );
-    if (isCollapsed) return;
-    for (let i = 0; i < node.children.length; i++) {
-        const child = node.children[i];
-        renderTree(child, dimsInRow, depth + 1, cellRows, meaNumber, onHeaderCollapse, enableCollapse, displayOffset);
-        if (i < node.children.length - 1) {
-            cellRows.push([]);
-        }
-    }
 }
 
 export interface TreeProps {
@@ -83,17 +69,43 @@ export interface TreeProps {
     enableCollapse: boolean;
     defaultAggregated: boolean;
     displayOffset?: number;
+    collapsedKeySet?: ReadonlySet<string>;
 }
-export function buildLeftTreeRows(props: TreeProps): ReactNode[][] {
-    const { data, dimsInRow, measInRow, onHeaderCollapse } = props;
-    const cellRows: ReactNode[][] = [[]];
-    renderTree(data, dimsInRow, 0, cellRows, measInRow.length, onHeaderCollapse, props.enableCollapse, props.displayOffset);
-    cellRows[0].shift();
-    if (measInRow.length > 0) {
+
+export function buildWindowedLeftTreeRows(
+    props: TreeProps,
+    start: number,
+    end: number
+): ReactNode[][] {
+    const leaves = collectPivotLeafChains(props.data, props.collapsedKeySet);
+    const windowCells = windowedHeaderCells(leaves, start, end);
+    const meaNumber = Math.max(props.measInRow.length, 1);
+    const cellRows: ReactNode[][] = windowCells.map((cells) =>
+        cells.map((cell) => {
+            const isCollapsed = isPivotNodeCollapsed(cell.node, props.collapsedKeySet);
+            const depth = cell.node.path.length;
+            const field = depth > 0 ? props.dimsInRow[depth - 1] : undefined;
+            return (
+                <LeftHeaderCell
+                    key={cell.node.uniqueKey}
+                    node={cell.node}
+                    field={field}
+                    colSpan={isCollapsed ? cell.node.height + 1 : 1}
+                    rowSpan={isCollapsed ? meaNumber : cell.span * meaNumber}
+                    enableCollapse={props.enableCollapse}
+                    isCollapsed={isCollapsed}
+                    displayOffset={props.displayOffset}
+                    onHeaderCollapse={props.onHeaderCollapse}
+                />
+            );
+        })
+    );
+
+    if (props.measInRow.length > 0) {
         const result: ReactNode[][] = [];
         for (const row of cellRows) {
-            for (let index = 0; index < measInRow.length; index++) {
-                const measure = measInRow[index];
+            for (let index = 0; index < props.measInRow.length; index++) {
+                const measure = props.measInRow[index];
                 result.push([
                     ...(index === 0 ? row : []),
                     <th
@@ -109,6 +121,11 @@ export function buildLeftTreeRows(props: TreeProps): ReactNode[][] {
         return result;
     }
     return cellRows;
+}
+
+export function buildLeftTreeRows(props: TreeProps): ReactNode[][] {
+    const leafCount = collectPivotLeafChains(props.data, props.collapsedKeySet).length;
+    return buildWindowedLeftTreeRows(props, 0, leafCount);
 }
 
 export default buildLeftTreeRows;

@@ -138,5 +138,9 @@ export function createMemoryProvider(initData?: string | null): IDataSourceProvi
         exportData() {
             return JSON.stringify(store.exportData());
         },
+        async removeDataSource(datasetId) {
+            store.removeDataSource(datasetId);
+            listeners.emit(IDataSourceEventType.updateList, '');
+        },
     };
 }

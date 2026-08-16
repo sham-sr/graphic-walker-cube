@@ -145,7 +145,7 @@ export const RendererApp = observer(function VizApp(props: BaseVizProps) {
 
     return (
         <ErrorContext value={{ reportError }}>
-            <ErrorBoundary fallback={<div>Something went wrong</div>} onError={props.onError}>
+            <ErrorBoundary fallback={<div>{t('error_panel.something_went_wrong')}</div>} onError={props.onError}>
                 <VizAppContext
                     ComputationContext={wrappedComputation}
                     themeContext={darkMode}

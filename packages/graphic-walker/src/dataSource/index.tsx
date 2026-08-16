@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useTranslation } from 'react-i18next';
 import { downloadBlob } from '../utils/save';
@@ -6,7 +6,7 @@ import GwFile from './dataSelection/gwFile';
 import DataSelection from './dataSelection';
 import DropdownSelect from '../components/dropdownSelect';
 import { IUIThemeConfig, IComputationFunction, IDarkMode, IDataSourceEventType, IDataSourceProvider, IMutField, IThemeKey } from '../interfaces';
-import { syncProviderSpecs } from './syncSpecs';
+import { persistDatasetSpecs, syncProviderSpecs } from './syncSpecs';
 import { ShadowDom } from '../shadow-dom';
 import { CommonStore } from '../store/commonStore';
 import { VizSpecStore } from '../store/visualSpecStore';
@@ -24,10 +24,12 @@ interface DSSegmentProps {
     onSelectId: (value: string) => void;
     onSave?: () => Promise<Blob>;
     onLoad?: (file: File) => void;
+    hideCreateDataset?: boolean;
+    onRemove?: (id: string) => void;
 }
 
 const DataSourceSegment: React.FC<DSSegmentProps> = observer((props) => {
-    const { commonStore, dataSources, onSelectId, selectedId, onLoad, onSave } = props;
+    const { commonStore, dataSources, onSelectId, selectedId, onLoad, onSave, hideCreateDataset, onRemove } = props;
     const gwFileRef = useRef<HTMLInputElement>(null);
     const { t } = useTranslation();
 
@@ -48,14 +50,28 @@ const DataSourceSegment: React.FC<DSSegmentProps> = observer((props) => {
                 />
             </div>
 
-            <Button
-                size="sm"
-                onClick={() => {
-                    commonStore.startDSBuildingTask();
-                }}
-            >
-                {t('DataSource.buttons.create_dataset')}
-            </Button>
+            {!hideCreateDataset && (
+                <Button
+                    size="sm"
+                    onClick={() => {
+                        commonStore.startDSBuildingTask();
+                    }}
+                >
+                    {t('DataSource.buttons.create_dataset')}
+                </Button>
+            )}
+            {onRemove && selectedId && (
+                <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={dataSources.length === 0}
+                    onClick={() => {
+                        onRemove(selectedId);
+                    }}
+                >
+                    {t('DataSource.buttons.remove_dataset')}
+                </Button>
+            )}
             {onSave && (
                 <Button
                     size="sm"
@@ -112,6 +128,7 @@ const DataSourceThemeContext = composeContext({ themeContext, vegaThemeContext, 
 
 export function DataSourceSegmentComponent(props: {
     provider: IDataSourceProvider;
+    hideCreateDataset?: boolean;
     displayOffset?: number;
     /** @deprecated renamed to appearence */
     dark?: IDarkMode;
@@ -130,16 +147,35 @@ export function DataSourceSegmentComponent(props: {
         computation: IComputationFunction;
         storeRef: React.RefObject<VizSpecStore | null>;
         datasetName: string;
+        datasetId: string;
         syncSpecs: () => void;
     }) => React.ReactNode;
 }) {
     const [selectedId, setSelectedId] = useState('');
     const [datasetList, setDatasetList] = useState<{ name: string; id: string }[]>([]);
+    const vizSpecStoreRef = useRef<VizSpecStore>(null);
+    const datasetStoresRef = useRef(new Map<string, VizSpecStore>());
+    const specSyncGenerationRef = useRef(0);
+    const handleSelectIdRef = useRef<(id: string) => void>(() => {});
+
     useEffect(() => {
-        props.provider.getDataSourceList().then(setDatasetList);
+        const applyList = (list: { name: string; id: string }[]) => {
+            setDatasetList(list);
+            setSelectedId((current) => {
+                if (current && list.some((item) => item.id === current)) {
+                    return current;
+                }
+                if (current) {
+                    persistDatasetSpecs(props.provider, current, datasetStoresRef.current.get(current));
+                    specSyncGenerationRef.current += 1;
+                }
+                return list[list.length - 1]?.id ?? '';
+            });
+        };
+        props.provider.getDataSourceList().then(applyList);
         return props.provider.registerCallback((e) => {
             if (e & IDataSourceEventType.updateList) {
-                props.provider.getDataSourceList().then(setDatasetList);
+                props.provider.getDataSourceList().then(applyList);
             }
         });
     }, [props.provider]);
@@ -148,30 +184,56 @@ export function DataSourceSegmentComponent(props: {
 
     const [computationID, refreshComputation] = useReducer((x: number) => x + 1, 0);
     const [meta, setMeta] = useState<IMutField[]>([]);
-    const vizSpecStoreRef = useRef<VizSpecStore>(null);
+
+    useLayoutEffect(() => {
+        const store = vizSpecStoreRef.current;
+        if (selectedId && store) {
+            datasetStoresRef.current.set(selectedId, store);
+        }
+    }, [selectedId, meta, dataset]);
+
+    const persistSelectedSpecs = useCallback(
+        (datasetId: string) => {
+            persistDatasetSpecs(props.provider, datasetId, datasetStoresRef.current.get(datasetId) ?? vizSpecStoreRef.current);
+        },
+        [props.provider]
+    );
+
+    const handleSelectId = useCallback(
+        (nextId: string) => {
+            if (nextId !== selectedId) {
+                persistSelectedSpecs(selectedId);
+                specSyncGenerationRef.current += 1;
+            }
+            setSelectedId(nextId);
+        },
+        [selectedId, persistSelectedSpecs]
+    );
 
     useEffect(() => {
         if (dataset) {
             const { provider } = props;
-            provider.getMeta(dataset.id).then(setMeta);
-            syncProviderSpecs(provider, dataset.id, vizSpecStoreRef);
-            const disposer = provider.registerCallback((e, datasetId) => {
-                if (dataset.id === datasetId) {
+            const datasetId = dataset.id;
+            const generation = ++specSyncGenerationRef.current;
+            const isCurrent = () => specSyncGenerationRef.current === generation;
+            provider.getMeta(datasetId).then(setMeta);
+            syncProviderSpecs(provider, datasetId, vizSpecStoreRef, isCurrent);
+            const disposer = provider.registerCallback((e, eventDatasetId) => {
+                if (datasetId === eventDatasetId) {
                     if (e & IDataSourceEventType.updateData) {
                         refreshComputation();
                     }
                     if (e & IDataSourceEventType.updateMeta) {
-                        provider.getMeta(datasetId).then(setMeta);
+                        provider.getMeta(eventDatasetId).then(setMeta);
                     }
                     if (e & IDataSourceEventType.updateSpec) {
-                        syncProviderSpecs(provider, datasetId, vizSpecStoreRef);
+                        syncProviderSpecs(provider, eventDatasetId, vizSpecStoreRef, isCurrent);
                     }
                 }
             });
             return () => {
                 disposer();
-                const data = vizSpecStoreRef.current?.exportAllCharts();
-                data && provider.saveSpecs(dataset.id, JSON.stringify(data));
+                persistDatasetSpecs(provider, datasetId, datasetStoresRef.current.get(datasetId));
             };
         }
     }, [dataset, props.provider]);
@@ -194,7 +256,11 @@ export function DataSourceSegmentComponent(props: {
         [props.provider, selectedId]
     );
 
-    const commonStore = useMemo(() => new CommonStore(props.provider, setSelectedId, { displayOffset: props.displayOffset }), [props.provider]);
+    handleSelectIdRef.current = handleSelectId;
+    const commonStore = useMemo(
+        () => new CommonStore(props.provider, (id) => handleSelectIdRef.current(id), { displayOffset: props.displayOffset }),
+        [props.provider]
+    );
 
     useEffect(() => {
         commonStore.setDisplayOffset(props.displayOffset);
@@ -216,24 +282,17 @@ export function DataSourceSegmentComponent(props: {
 
     const onSave = useMemo(() => {
         const exportFile = props.provider.onExportFile;
-        const saveSpecs = props.provider.saveSpecs;
         if (exportFile) {
             return async () => {
-                const data = vizSpecStoreRef.current?.exportAllCharts();
-                if (data) {
-                    await saveSpecs(selectedId, JSON.stringify(data));
-                }
+                persistSelectedSpecs(selectedId);
                 return exportFile();
             };
         }
-    }, [selectedId, props.provider]);
+    }, [selectedId, persistSelectedSpecs, props.provider]);
 
     const syncSpecs = useCallback(() => {
-        const data = vizSpecStoreRef.current?.exportAllCharts();
-        if (data) {
-            props.provider.saveSpecs(selectedId, JSON.stringify(data));
-        }
-    }, [selectedId, props.provider]);
+        persistSelectedSpecs(selectedId);
+    }, [selectedId, persistSelectedSpecs]);
 
     const darkMode = useCurrentMediaTheme(props.appearance ?? props.dark);
     const [currentTheme, setCurrentTheme] = useState<IThemeKey | GWGlobalConfig>(
@@ -258,10 +317,18 @@ export function DataSourceSegmentComponent(props: {
                         <DataSourceSegment
                             commonStore={commonStore}
                             dataSources={datasetList}
-                            onSelectId={setSelectedId}
+                            onSelectId={handleSelectId}
                             selectedId={selectedId}
                             onLoad={onLoad}
                             onSave={onSave}
+                            hideCreateDataset={props.hideCreateDataset}
+                            onRemove={
+                                props.provider.removeDataSource
+                                    ? (id) => {
+                                          void props.provider.removeDataSource?.(id);
+                                      }
+                                    : undefined
+                            }
                         />
                         <div ref={setPortal} />
                     </div>
@@ -270,6 +337,7 @@ export function DataSourceSegmentComponent(props: {
             <props.children
                 computation={computation}
                 datasetName={dataset?.name ?? ''}
+                datasetId={selectedId}
                 meta={meta}
                 onMetaChange={onMetaChange}
                 storeRef={vizSpecStoreRef}

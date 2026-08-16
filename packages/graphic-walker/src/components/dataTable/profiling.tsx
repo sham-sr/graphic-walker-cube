@@ -1,4 +1,5 @@
 import { ComponentType, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IComputationFunction, ISemanticType } from '../../interfaces';
 import { profileNonmialField, profileQuantitativeField, wrapComputationWithTag } from '../../computation';
 import React from 'react';
@@ -16,13 +17,14 @@ export interface FieldProfilingProps {
 }
 
 function NominalProfiling({ computation, field, valueRenderer = (s) => `${s}` }: FieldProfilingProps & { valueRenderer?: (v: string | number) => string }) {
+    const { t } = useTranslation();
     const [stat, setStat] = useState<Awaited<ReturnType<typeof profileNonmialField>>>();
     useEffect(() => {
         profileNonmialField(wrapComputationWithTag(computation, "profiling"), field).then(setStat);
     }, [computation, field]);
 
     if (!isNotEmpty(stat)) {
-        return <div className="h-24 flex items-center justify-center">Loading...</div>;
+        return <div className="h-24 flex items-center justify-center">{t('dataTable.profiling.loading')}</div>;
     }
 
     const render = (value) => {
@@ -82,12 +84,13 @@ function NominalProfiling({ computation, field, valueRenderer = (s) => `${s}` }:
 const formatter = format('~s');
 
 function QuantitativeProfiling({ computation, field }: FieldProfilingProps) {
+    const { t } = useTranslation();
     const [stat, setStat] = useState<Awaited<ReturnType<typeof profileQuantitativeField>>>();
     useEffect(() => {
         profileQuantitativeField(wrapComputationWithTag(computation, "profiling"), field).then(setStat);
     }, [computation, field]);
     if (!isNotEmpty(stat)) {
-        return <div className="h-24 flex items-center justify-center">Loading...</div>;
+        return <div className="h-24 flex items-center justify-center">{t('dataTable.profiling.loading')}</div>;
     }
     if (stat.min === stat.max) {
         return <div className="h-24 flex items-center justify-center text-xl">= {stat.min}</div>;
@@ -104,6 +107,7 @@ function QuantitativeProfiling({ computation, field }: FieldProfilingProps) {
 }
 
 function BinRenderer({ data }: { data: Awaited<ReturnType<typeof profileQuantitativeField>> }) {
+    const { t } = useTranslation();
     const mediaTheme = useContext(themeContext);
     const { vizThemeConfig } = useContext(vegaThemeContext);
 
@@ -119,6 +123,9 @@ function BinRenderer({ data }: { data: Awaited<ReturnType<typeof profileQuantita
         };
         return config;
     }, [theme]);
+
+    const valueTitle = t('dataTable.profiling.value');
+    const countTitle = t('dataTable.profiling.count');
 
     const ref = useCallback(
         (node: HTMLDivElement) => {
@@ -151,8 +158,8 @@ function BinRenderer({ data }: { data: Awaited<ReturnType<typeof profileQuantita
                         axis: false,
                     },
                     tooltip: [
-                        { field: 'value', type: 'ordinal', title: 'Value' },
-                        { field: 'count', type: 'quantitative', title: 'Count' },
+                        { field: 'value', type: 'ordinal', title: valueTitle },
+                        { field: 'count', type: 'quantitative', title: countTitle },
                     ],
                 },
                 config: { view: { stroke: null } },
@@ -167,7 +174,7 @@ function BinRenderer({ data }: { data: Awaited<ReturnType<typeof profileQuantita
                 },
             });
         },
-        [data, vegaConfig]
+        [countTitle, data, mediaTheme, valueTitle, vegaConfig]
     );
     return <div ref={ref} />;
 }

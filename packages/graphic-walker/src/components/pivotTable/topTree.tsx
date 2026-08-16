@@ -4,13 +4,7 @@ import { IField } from '../../interfaces';
 import { MinusCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 import { formatDate, getMeaAggName } from '@/utils';
 import { parsedOffsetDate } from '@/lib/op/offset';
-
-function getChildCount(node: INestNode): number {
-    if (node.isCollapsed || node.children.length === 0) {
-        return 1;
-    }
-    return node.children.map(getChildCount).reduce((a, b) => a + b, 0);
-}
+import { getLeafSpan, isPivotNodeCollapsed } from './treeWalk';
 
 /**
  * render pivot table left tree table
@@ -28,10 +22,11 @@ function renderTree(
     meaNumber: number,
     onHeaderCollapse: (node: INestNode) => void,
     enableCollapse: boolean,
-    displayOffset?: number
+    displayOffset?: number,
+    collapsedKeySet?: ReadonlySet<string>
 ) {
-    const childrenSize = getChildCount(node);
-    const { isCollapsed } = node;
+    const childrenSize = getLeafSpan(node, collapsedKeySet);
+    const isCollapsed = isPivotNodeCollapsed(node, collapsedKeySet);
     if (depth > dimsInCol.length) {
         return;
     }
@@ -67,7 +62,7 @@ function renderTree(
     if (isCollapsed) return;
     for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        renderTree(child, dimsInCol, depth + 1, cellRows, meaNumber, onHeaderCollapse, enableCollapse, displayOffset);
+        renderTree(child, dimsInCol, depth + 1, cellRows, meaNumber, onHeaderCollapse, enableCollapse, displayOffset, collapsedKeySet);
     }
 }
 
@@ -81,13 +76,14 @@ export interface TreeProps {
     enableCollapse: boolean;
     defaultAggregated: boolean;
     displayOffset?: number;
+    collapsedKeySet?: ReadonlySet<string>;
 }
 const TopTree: React.FC<TreeProps> = (props) => {
     const { data, dimsInCol, measInCol, dimsInRow, measInRow, onHeaderCollapse } = props;
     const nodeCells: ReactNode[][] = useMemo(() => {
         const cellRows: ReactNode[][] = new Array(dimsInCol.length + 1).fill(0).map(() => []);
-        renderTree(data, dimsInCol, 0, cellRows, measInCol.length, onHeaderCollapse, props.enableCollapse, props.displayOffset);
-        const totalChildrenSize = getChildCount(data);
+        renderTree(data, dimsInCol, 0, cellRows, measInCol.length, onHeaderCollapse, props.enableCollapse, props.displayOffset, props.collapsedKeySet);
+        const totalChildrenSize = getLeafSpan(data, props.collapsedKeySet);
 
         // if all children in one layer are collapsed, then we need to reset the rowSpan of all children to 1
         cellRows.forEach((row: ReactNode[], rowIdx: number) => {
@@ -159,7 +155,7 @@ const TopTree: React.FC<TreeProps> = (props) => {
                 ...row,
             ];
         });
-    }, [data, dimsInCol, measInCol, dimsInRow, measInRow, onHeaderCollapse, props.defaultAggregated, props.enableCollapse, props.displayOffset]);
+    }, [data, dimsInCol, measInCol, dimsInRow, measInRow, onHeaderCollapse, props.defaultAggregated, props.enableCollapse, props.displayOffset, props.collapsedKeySet]);
 
     return (
         <thead className="border bg-secondary">

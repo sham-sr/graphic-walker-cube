@@ -1,5 +1,11 @@
-import { INestNode } from '../components/pivotTable/interface';
-import { buildMetricTableFromNestTree, buildNestTree, createPivotPathKey, pivotTableValuesEqual } from '../components/pivotTable/utils';
+import { INestNode, IPivotCube } from '../components/pivotTable/interface';
+import { buildNestTree, createPivotPathKey, pivotTableValuesEqual } from '../components/pivotTable/utils';
+import {
+    buildPivotCube,
+    getAllPivotGroupingSets,
+    inferRollupMeasures,
+    type IPivotRollupMeasure,
+} from '../components/pivotTable/cube';
 import { IViewField, IRow } from '../interfaces';
 
 const getFirstVisibleValuePath = (item: INestNode): INestNode[] => {
@@ -36,6 +42,12 @@ function getVisibleSlice(
     );
 }
 
+export interface IBuildPivotTableResult {
+    lt: INestNode;
+    tt: INestNode;
+    cube: IPivotCube;
+}
+
 export function buildPivotTable(
     dimsInRow: IViewField[],
     dimsInColumn: IViewField[],
@@ -47,8 +59,15 @@ export function buildPivotTable(
         fid: string;
         type: 'ascending' | 'descending';
         mode: 'row' | 'column';
-    }
-): { lt: INestNode; tt: INestNode; metric: (IRow | null | undefined)[][] } {
+    },
+    rollupMeasures?: IPivotRollupMeasure[]
+): IBuildPivotTableResult {
+    const dimensionKeys = [...dimsInRow, ...dimsInColumn].map((field) => field.fid);
+    const measures = rollupMeasures && rollupMeasures.length > 0 ? rollupMeasures : inferRollupMeasures(allData, dimensionKeys);
+    const groupingSets = getAllPivotGroupingSets(dimsInRow, dimsInColumn);
+    const cube = buildPivotCube(allData, aggData, dimensionKeys, groupingSets, measures);
+    const cubeRows = sort ? [...allData, ...aggData, ...Object.values(cube.cells)] : allData;
+
     let lt: INestNode;
     let tt: INestNode;
     if (sort?.mode === 'row') {
@@ -60,7 +79,7 @@ export function buildPivotTable(
         );
         const firstColumnPath = getFirstVisibleValuePath(tt);
         if (dimsInColumn.length > 0 && firstColumnPath.length > 0) {
-            const mentioned = getVisibleSlice([...allData, ...aggData], allData, dimsInRow, dimsInColumn, firstColumnPath);
+            const mentioned = getVisibleSlice(cubeRows, allData, dimsInRow, dimsInColumn, firstColumnPath);
             const mentionedSet = new Set(mentioned);
             const rest = allData.filter((row) => !mentionedSet.has(row));
             lt = buildNestTree(
@@ -89,7 +108,7 @@ export function buildPivotTable(
         );
         const firstRowPath = getFirstVisibleValuePath(lt);
         if (sort && dimsInRow.length > 0 && firstRowPath.length > 0) {
-            const mentioned = getVisibleSlice([...allData, ...aggData], allData, dimsInColumn, dimsInRow, firstRowPath);
+            const mentioned = getVisibleSlice(cubeRows, allData, dimsInColumn, dimsInRow, firstRowPath);
             const mentionedSet = new Set(mentioned);
             const rest = allData.filter((row) => !mentionedSet.has(row));
             tt = buildNestTree(
@@ -111,6 +130,5 @@ export function buildPivotTable(
         }
     }
 
-    const metric = buildMetricTableFromNestTree(lt, tt, [...allData, ...aggData]);
-    return { lt, tt, metric };
+    return { lt, tt, cube };
 }

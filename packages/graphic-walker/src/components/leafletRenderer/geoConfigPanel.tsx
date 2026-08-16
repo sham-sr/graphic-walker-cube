@@ -42,15 +42,15 @@ const GeoConfigPanel = ({ geoList = emptyList }: { geoList?: IGeoDataItem[] }) =
 
     const options = useMemo(
         () =>
-            [{ label: 'Select a Geographic Data', value: '-1' }]
+            [{ label: t('geography_settings.select_data'), value: '-1' }]
                 .concat(
                     geoList.map((x, i) => ({
                         label: x.name,
                         value: `${i}`,
                     }))
                 )
-                .concat({ label: 'Manual Configuration', value: '-2' }),
-        [geoList]
+                .concat({ label: t('geography_settings.manual_config'), value: '-2' }),
+        [geoList, t]
     );
     const setSelectItem = useMemo(() => (a: string) => setSelectItemR(parseInt(a)), []);
 

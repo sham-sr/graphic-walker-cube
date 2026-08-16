@@ -260,9 +260,10 @@ const DataTable = forwardRef(
     const semanticTypeList = useMemo<{ value: string; label: string }[]>(() => {
         return SEMANTIC_TYPE_LIST.map((st) => ({
             value: st,
-            label: t(`constant.semantic_type.${st}`),
+            // Prefer field-menu labels so DataTable and field context menu stay consistent.
+            label: t(`field_menu.semantic_type.types.${st}`),
         }));
-    }, []);
+    }, [t]);
 
     const [rows, setRows] = useState<IRow[]>([]);
     const [dataLoading, setDataLoading] = useState(false);

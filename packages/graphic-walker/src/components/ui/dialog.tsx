@@ -28,6 +28,38 @@ const DialogOverlay = React.forwardRef<React.ElementRef<typeof DialogPrimitive.O
 );
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+function childrenContainDialogTitle(children: React.ReactNode): boolean {
+    let found = false;
+    React.Children.forEach(children, (child) => {
+        if (found || !React.isValidElement(child)) return;
+        const type = child.type as { displayName?: string } | string;
+        if (
+            type === DialogPrimitive.Title ||
+            (typeof type === 'object' && type?.displayName === DialogPrimitive.Title.displayName)
+        ) {
+            found = true;
+            return;
+        }
+        const nested = (child.props as { children?: React.ReactNode } | undefined)?.children;
+        if (nested) {
+            found = childrenContainDialogTitle(nested);
+        }
+    });
+    return found;
+}
+
+function withAccessibleDialogTitle(children: React.ReactNode): React.ReactNode {
+    if (childrenContainDialogTitle(children)) {
+        return children;
+    }
+    return (
+        <>
+            <DialogPrimitive.Title className="sr-only">Dialog</DialogPrimitive.Title>
+            {children}
+        </>
+    );
+}
+
 const DialogContent = React.forwardRef<
     React.ElementRef<typeof DialogPrimitive.Content>,
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
@@ -47,7 +79,7 @@ const DialogContent = React.forwardRef<
             {...props}
         >
             <ScrollArea className={cn('overscroll-none min-h-0 max-h-[calc(min(800px,90vh))] w-full relative p-6', containerClassName)}>
-                {children}
+                {withAccessibleDialogTitle(children)}
             </ScrollArea>
             {showCloseButton && (
                 <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
@@ -78,7 +110,7 @@ const DialogNormalContent = React.forwardRef<
             )}
             {...props}
         >
-            <ScrollArea className="min-h-0 w-full">{children}</ScrollArea>
+            <ScrollArea className="min-h-0 w-full">{withAccessibleDialogTitle(children)}</ScrollArea>
             <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
                 <Cross2Icon className="h-4 w-4" />
                 <span className="sr-only">Close</span>

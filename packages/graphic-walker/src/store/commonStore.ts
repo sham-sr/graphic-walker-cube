@@ -1,6 +1,6 @@
 import { makeAutoObservable, observable, toJS } from 'mobx';
 import { IDataSetInfo, IDataSourceProvider, IMutField, IRow } from '../interfaces';
-import { transData } from '../dataSource/utils';
+import { normalizeDataByMeta, transData } from '../dataSource/utils';
 
 export class CommonStore {
     public tmpDSName: string = '';
@@ -74,7 +74,10 @@ export class CommonStore {
 
     public commitTempDS() {
         const { tmpDSName, tmpDSRawFields, tmpDataSource } = this;
-        this.provider.addDataSource(toJS(tmpDataSource), toJS(tmpDSRawFields), tmpDSName).then(this.onCommitDS);
+        const fields = toJS(tmpDSRawFields);
+        // Re-normalize with the final metas so type edits after upload still coerce temporal/quantitative cells.
+        const data = normalizeDataByMeta(toJS(tmpDataSource), fields);
+        this.provider.addDataSource(data, fields, tmpDSName).then(this.onCommitDS);
         this.setShowDSPanel(false);
         this.initTempDS();
     }

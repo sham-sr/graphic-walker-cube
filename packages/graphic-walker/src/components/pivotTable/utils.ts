@@ -1,28 +1,23 @@
 import type { IRow } from '../../interfaces';
 import type { INestNode, IPivotTablePath, PivotTableValue } from './interface';
+import { buildPivotCube, materializeMetricMatrix } from './cube';
+import { createPivotPathKey, createPivotValueKey } from './pathKey';
 
-export function pivotTableValuesEqual(left: unknown, right: unknown): boolean {
-    return left === right || (typeof left === 'number' && typeof right === 'number' && Number.isNaN(left) && Number.isNaN(right));
-}
-
-function encodePivotTableValue(value: PivotTableValue): readonly [type: string, value?: string | number | boolean] {
-    if (value === null) return ['null'];
-    if (value === undefined) return ['undefined'];
-    if (typeof value === 'number') {
-        if (Number.isNaN(value)) return ['number', 'NaN'];
-        if (value === Infinity) return ['number', 'Infinity'];
-        if (value === -Infinity) return ['number', '-Infinity'];
-        return ['number', value === 0 ? 0 : value];
-    }
-    return [typeof value, value];
-}
-
-export function createPivotPathKey(path: readonly { key: string; value: PivotTableValue }[]): string {
-    return JSON.stringify(path.map(({ key, value }) => [key, encodePivotTableValue(value)]));
-}
+export { createPivotPathKey, encodePivotTableValue, pivotTableValuesEqual } from './pathKey';
+export { applyCollapseFlags, collectVisibleLeaves, getLeafSpan, isPivotNodeCollapsed } from './treeWalk';
+export {
+    buildPivotCube,
+    getCubeCell,
+    indexRowsIntoCube,
+    leafValuePath,
+    materializeMetricMatrix,
+    mergeCubes,
+    rollupCuboid,
+} from './cube';
 
 function insertNode(
     tree: INestNode,
+    childIndex: Map<INestNode, Map<string, INestNode>>,
     layerKeys: string[],
     nodeData: IRow,
     depth: number,
@@ -33,14 +28,19 @@ function insertNode(
     }
 ) {
     if (depth >= layerKeys.length) {
-        // tree.key = nodeData[layerKeys[depth]];
         return;
     }
     const key = nodeData[layerKeys[depth]] as PivotTableValue;
     const path: IPivotTablePath = [...tree.path, { key: layerKeys[depth], value: key }];
     const uniqueKey = createPivotPathKey(path);
+    const valueKey = createPivotValueKey(key);
 
-    let child = tree.children.find((candidate) => pivotTableValuesEqual(candidate.key, key));
+    let index = childIndex.get(tree);
+    if (!index) {
+        index = new Map();
+        childIndex.set(tree, index);
+    }
+    let child = index.get(valueKey);
     if (!child) {
         child = {
             kind: 'value',
@@ -54,30 +54,38 @@ function insertNode(
             height: layerKeys.length - depth - 1,
             isCollapsed: collapsedKeySet.has(uniqueKey),
         };
-        const reverse = depth === layerKeys.length - 1 && sort?.type === 'descending';
-        tree.children.splice(binarySearchIndex(tree.children, child.sort, reverse), 0, child);
+        tree.children.push(child);
+        index.set(valueKey, child);
     }
-    insertNode(child, layerKeys, nodeData, depth + 1, collapsedKeySet, sort);
+    insertNode(child, childIndex, layerKeys, nodeData, depth + 1, collapsedKeySet, sort);
 }
 
-// Custom binary search function to find appropriate index for insertion.
-function binarySearchIndex(arr: INestNode[], keyVal: PivotTableValue, reverse = false): number {
-    let start = 0,
-        end = arr.length - 1;
-
-    while (start <= end) {
-        let middle = Math.floor((start + end) / 2);
-        let middleVal = arr[middle].sort;
-        if (typeof middleVal === 'number' && typeof keyVal === 'number') {
-            if (reverse !== middleVal < keyVal) start = middle + 1;
-            else end = middle - 1;
-        } else {
-            let cmp = String(middleVal).localeCompare(String(keyVal));
-            if (reverse !== cmp < 0) start = middle + 1;
-            else end = middle - 1;
-        }
+function comparePivotSortValues(left: PivotTableValue, right: PivotTableValue, reverse: boolean): number {
+    if (typeof left === 'number' && typeof right === 'number') {
+        if (left === right || (Number.isNaN(left) && Number.isNaN(right))) return 0;
+        const cmp = left < right ? -1 : 1;
+        return reverse ? -cmp : cmp;
     }
-    return start;
+    const cmp = String(left).localeCompare(String(right));
+    return reverse ? -cmp : cmp;
+}
+
+function sortNestTree(
+    node: INestNode,
+    depth: number,
+    layerCount: number,
+    sort?: {
+        fid: string;
+        type: 'ascending' | 'descending';
+    }
+) {
+    if (node.children.length > 1) {
+        const reverse = depth === layerCount - 1 && sort?.type === 'descending';
+        node.children.sort((left, right) => comparePivotSortValues(left.sort, right.sort, reverse));
+    }
+    for (const child of node.children) {
+        sortNestTree(child, depth + 1, layerCount, sort);
+    }
 }
 
 const ROOT_KEY = '__pivot_root__';
@@ -115,6 +123,7 @@ export function buildNestTree(
     dataWithoutSort?: IRow[]
 ): INestNode {
     const collapsedKeySet = new Set(collapsedKeyList);
+    const childIndex = new Map<INestNode, Map<string, INestNode>>();
     const tree: INestNode = {
         kind: 'root',
         key: ROOT_KEY,
@@ -127,88 +136,22 @@ export function buildNestTree(
         height: layerKeys.length,
         isCollapsed: false,
     };
-    for (let row of data) {
-        insertNode(tree, layerKeys, row, 0, collapsedKeySet, sort);
+    for (const row of data) {
+        insertNode(tree, childIndex, layerKeys, row, 0, collapsedKeySet, sort);
     }
     if (dataWithoutSort) {
-        for (let row of dataWithoutSort) {
-            insertNode(tree, layerKeys, row, 0, collapsedKeySet, { fid: '', type: sort?.type ?? 'ascending' });
+        for (const row of dataWithoutSort) {
+            insertNode(tree, childIndex, layerKeys, row, 0, collapsedKeySet, { fid: '', type: sort?.type ?? 'ascending' });
         }
     }
+    sortNestTree(tree, 0, layerKeys.length, sort);
     if (showSummary) {
         insertSummaryNode(tree);
     }
     return tree;
 }
 
-class NodeIterator {
-    public tree: INestNode;
-    public nodeStack: INestNode[] = [];
-    public current: INestNode | null = null;
-    constructor(tree: INestNode) {
-        this.tree = tree;
-    }
-    public first() {
-        let node = this.tree;
-        this.nodeStack = [node];
-        while (node.children.length > 0 && !node.isCollapsed) {
-            this.nodeStack.push(node.children[0]);
-            node = node.children[0];
-        }
-        this.current = node;
-        return this.current;
-    }
-    public next(): INestNode | null {
-        let cursorMoved = false;
-        let counter = 0;
-        while (this.nodeStack.length > 1) {
-            counter++;
-            if (counter > 100) break;
-            let node = this.nodeStack[this.nodeStack.length - 1];
-            let parent = this.nodeStack[this.nodeStack.length - 2];
-            let nodeIndex = parent.children.findIndex((candidate) => candidate === node);
-            if (nodeIndex === -1) break;
-            if (cursorMoved) {
-                if (node.children.length > 0 && !node.isCollapsed) {
-                    this.nodeStack.push(node.children[0]);
-                    continue;
-                } else {
-                    break;
-                }
-            } else {
-                if (nodeIndex < parent.children.length - 1) {
-                    this.nodeStack.pop();
-                    this.nodeStack.push(parent.children[nodeIndex + 1]);
-                    cursorMoved = true;
-                    continue;
-                }
-                if (nodeIndex >= parent.children.length - 1) {
-                    this.nodeStack.pop();
-                    continue;
-                }
-            }
-        }
-        if (cursorMoved) {
-            this.current = this.nodeStack[this.nodeStack.length - 1] || null;
-        } else {
-            this.current = null;
-        }
-        return this.current;
-    }
-    public predicates(): IPivotTablePath {
-        return this.nodeStack
-            .filter((node) => node.kind === 'value')
-            .map((node) => ({
-                key: node.fieldKey,
-                value: node.value,
-            }));
-    }
-}
-
 export function buildMetricTableFromNestTree(leftTree: INestNode, topTree: INestNode, data: IRow[]): (IRow | null | undefined)[][] {
-    const mat: any[][] = [];
-    const iteLeft = new NodeIterator(leftTree);
-    const iteTop = new NodeIterator(topTree);
     const dimensionKeys = Array.from(
         new Set(
             [...leftTree.children, ...topTree.children].flatMap(function collectKeys(node: INestNode): string[] {
@@ -216,41 +159,8 @@ export function buildMetricTableFromNestTree(leftTree: INestNode, topTree: INest
             })
         )
     );
-    const indexedRows = new Map<string, IRow>();
-    for (const row of data) {
-        const predicates = dimensionKeys
-            .filter((key) => Object.prototype.hasOwnProperty.call(row, key))
-            .map((key) => ({ key, value: row[key] as PivotTableValue }));
-        const key = createPivotPathKey(predicates);
-        const existing = indexedRows.get(key);
-        if (!existing || Object.keys(row).length <= Object.keys(existing).length) {
-            indexedRows.set(key, row);
-        }
-    }
-    iteLeft.first();
-    while (iteLeft.current !== null) {
-        const vec: any[] = [];
-        iteTop.first();
-        while (iteTop.current !== null) {
-            const predicates = iteLeft
-                .predicates()
-                .concat(iteTop.predicates());
-            const indexedRow = indexedRows.get(createPivotPathKey(predicates));
-            const matchedRows = indexedRow
-                ? [indexedRow]
-                : data.filter((row) => predicates.every((predicate) => pivotTableValuesEqual(row[predicate.key], predicate.value)));
-            if (matchedRows.length > 0) {
-                // If multiple rows are matched, then find the most matched one (the row with smallest number of keys)
-                vec.push(matchedRows.reduce((a, b) => (Object.keys(a).length < Object.keys(b).length ? a : b)));
-            } else {
-                vec.push(undefined);
-            }
-            iteTop.next();
-        }
-        mat.push(vec);
-        iteLeft.next();
-    }
-    return mat;
+    const cube = buildPivotCube(data, [], dimensionKeys, [], []);
+    return materializeMetricMatrix(leftTree, topTree, cube);
 }
 
 export function getAllChildrenSize(node: INestNode, depth: number): number {

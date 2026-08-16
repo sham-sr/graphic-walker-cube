@@ -104,10 +104,15 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
     const vizStore = useVizStore();
 
     // Localize the first chart name if it's still the default "Chart 1"
+    // Skip when the translated title equals the default (e.g. en-US → "Chart 1"),
+    // otherwise setVisName keeps updating and React hits maximum update depth.
     useEffect(() => {
-        if (vizStore.vizList.length > 0 && vizStore.vizList[0].name === 'Chart 1') {
-            vizStore.setVisName(0, t('main.tablist.auto_title', { idx: 1 }));
-        }
+        if (vizStore.vizList.length === 0) return;
+        const currentName = vizStore.vizList[0].name;
+        if (currentName !== 'Chart 1') return;
+        const localizedName = t('main.tablist.auto_title', { idx: 1 });
+        if (localizedName === currentName) return;
+        vizStore.setVisName(0, localizedName);
     }, [vizStore, vizStore.vizList, t]);
 
     useEffect(() => {
@@ -175,7 +180,7 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
 
     return (
         <ErrorContext value={{ reportError }}>
-            <ErrorBoundary fallback={<div>Something went wrong</div>} onError={props.onError}>
+            <ErrorBoundary fallback={<div>{t('error_panel.something_went_wrong')}</div>} onError={props.onError}>
                 <VizAppContext
                     ComputationContext={wrappedComputation}
                     themeContext={darkMode}

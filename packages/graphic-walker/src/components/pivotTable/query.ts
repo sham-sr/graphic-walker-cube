@@ -3,6 +3,8 @@ import { dataQuery } from '../../computation/dataQuery';
 import { fold2 } from '../../lib/op/fold';
 import { getMeaAggKey, getSort, getSortedEncoding } from '../../utils';
 import { toWorkflow } from '../../utils/workflow';
+import type { IPivotRollupMeasure } from './cube';
+import { toRollupMeasures } from './cube';
 import type { IPivotTableModel, IPivotTablePath } from './interface';
 import { createPivotPathKey } from './utils';
 
@@ -25,7 +27,7 @@ export interface IPivotTableQueryInput {
 export interface IPivotTableBuildResult {
     lt: IPivotTableModel['leftTree'];
     tt: IPivotTableModel['topTree'];
-    metric: IPivotTableModel['metric'];
+    cube: IPivotTableModel['cube'];
 }
 
 export type PivotTableModelBuilder = (
@@ -39,7 +41,8 @@ export type PivotTableModelBuilder = (
         fid: string;
         type: 'ascending' | 'descending';
         mode: 'row' | 'column';
-    }
+    },
+    rollupMeasures?: IPivotRollupMeasure[]
 ) => Promise<IPivotTableBuildResult>;
 
 const buildPivotTableModelInWorker: PivotTableModelBuilder = async (...args) => {
@@ -207,26 +210,21 @@ export async function queryPivotTable(
         assertUniqueRawCells(viewData, viewDimensions);
     }
 
-    const groupByCombinations = getPivotGroupByCombinations(dimsInRow, dimsInColumn, collapsedPaths, showTableSummary);
-    const aggregateResults = await Promise.all(
-        groupByCombinations.map((dimensions) =>
-            queryViewData(input.computation, fields, filters, dimensions, viewMeasures, input, sort, sortedDimensionId, -1)
-        )
-    );
     const result = await buildModel(
         dimsInRow,
         dimsInColumn,
         viewData,
-        aggregateResults.flat(),
+        [],
         collapsedPaths.map(createPivotPathKey),
         showTableSummary,
-        getPivotSort(input.rows, input.columns, input.defaultAggregated)
+        getPivotSort(input.rows, input.columns, input.defaultAggregated),
+        toRollupMeasures(viewMeasures, input.defaultAggregated)
     );
 
     return {
         leftTree: result.lt,
         topTree: result.tt,
-        metric: result.metric,
+        cube: result.cube,
         isEmpty: viewData.length === 0,
     };
 }

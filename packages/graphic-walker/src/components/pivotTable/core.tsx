@@ -6,7 +6,7 @@ import { buildCsvContent, exportSpreadsheet } from '../../services/spreadsheetEx
 import { download } from '../../utils/save';
 import type { INestNode, IPivotTableModel, IPivotTablePath } from './interface';
 import { getPivotTableFields, queryPivotTable, type PivotTableModelBuilder } from './query';
-import { pivotTableValuesEqual } from './utils';
+import { materializeMetricMatrix, pivotTableValuesEqual } from './utils';
 import { PivotTableView } from './view';
 
 const EMPTY_FILTERS: readonly IFilterField[] = [];
@@ -148,7 +148,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 limit,
                 timezoneDisplayOffset,
                 showTableSummary: effectiveShowTableSummary,
-                collapsedPaths: effectiveCollapsedPaths,
+                collapsedPaths: EMPTY_PATHS,
                 viewData,
             },
             buildModel
@@ -191,7 +191,6 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
         limit,
         timezoneDisplayOffset,
         effectiveShowTableSummary,
-        effectiveCollapsedPaths,
         viewData,
         buildModel,
     ]);
@@ -223,10 +222,10 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
 
     const downloadPivot = useCallback(
         (type: 'csv' | 'xlsx' | 'ods') => {
-            if (!model || !shouldRenderPivotTableModel(model) || !model.leftTree || !model.topTree || model.metric.length === 0) {
+            if (!model || !shouldRenderPivotTableModel(model) || !model.leftTree || !model.topTree) {
                 return;
             }
-            const metricTable = model.metric.map((row) => row.map((cell) => cell ?? null));
+            const metricTable = materializeMetricMatrix(model.leftTree, model.topTree, model.cube).map((row) => row.map((cell) => cell ?? null));
             const sheet = buildPivotSheet({
                 leftTree: model.leftTree,
                 topTree: model.topTree,
@@ -266,7 +265,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     }, [downloadPivot, exportHandlerRef]);
 
     return (
-        <div className="relative overflow-auto min-h-[2.5rem]" data-testid="pivot-table-core" aria-busy={loading}>
+        <div className="relative h-full min-h-0 max-h-[70vh] overflow-auto" data-testid="pivot-table-core" aria-busy={loading}>
             {loading && <LoadingLayer />}
             {model && shouldRenderPivotTableModel(model) ? (
                 <PivotTableView
@@ -277,6 +276,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                     numberFormat={numberFormat}
                     timezoneDisplayOffset={timezoneDisplayOffset}
                     enableCollapse={aggregationFeaturesEnabled && !disableCollapse}
+                    collapsedPaths={effectiveCollapsedPaths}
                     onHeaderCollapse={handleHeaderCollapse}
                 />
             ) : (

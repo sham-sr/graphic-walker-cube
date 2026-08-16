@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { Vector } from 'apache-arrow';
 import { bigNumToString } from 'apache-arrow/util/bn';
-import { compileWorkflowToSQL } from '../../duckdb-wasm-computation/src/compile.cjs';
+import { compileWorkflowToSQL } from '../../duckdb-wasm-computation/src/compile.mjs';
 
 const require = createRequire(import.meta.url);
 

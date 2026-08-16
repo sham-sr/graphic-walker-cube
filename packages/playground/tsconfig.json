@@ -8,7 +8,6 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
       "@kanaries/graphic-walker": ["../graphic-walker/src"],
       "@kanaries/duckdb-computation": ["../duckdb-wasm-computation/src"],
@@ -22,6 +21,7 @@
 
     /* Linting */
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true

@@ -45,17 +45,17 @@ const CodeExport: React.FC = observer((props) => {
     const specTabs: { key: string; label: string }[] = [
         {
             key: 'graphic-walker',
-            label: 'Graphic-Walker',
+            label: t('code_export.tabs.graphic_walker'),
         },
         {
             key: 'vega-lite',
-            label: 'Vega-Lite',
+            label: t('code_export.tabs.vega_lite'),
         },
         ...(vizStore.layout.showActions
             ? [
                   {
                       key: 'workflow',
-                      label: 'Workflow',
+                      label: t('code_export.tabs.workflow'),
                   },
               ]
             : []),

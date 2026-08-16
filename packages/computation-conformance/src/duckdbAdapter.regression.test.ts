@@ -2,7 +2,7 @@ import path from 'node:path';
 import { arrowToJSON } from '../../duckdb-wasm-computation/src/result';
 import { transformData } from '../../duckdb-wasm-computation/src/result';
 import { cleanupComputation, createInitializer, createListenerRegistry, loadJSONTable } from '../../duckdb-wasm-computation/src/runtime';
-import { correctOpenRangeSQL } from '../../duckdb-wasm-computation/src/compile.cjs';
+import { correctOpenRangeSQL } from '../../duckdb-wasm-computation/src/compile';
 import { createDuckDBMemoryProvider } from '../../duckdb-wasm-computation/src/provider';
 
 describe('DuckDB browser adapter regressions', () => {

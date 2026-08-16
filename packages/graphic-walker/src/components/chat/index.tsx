@@ -62,6 +62,7 @@ async function queryChat(
 }
 
 function UserMessage(props: { message: IUserChatMessage; onRemove?: () => void }) {
+    const { t } = useTranslation();
     const collapasable = props.message.type === 'generated';
     return (
         <Card>
@@ -69,7 +70,7 @@ function UserMessage(props: { message: IUserChatMessage; onRemove?: () => void }
                 <div className="p-1 w-6 h-6 rounded-full bg-muted">
                     <UserIcon className="w-4 h-4" />
                 </div>
-                <CardTitle className="flex-1">You</CardTitle>
+                <CardTitle className="flex-1">{t('chat.you')}</CardTitle>
                 {props.onRemove && (
                     <Button variant="ghost" size="icon-sm" onClick={props.onRemove}>
                         <TrashIcon className="w-4 h-4" />
@@ -79,7 +80,7 @@ function UserMessage(props: { message: IUserChatMessage; onRemove?: () => void }
             <CardContent className="pl-14">
                 {collapasable && (
                     <Collapsible>
-                        <CollapsibleTrigger className="text-muted-foreground">Click to expand auto generated message</CollapsibleTrigger>
+                        <CollapsibleTrigger className="text-muted-foreground">{t('chat.expand_auto_message')}</CollapsibleTrigger>
                         <CollapsibleContent className="whitespace-pre">{props.message.content}</CollapsibleContent>
                     </Collapsible>
                 )}

@@ -162,7 +162,7 @@ export const useMenuActions = (channel: 'dimensions' | 'measures'): IActionMenuI
                 f.computed &&
                     !isInnerField &&
                     f.expression?.op === 'expr' && {
-                        label: 'Edit Computed Field',
+                        label: t('edit_computed_field'),
                         onPress() {
                             vizStore.setComputedFieldFid(f.fid);
                         },

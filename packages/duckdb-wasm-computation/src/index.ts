@@ -10,7 +10,7 @@ import { IDataSourceEventType, exportFullRaw, fromFields } from '@kanaries/graph
 import type { IDataQueryPayload, IDataSourceProvider, IRow } from '@kanaries/graphic-walker';
 import { cleanupComputation, createInitializer, loadJSONTable } from './runtime';
 import { transformData } from './result';
-import { compileWorkflowToSQL } from './compile.cjs';
+import { compileWorkflowToSQL } from './compile';
 import { createDuckDBMemoryProvider } from './provider';
 
 const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
@@ -26,24 +26,66 @@ const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
 
 let db: duckdb.AsyncDuckDB;
 
+/** Vite may emit `/@fs/C:/...` for assets outside the app root; blob workers cannot parse those as relative URLs. */
+function toAbsoluteAssetUrl(assetPath: string): string {
+    if (/^(?:https?:|blob:|data:)/i.test(assetPath)) {
+        return assetPath;
+    }
+    return new URL(assetPath, globalThis.location?.href ?? 'http://localhost/').href;
+}
+
+function isWindowsViteFsUrl(assetUrl: string): boolean {
+    return assetUrl.includes('/@fs/') && /\/[A-Za-z]:\//.test(assetUrl);
+}
+
+/**
+ * Resolve an asset URL that DuckDB's blob worker can fetch.
+ * On Windows Vite, `/@fs/C:/...` breaks `new Request()` inside workers, so materialize as a blob URL.
+ */
+async function toWorkerSafeAssetUrl(assetPath: string, mimeType: string): Promise<string> {
+    const absoluteUrl = toAbsoluteAssetUrl(assetPath);
+    if (!isWindowsViteFsUrl(absoluteUrl)) {
+        return absoluteUrl;
+    }
+
+    const response = await fetch(absoluteUrl);
+    if (!response.ok) {
+        throw new Error(`Failed to load DuckDB asset: ${response.status} ${absoluteUrl}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return URL.createObjectURL(new Blob([buffer], { type: mimeType }));
+}
+
+async function createDuckDBWorker(mainWorker: string): Promise<Worker> {
+    // Main-thread fetch can load /@fs URLs; inline into a blob Worker to avoid importScripts(/@fs/C:...).
+    const absoluteWorkerUrl = toAbsoluteAssetUrl(mainWorker);
+    const script = await fetch(absoluteWorkerUrl).then((response) => {
+        if (!response.ok) {
+            throw new Error(`Failed to load DuckDB worker: ${response.status} ${absoluteWorkerUrl}`);
+        }
+        return response.text();
+    });
+    return new Worker(URL.createObjectURL(new Blob([script], { type: 'text/javascript' })));
+}
+
 const initialize = createInitializer(async () => {
     // Select a bundle based on browser checks
     const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
 
-    const workerUrl = URL.createObjectURL(
-        new Blob([`importScripts("${bundle.mainWorker!}");`], {
-            type: 'text/javascript',
-        })
-    );
-
     let worker: Worker | undefined;
     let nextDatabase: duckdb.AsyncDuckDB | undefined;
     try {
+        worker = await createDuckDBWorker(bundle.mainWorker!);
+        const mainModule = await toWorkerSafeAssetUrl(bundle.mainModule, 'application/wasm');
+        const pthreadWorker = bundle.pthreadWorker
+            ? await toWorkerSafeAssetUrl(bundle.pthreadWorker, 'text/javascript')
+            : undefined;
+        const dslModule = await toWorkerSafeAssetUrl(dslWasm, 'application/wasm');
+
         // Instantiate the asynchronous version of DuckDB-Wasm.
-        worker = new Worker(workerUrl);
         nextDatabase = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
-        await nextDatabase.instantiate(bundle.mainModule, bundle.pthreadWorker);
-        await initWasm(dslWasm);
+        await nextDatabase.instantiate(mainModule, pthreadWorker);
+        await initWasm(dslModule);
         db = nextDatabase;
     } catch (error) {
         if (nextDatabase) {
@@ -52,8 +94,6 @@ const initialize = createInitializer(async () => {
             worker?.terminate();
         }
         throw error;
-    } finally {
-        URL.revokeObjectURL(workerUrl);
     }
 });
 

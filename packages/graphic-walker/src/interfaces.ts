@@ -1107,6 +1107,9 @@ export interface IDataSourceProvider {
 
     queryData(query: IDataQueryPayload, datasetIds: string[]): Promise<IRow[]>;
 
+    /** Optional: drop a dataset. Host embeddings use this for replace-on-limit. */
+    removeDataSource?(datasetId: string): Promise<void>;
+
     onExportFile?: () => Promise<Blob>;
     onImportFile?: (file: File) => void;
 

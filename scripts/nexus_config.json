@@ -1,0 +1,78 @@
+{
+  "env": {
+    "NEXUS_USER": "bot.cube"
+  },
+  "docker": {
+    "env": {
+      "DOCKER_REGISTRY": "snr.promit-ek.ru",
+      "NEXUS_REPO": "global.docker-hosted",
+      "NEXUS_IMAGE_PREFIX": "cube"
+    },
+    "services": {
+      "cube-custom": {
+        "context": "cube",
+        "dockerfile": "Dockerfile",
+        "image": "cube-custom"
+      },
+      "ui_api": {
+        "context": ".",
+        "dockerfile": "ui_api/Dockerfile",
+        "image": "ui-api"
+      },
+      "reports_scheduler": {
+        "context": "temporal_scheduler",
+        "dockerfile": "Dockerfile",
+        "image": "reports_scheduler"
+      },
+      "cube-docs": {
+        "context": "docs",
+        "dockerfile": "Dockerfile",
+        "image": "cube-docs"
+      },
+      "ai_agent": {
+        "context": "ai_agent",
+        "dockerfile": "Dockerfile",
+        "image": "ai-agent"
+      },
+      "mcp_server": {
+        "context": "mcp_server",
+        "dockerfile": "Dockerfile",
+        "image": "mcp-server"
+      },
+      "db_manager_service": {
+        "context": ".",
+        "dockerfile": "db_manager_service/Dockerfile",
+        "image": "db-manager"
+      }
+    }
+  },
+  "pypi": {
+    "env": {
+      "PYPI_REPOSITORY_URL": "https://snr.promit-ek.ru/repository/cube.pypi-hosted/"
+    },
+    "packages": {
+      "etl-transformers": {
+        "path": "peer_models/transformers"
+      }
+    }
+  },
+  "npm": {
+    "env": {
+      "NPM_REGISTRY_URL": "https://snr.promit-ek.ru/repository/cube.npm-hosted/"
+    },
+    "packages": {
+      "graphic-walker": {
+        "path": "packages/graphic-walker",
+        "publishName": "@cube/graphic-walker"
+      },
+      "duckdb-computation": {
+        "path": "packages/duckdb-wasm-computation",
+        "publishName": "@cube/duckdb-computation"
+      },
+      "graphic-walker-embed": {
+        "path": "packages/graphic-walker-embed",
+        "publishName": "@cube/graphic-walker-embed"
+      }
+    }
+  }
+}

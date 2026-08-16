@@ -8,18 +8,16 @@
       "allowSyntheticDefaultImports": true,
       "strict": true,
       "forceConsistentCasingInFileNames": true,
-      "downlevelIteration": true,
       "noImplicitAny": false,
       "module": "ESNext",
-      "moduleResolution": "Node",
+      "moduleResolution": "bundler",
       "resolveJsonModule": true,
       "isolatedModules": true,
       "noEmit": true,
       "jsx": "react",
       "declaration": false,
       "sourceMap": false,
-      "outDir": "./app-dist",
+      "outDir": "./app-dist"
     },
     "include": ["src"]
   }
-  

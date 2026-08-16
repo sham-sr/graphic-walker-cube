@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import fs from 'node:fs/promises';
 import path from 'path';
 import react from '@vitejs/plugin-react'
-import typescript from '@rollup/plugin-typescript'
 import { peerDependencies } from './package.json'
 import { DEMO_DATASETS, downloadDemoDataset } from '../../scripts/demo-datasets.mjs';
 
@@ -10,7 +9,12 @@ import { DEMO_DATASETS, downloadDemoDataset } from '../../scripts/demo-datasets.
 // styled-components is an externalized runtime dependency so consumer bundlers can
 // dedupe it; consumers are not required to provide it as a peer.
 // @see https://styled-components.com/docs/faqs#marking-styledcomponents-as-external-in-your-package-dependencies
-const modulesNotToBundle = Object.keys(peerDependencies).concat(['styled-components', 'react-dom/client', 'react-dom/server']);
+const modulesNotToBundle = Object.keys(peerDependencies).concat([
+  'styled-components',
+  'react-dom/client',
+  'react-dom/server',
+  '@kanaries/duckdb-computation',
+]);
 const demoDatasetDownloads = new Map<string, Promise<Buffer>>();
 
 function demoDatasetFallbackPlugin() {
@@ -67,13 +71,8 @@ export default defineConfig({
   plugins: [
     demoDatasetFallbackPlugin(),
     react(),
-    // @ts-ignore
-    {
-      ...typescript({
-        tsconfig: path.resolve(__dirname, './tsconfig.json'),
-      }),
-      apply: 'build'
-    }
+    // Declarations are emitted by `tspc --build` in the package `build` script.
+    // @rollup/plugin-typescript here resolves `@kanaries/graphic-walker` against dist mid-build and fails.
   ],
   resolve: {
     dedupe: modulesNotToBundle,

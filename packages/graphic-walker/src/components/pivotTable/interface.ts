@@ -22,9 +22,14 @@ export interface INestNode {
     path: IPivotTablePath;
 }
 
+export interface IPivotCube {
+    /** Path-keyed cuboid cells. Missing intersections are absent, not stored. */
+    cells: Record<string, IRow>;
+}
+
 export interface IPivotTableModel {
     leftTree: INestNode;
     topTree: INestNode;
-    metric: (IRow | null | undefined)[][];
+    cube: IPivotCube;
     isEmpty: boolean;
 }
