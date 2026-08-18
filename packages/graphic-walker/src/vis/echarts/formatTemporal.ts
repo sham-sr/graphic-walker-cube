@@ -115,6 +115,53 @@ export function formatTemporalDate(date: Date, grain: TimeGrain | undefined, loc
     }
 }
 
+export type TemporalFormatMode = 'human' | 'technical';
+
+function pad2(value: number): string {
+    return String(value).padStart(2, '0');
+}
+
+function isoDate(date: Date): string {
+    return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+}
+
+/** When Cube/GW did not stamp a grain, infer one from the clock so midnight dates stay dates. */
+export function inferTimeGrainFromDate(date: Date): TimeGrain {
+    if (date.getUTCSeconds()) return 'second';
+    if (date.getUTCMinutes()) return 'minute';
+    if (date.getUTCHours()) return 'hour';
+    return 'day';
+}
+
+export function formatTemporalIso(date: Date, grain: TimeGrain | undefined): string {
+    const resolved = grain ?? inferTimeGrainFromDate(date);
+    const year = date.getUTCFullYear();
+    switch (resolved) {
+        case 'year':
+        case 'iso_year':
+            return String(year);
+        case 'quarter':
+            return `${year}-Q${Math.floor(date.getUTCMonth() / 3) + 1}`;
+        case 'month':
+            return `${year}-${pad2(date.getUTCMonth() + 1)}`;
+        case 'week':
+        case 'iso_week': {
+            const week = utcWeek(date);
+            return `${week.year}-W${pad2(week.week)}`;
+        }
+        case 'day':
+            return isoDate(date);
+        case 'hour':
+            return `${isoDate(date)} ${pad2(date.getUTCHours())}:00`;
+        case 'minute':
+            return `${isoDate(date)} ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}`;
+        case 'second':
+            return `${isoDate(date)} ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}:${pad2(date.getUTCSeconds())}`;
+        default:
+            return isoDate(date);
+    }
+}
+
 export function formatTemporalLabel(value: unknown, field: Pick<IViewField, 'fid' | 'timeUnit' | 'expression' | 'semanticType'>, locale?: string): string {
     const date = parseTemporal(value);
     if (!date) {
@@ -122,6 +169,39 @@ export function formatTemporalLabel(value: unknown, field: Pick<IViewField, 'fid
     }
     const grain = field.semanticType === 'temporal' || field.timeUnit || field.expression?.op === 'dateTimeDrill' ? resolveTimeGrain(field) : undefined;
     return formatTemporalDate(date, grain, locale);
+}
+
+export function formatTemporalValue(
+    value: unknown,
+    field: Pick<IViewField, 'fid' | 'timeUnit' | 'expression' | 'semanticType'>,
+    mode: TemporalFormatMode = 'human',
+    locale?: string
+): string {
+    const date = parseTemporal(value);
+    if (!date) {
+        return value == null ? '' : String(value);
+    }
+    const stamped = field.semanticType === 'temporal' || field.timeUnit || field.expression?.op === 'dateTimeDrill' ? resolveTimeGrain(field) : undefined;
+    if (mode === 'technical') {
+        return formatTemporalIso(date, stamped ?? inferTimeGrainFromDate(date));
+    }
+    if (stamped) {
+        return formatTemporalDate(date, stamped, locale);
+    }
+    const inferred = inferTimeGrainFromDate(date);
+    if (inferred === 'day') {
+        return formatTemporalDate(date, 'day', locale);
+    }
+    const loc = toBcp47Locale(locale);
+    const withSeconds = inferred === 'second';
+    return intl(loc, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        ...(withSeconds ? { second: '2-digit' as const } : {}),
+    }).format(date);
 }
 
 export function timeAxisMinInterval(grain: TimeGrain | undefined): number | undefined {

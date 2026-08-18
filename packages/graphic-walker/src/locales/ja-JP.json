@@ -582,6 +582,8 @@
         "expand_all": "すべてのグループを展開",
         "headers_nested": "入れ子のグループ見出し",
         "headers_repeat": "グループ値を繰り返す",
+        "date_human": "粒度に応じた日付表示",
+        "date_technical": "粒度に応じた ISO 日付",
         "hint_sort": "見出しをクリックして並べ替え",
         "hint_full": "見出しで並べ替え · セルをクリックしてこのパスを残す"
     },

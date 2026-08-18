@@ -96,6 +96,7 @@ export const emptyVisualLayout: IVisualLayout = {
     pivotColorMode: 'heatmap',
     pivotPercentMode: 'none',
     pivotRepeatLabels: false,
+    pivotDateFormat: 'human',
     chartShowLabels: false,
     chartOverlay: 'none',
     chartReference: 'none',

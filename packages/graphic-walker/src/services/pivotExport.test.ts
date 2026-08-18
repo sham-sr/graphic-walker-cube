@@ -62,4 +62,24 @@ describe('buildPivotSheet', () => {
         expect(sheet.data.some((row) => row[0] === 'East' && row[1] === 'Boston')).toBe(true);
         expect(sheet.data.some((row) => row[0] === 'East' && row[1] === 'NYC')).toBe(true);
     });
+
+    test('exports truncated ISO month headers in technical date mode', () => {
+        const month: IField = { fid: 'tickets.sell_date.month', name: 'Month', analyticType: 'dimension', semanticType: 'temporal' };
+        const data = [{ [month.fid]: '2021-11-01T00:00:00.000Z', sales_sum: 5 }];
+        const leftTree = buildNestTree([], data, [], false);
+        const topTree = buildNestTree([month.fid], data, [], false);
+        const sheet = buildPivotSheet({
+            leftTree,
+            topTree,
+            metricTable: [[{ sales_sum: 5 }]],
+            dimsInRow: [],
+            dimsInColumn: [month],
+            measInRow: [],
+            measInColumn: [sales],
+            dateFormat: 'technical',
+        });
+        const cells = sheet.data.flat().map((value) => String(value ?? ''));
+        expect(cells).toContain('2021-11');
+        expect(cells.some((cell) => cell.includes('00:00:00'))).toBe(false);
+    });
 });

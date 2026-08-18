@@ -116,7 +116,7 @@ describe('PivotTableView', () => {
         expect(markup).toContain('aria-label="Expand __total"');
     });
 
-    test('applies the requested display offset to nested temporal row fields', () => {
+    test('formats ungrained timestamps with a year in human mode', () => {
         const region = dimension('region', 'Region');
         const occurredAt: IViewField = {
             ...dimension('occurredAt', 'Occurred at'),
@@ -142,7 +142,38 @@ describe('PivotTableView', () => {
             />
         );
 
-        expect(markup).toContain('2024-01-01 09:57:00');
+        expect(markup).toMatch(/2024/);
+        expect(markup).toMatch(/Jan/);
+        expect(markup).not.toContain('09:57:00');
+        expect(markup).not.toContain('NaN-NaN-NaN');
+    });
+
+    test('renders technical ISO dates instead of localized grain labels', () => {
+        const occurredAt: IViewField = {
+            ...dimension('occurredAt', 'Occurred at'),
+            semanticType: 'temporal',
+            offset: 0,
+        };
+        const result = buildPivotTable(
+            [occurredAt],
+            [],
+            [{ occurredAt: '2024-01-01T12:00:00Z', sales_sum: 7 }],
+            [],
+            [],
+            false
+        );
+        const markup = renderToStaticMarkup(
+            <PivotTableView
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
+                rows={[occurredAt, measure]}
+                columns={[]}
+                enableCollapse={false}
+                onHeaderCollapse={() => {}}
+                dateFormat="technical"
+            />
+        );
+
+        expect(markup).toContain('2024-01-01 12:00');
     });
 
     test('renders temporal summary labels without parsing them as dates', () => {

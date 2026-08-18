@@ -1,4 +1,4 @@
-import { formatTemporalLabel, parseTemporal, resolveTimeGrain } from './formatTemporal';
+import { formatTemporalIso, formatTemporalLabel, formatTemporalValue, parseTemporal, resolveTimeGrain } from './formatTemporal';
 import type { IViewField } from '../../interfaces';
 
 const monthField: IViewField = {
@@ -43,5 +43,18 @@ describe('formatTemporal', () => {
         expect(formatTemporalLabel(iso, quarterField, 'en-US')).toBe('Q1 2025');
         expect(formatTemporalLabel(iso, weekField, 'en-US')).toMatch(/^W0?\d+ 2025$/);
         expect(formatTemporalLabel(iso, weekField, 'ru-RU')).toMatch(/нед/);
+    });
+
+    test('formats truncated ISO by grain for technical pivot headers', () => {
+        const iso = '2025-02-15T00:00:00.000Z';
+        const date = parseTemporal(iso)!;
+        expect(formatTemporalIso(date, 'year')).toBe('2025');
+        expect(formatTemporalIso(date, 'quarter')).toBe('2025-Q1');
+        expect(formatTemporalIso(date, 'month')).toBe('2025-02');
+        expect(formatTemporalIso(date, 'day')).toBe('2025-02-15');
+        expect(formatTemporalValue(iso, monthField, 'technical')).toBe('2025-02');
+        expect(formatTemporalValue(iso, monthField, 'human', 'en-US').toLowerCase()).toMatch(/feb/);
+        expect(formatTemporalValue('2024-01-01T12:00:00.000Z', { ...monthField, fid: 'occurredAt' }, 'technical')).toBe('2024-01-01 12:00');
+        expect(formatTemporalValue('2024-01-01T12:00:00.000Z', { ...monthField, fid: 'occurredAt' }, 'human', 'en-US')).toMatch(/2024/);
     });
 });

@@ -589,6 +589,8 @@
         "expand_all": "展开全部组",
         "headers_nested": "嵌套分组表头",
         "headers_repeat": "重复分组值",
+        "date_human": "按粒度本地化日期",
+        "date_technical": "按粒度使用 ISO 日期",
         "hint_sort": "点击表头排序",
         "hint_full": "点击表头排序 · 点击单元格保留该路径"
     },

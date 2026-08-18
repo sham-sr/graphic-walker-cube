@@ -12,11 +12,14 @@ import { PivotTableView } from './view';
 import { PivotTableToolbar } from './toolbar';
 import {
     resolvePivotColorMode,
+    resolvePivotDateFormat,
     resolvePivotHeaderMode,
     resolvePivotPercentMode,
     resolvePivotTotals,
     showTableSummaryFromTotals,
+    fieldLooksTemporal,
     type PivotColorMode,
+    type PivotDateFormat,
     type PivotHeaderMode,
     type PivotPercentMode,
     type PivotTotalsMode,
@@ -98,6 +101,8 @@ export interface PivotTableCoreProps {
     /** Repeat nested group labels on every leaf. Controlled when `onRepeatLabelsChange` is set. */
     repeatLabels?: boolean;
     onRepeatLabelsChange?: (repeat: boolean) => void;
+    dateFormat?: PivotDateFormat;
+    onDateFormatChange?: (mode: PivotDateFormat) => void;
     dark?: boolean;
     onHeaderSort?: (fid: string) => void;
     onKeepPath?: (path: IPivotTablePath) => void;
@@ -136,11 +141,13 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     onColumnTotalsChange,
     repeatLabels,
     onRepeatLabelsChange,
+    dateFormat,
+    onDateFormatChange,
     dark = false,
     onHeaderSort,
     onKeepPath,
 }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [model, setModel] = useState<IPivotTableModel | null>(null);
     const [loading, setLoading] = useState(false);
     const [uncontrolledCollapsedPaths, setUncontrolledCollapsedPaths] = useState<IPivotTablePath[]>(() =>
@@ -152,6 +159,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     const [localRowTotals, setLocalRowTotals] = useState<PivotTotalsMode>(() => initialTotals.rows);
     const [localColumnTotals, setLocalColumnTotals] = useState<PivotTotalsMode>(() => initialTotals.columns);
     const [localHeaderMode, setLocalHeaderMode] = useState<PivotHeaderMode>(() => resolvePivotHeaderMode(repeatLabels));
+    const [localDateFormat, setLocalDateFormat] = useState<PivotDateFormat>(() => resolvePivotDateFormat(dateFormat));
     const requestIdRef = useRef(0);
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const onErrorRef = useRef(onError);
@@ -293,6 +301,9 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     const activePercentMode = onPercentModeChange ? resolvePivotPercentMode(percentMode) : localPercentMode;
     const activeHeaderMode = onRepeatLabelsChange ? resolvePivotHeaderMode(repeatLabels) : localHeaderMode;
     const activeRepeatLabels = activeHeaderMode === 'repeat';
+    const activeDateFormat = onDateFormatChange ? resolvePivotDateFormat(dateFormat) : localDateFormat;
+    const showDateFormat = [...rows, ...columns].some((field) => fieldLooksTemporal(field));
+    const locale = i18n.language;
     const collapsiblePaths = useMemo(() => {
         if (!model?.leftTree || !model.topTree) {
             return [];
@@ -358,6 +369,17 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
         [onRepeatLabelsChange]
     );
 
+    const handleDateFormatChange = useCallback(
+        (mode: PivotDateFormat) => {
+            if (onDateFormatChange) {
+                onDateFormatChange(mode);
+                return;
+            }
+            setLocalDateFormat(mode);
+        },
+        [onDateFormatChange]
+    );
+
     const handleCollapseAllToggle = useCallback(() => {
         if (disableCollapse || !aggregationFeaturesEnabled) {
             return;
@@ -386,6 +408,8 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 displayOffset: timezoneDisplayOffset,
                 summaryLabels,
                 repeatLabels: activeRepeatLabels,
+                dateFormat: activeDateFormat,
+                locale,
             });
             const fileName = `${name || 'pivot-table'}.${type}`;
             if (type === 'csv') {
@@ -403,7 +427,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 type
             );
         },
-        [dimsInColumn, dimsInRow, measInColumn, measInRow, model, name, timezoneDisplayOffset, summaryLabels, activeRepeatLabels]
+        [dimsInColumn, dimsInRow, measInColumn, measInRow, model, name, timezoneDisplayOffset, summaryLabels, activeRepeatLabels, activeDateFormat, locale]
     );
 
     useEffect(() => {
@@ -424,13 +448,16 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 rowTotals={activeRowTotals}
                 columnTotals={activeColumnTotals}
                 headerMode={activeHeaderMode}
+                dateFormat={activeDateFormat}
                 onColorModeChange={handleColorModeChange}
                 onPercentModeChange={handlePercentModeChange}
                 onRowTotalsChange={handleRowTotalsChange}
                 onColumnTotalsChange={handleColumnTotalsChange}
                 onHeaderModeChange={handleHeaderModeChange}
+                onDateFormatChange={handleDateFormatChange}
                 showKeepHint={Boolean(onKeepPath)}
                 showHeaderMode={showHeaderMode}
+                showDateFormat={showDateFormat}
                 showCollapseAll={showCollapseAll}
                 anyCollapsed={effectiveCollapsedPaths.length > 0}
                 onCollapseAllToggle={handleCollapseAllToggle}
@@ -456,6 +483,8 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                         onKeepPath={onKeepPath}
                         summaryLabels={summaryLabels}
                         repeatLabels={activeRepeatLabels}
+                        dateFormat={activeDateFormat}
+                        locale={locale}
                     />
                 ) : (
                     !loading && emptyContent

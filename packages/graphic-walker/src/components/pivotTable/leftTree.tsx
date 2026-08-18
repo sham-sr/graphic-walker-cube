@@ -5,7 +5,7 @@ import { MinusCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 import { cn, getMeaAggName } from '@/utils';
 import { collectPivotLeafChains, windowedHeaderCells, type IPivotLeafAncestorIndex, type IPivotLeafChain } from './headerWindow';
 import { isPivotNodeCollapsed } from './treeWalk';
-import { formatPivotHeaderValue, sortMark, type PivotSummaryLabels } from './display';
+import { formatPivotHeaderValue, sortMark, type PivotDateFormat, type PivotSummaryLabels } from './display';
 
 function LeftHeaderCell({
     node,
@@ -23,6 +23,8 @@ function LeftHeaderCell({
     stickyLeft,
     summaryLabels,
     hideCollapse,
+    dateFormat,
+    locale,
 }: {
     node: INestNode;
     field: IField | undefined;
@@ -39,8 +41,10 @@ function LeftHeaderCell({
     stickyLeft?: boolean;
     summaryLabels?: PivotSummaryLabels;
     hideCollapse?: boolean;
+    dateFormat?: PivotDateFormat;
+    locale?: string;
 }) {
-    const label = formatPivotHeaderValue(node, field, dimsInRow, displayOffset, summaryLabels);
+    const label = formatPivotHeaderValue(node, field, dimsInRow, displayOffset, summaryLabels, dateFormat, locale);
     const mark = sortMark(field?.fid, sortedFid, sortedDir);
     return (
         <th
@@ -97,6 +101,8 @@ export interface TreeProps {
     leaves?: readonly IPivotLeafChain[];
     ancestorIndex?: IPivotLeafAncestorIndex;
     repeatLabels?: boolean;
+    dateFormat?: PivotDateFormat;
+    locale?: string;
 }
 
 export function buildWindowedLeftTreeRows(props: TreeProps, start: number, end: number): ReactNode[][] {
@@ -130,6 +136,8 @@ export function buildWindowedLeftTreeRows(props: TreeProps, start: number, end: 
                     stickyLeft={dimIndex === 0}
                     summaryLabels={props.summaryLabels}
                     hideCollapse={cell.repeated}
+                    dateFormat={props.dateFormat}
+                    locale={props.locale}
                 />
             );
         })

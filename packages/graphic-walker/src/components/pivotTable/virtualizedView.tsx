@@ -6,7 +6,7 @@ import MetricTable from './metricTable';
 import TopTree from './topTree';
 import { collectPivotLeafChains, indexPivotLeafAncestors } from './headerWindow';
 import type { INestNode, IPivotTableModel, IPivotTablePath } from './interface';
-import type { PivotColorMode, PivotPercentMode, PivotSummaryLabels } from './display';
+import type { PivotColorMode, PivotDateFormat, PivotPercentMode, PivotSummaryLabels } from './display';
 import { PIVOT_ROW_HEIGHT_PX, PIVOT_SCROLLPORT_CLASS, PIVOT_TABLE_CLASS } from './scrollport';
 
 export interface VirtualizedPivotViewProps {
@@ -32,6 +32,8 @@ export interface VirtualizedPivotViewProps {
     onKeepPath?: (path: IPivotTablePath) => void;
     summaryLabels?: PivotSummaryLabels;
     repeatLabels?: boolean;
+    dateFormat?: PivotDateFormat;
+    locale?: string;
 }
 
 export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
@@ -56,6 +58,8 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
     onKeepPath,
     summaryLabels,
     repeatLabels,
+    dateFormat,
+    locale,
 }) => {
     const parentRef = useRef<HTMLDivElement>(null);
     const leftChains = useMemo(() => collectPivotLeafChains(model.leftTree, collapsedKeySet), [model.leftTree, collapsedKeySet]);
@@ -98,6 +102,8 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     leaves: leftChains,
                     ancestorIndex,
                     repeatLabels,
+                    dateFormat,
+                    locale,
                 },
                 rowStart,
                 rowEnd
@@ -118,6 +124,8 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
             leftChains,
             ancestorIndex,
             repeatLabels,
+            dateFormat,
+            locale,
             rowStart,
             rowEnd,
         ]
@@ -142,6 +150,8 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     sortedDir={sortedDir}
                     summaryLabels={summaryLabels}
                     repeatLabels={repeatLabels}
+                    dateFormat={dateFormat}
+                    locale={locale}
                 />
                 <MetricTable
                     cube={model.cube}

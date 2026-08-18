@@ -327,6 +327,7 @@ const Renderer = forwardRef<IReactVegaHandler, RendererProps>(function (props, r
                         );
                     }}
                     onPivotRepeatLabelsChange={(repeat) => vizStore.setVisualLayout('pivotRepeatLabels', repeat)}
+                    onPivotDateFormatChange={(mode) => vizStore.setVisualLayout('pivotDateFormat', mode)}
                     onPivotHeaderSort={(fid) => vizStore.cycleFieldSort(fid)}
                     onPivotKeepPath={(path) => vizStore.keepDimensionValues(path)}
                     onChartChromeChange={(patch) => {

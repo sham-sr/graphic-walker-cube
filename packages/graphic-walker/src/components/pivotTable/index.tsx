@@ -3,4 +3,4 @@ export type { ILocalPivotTableProps, IRemotePivotTableProps, PivotTableProps } f
 export type { IPivotTablePath, IPivotTablePathItem, IPivotCube, PivotTableValue } from './interface';
 export { PivotTableCore } from './core';
 export type { PivotTableCoreProps } from './core';
-export type { PivotColorMode, PivotHeaderMode, PivotPercentMode, PivotTotalsMode } from './display';
+export type { PivotColorMode, PivotDateFormat, PivotHeaderMode, PivotPercentMode, PivotTotalsMode } from './display';

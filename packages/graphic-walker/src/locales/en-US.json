@@ -585,6 +585,8 @@
         "expand_all": "Expand all groups",
         "headers_nested": "Nested group headers",
         "headers_repeat": "Repeat group values",
+        "date_human": "Localized dates by grain",
+        "date_technical": "ISO dates by grain",
         "hint_sort": "Click a header to sort",
         "hint_full": "Click a header to sort · click a cell to keep this path"
     },

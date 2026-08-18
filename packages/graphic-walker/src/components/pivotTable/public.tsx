@@ -5,7 +5,7 @@ import { ShadowDom } from '../../shadow-dom';
 import { useCurrentMediaTheme } from '../../utils/media';
 import type { IPivotTablePath } from './interface';
 import { PivotTableCore } from './core';
-import type { PivotColorMode, PivotPercentMode, PivotTotalsMode } from './display';
+import type { PivotColorMode, PivotDateFormat, PivotPercentMode, PivotTotalsMode } from './display';
 
 interface PivotTableBaseProps extends IThemeProps, IErrorHandlerProps {
     /** Complete field catalog used to compile filters, expressions, and aggregations. */
@@ -50,6 +50,8 @@ interface PivotTableBaseProps extends IThemeProps, IErrorHandlerProps {
     /** Repeat nested group labels on every leaf. Controlled when `onRepeatLabelsChange` is set. */
     repeatLabels?: boolean;
     onRepeatLabelsChange?: (repeat: boolean) => void;
+    dateFormat?: PivotDateFormat;
+    onDateFormatChange?: (mode: PivotDateFormat) => void;
     onHeaderSort?: (fid: string) => void;
     onKeepPath?: (path: IPivotTablePath) => void;
 }
@@ -118,6 +120,8 @@ export function PivotTable(props: PivotTableProps) {
         onColumnTotalsChange,
         repeatLabels,
         onRepeatLabelsChange,
+        dateFormat,
+        onDateFormatChange,
         onHeaderSort,
         onKeepPath,
     } = props;
@@ -166,6 +170,8 @@ export function PivotTable(props: PivotTableProps) {
                     onColumnTotalsChange={onColumnTotalsChange}
                     repeatLabels={repeatLabels}
                     onRepeatLabelsChange={onRepeatLabelsChange}
+                    dateFormat={dateFormat}
+                    onDateFormatChange={onDateFormatChange}
                     dark={darkMode === 'dark'}
                     onHeaderSort={onHeaderSort}
                     onKeepPath={onKeepPath}

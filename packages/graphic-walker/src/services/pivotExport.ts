@@ -1,7 +1,7 @@
 import { getMeaAggKey } from '@/utils';
 import { IField, IRow } from '../interfaces';
 import { INestNode } from '../components/pivotTable/interface';
-import { formatPivotHeaderValue, type PivotSummaryLabels } from '../components/pivotTable/display';
+import { formatPivotHeaderValue, type PivotDateFormat, type PivotSummaryLabels } from '../components/pivotTable/display';
 import { collectPivotLeafChains } from '../components/pivotTable/headerWindow';
 import type { Range } from 'xlsx';
 import type { SheetCellValue } from './spreadsheetExport';
@@ -35,9 +35,11 @@ function formatNodeValue(
     field: IField | undefined,
     dims: IField[],
     displayOffset?: number,
-    labels?: PivotSummaryLabels
+    labels?: PivotSummaryLabels,
+    dateFormat?: PivotDateFormat,
+    locale?: string
 ): string {
-    return formatPivotHeaderValue(node, field, dims, displayOffset, labels);
+    return formatPivotHeaderValue(node, field, dims, displayOffset, labels, dateFormat, locale);
 }
 
 function renderLeftTree(
@@ -47,7 +49,9 @@ function renderLeftTree(
     cellRows: CellSpan[][],
     meaNumber: number,
     displayOffset?: number,
-    labels?: PivotSummaryLabels
+    labels?: PivotSummaryLabels,
+    dateFormat?: PivotDateFormat,
+    locale?: string
 ) {
     const childrenSize = getChildCount(node);
     if (depth > dimsInRow.length) {
@@ -55,14 +59,14 @@ function renderLeftTree(
     }
     const field = depth > 0 ? dimsInRow[depth - 1] : undefined;
     cellRows[cellRows.length - 1].push({
-        value: formatNodeValue(node, field, dimsInRow, displayOffset, labels),
+        value: formatNodeValue(node, field, dimsInRow, displayOffset, labels, dateFormat, locale),
         colSpan: node.isCollapsed ? node.height + 1 : 1,
         rowSpan: node.isCollapsed ? Math.max(meaNumber, 1) : childrenSize * Math.max(meaNumber, 1),
     });
     if (node.isCollapsed) return;
     for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        renderLeftTree(child, dimsInRow, depth + 1, cellRows, meaNumber, displayOffset, labels);
+        renderLeftTree(child, dimsInRow, depth + 1, cellRows, meaNumber, displayOffset, labels, dateFormat, locale);
         if (i < node.children.length - 1) {
             cellRows.push([]);
         }
@@ -76,7 +80,9 @@ function renderTopTree(
     cellRows: CellSpan[][],
     meaNumber: number,
     displayOffset?: number,
-    labels?: PivotSummaryLabels
+    labels?: PivotSummaryLabels,
+    dateFormat?: PivotDateFormat,
+    locale?: string
 ) {
     const childrenSize = getChildCount(node);
     if (depth > dimsInCol.length) {
@@ -84,13 +90,13 @@ function renderTopTree(
     }
     const field = depth > 0 ? dimsInCol[depth - 1] : undefined;
     cellRows[depth].push({
-        value: formatNodeValue(node, field, dimsInCol, displayOffset, labels),
+        value: formatNodeValue(node, field, dimsInCol, displayOffset, labels, dateFormat, locale),
         colSpan: node.isCollapsed ? Math.max(meaNumber, 1) : childrenSize * Math.max(meaNumber, 1),
         rowSpan: node.isCollapsed ? node.height + 1 : 1,
     });
     if (node.isCollapsed) return;
     for (let i = 0; i < node.children.length; i++) {
-        renderTopTree(node.children[i], dimsInCol, depth + 1, cellRows, meaNumber, displayOffset, labels);
+        renderTopTree(node.children[i], dimsInCol, depth + 1, cellRows, meaNumber, displayOffset, labels, dateFormat, locale);
     }
 }
 
@@ -118,19 +124,21 @@ function buildLeftHeaderRows(
     measInRow: IField[],
     displayOffset?: number,
     labels?: PivotSummaryLabels,
-    repeatLabels = false
+    repeatLabels = false,
+    dateFormat?: PivotDateFormat,
+    locale?: string
 ): LeftHeaderBuildResult {
     if (repeatLabels) {
         const leaves = collectPivotLeafChains(leftTree);
         const cellRows: CellSpan[][] = leaves.map((leaf) => {
             const cells: CellSpan[] = leaf.chain.map((node, depth) => ({
-                value: formatNodeValue(node, dimsInRow[depth], dimsInRow, displayOffset, labels),
+                value: formatNodeValue(node, dimsInRow[depth], dimsInRow, displayOffset, labels, dateFormat, locale),
             }));
             while (cells.length < dimsInRow.length) {
                 const node = leaf.node;
                 const depth = cells.length;
                 cells.push({
-                    value: formatNodeValue(node, dimsInRow[Math.min(depth, dimsInRow.length - 1)], dimsInRow, displayOffset, labels),
+                    value: formatNodeValue(node, dimsInRow[Math.min(depth, dimsInRow.length - 1)], dimsInRow, displayOffset, labels, dateFormat, locale),
                 });
             }
             return cells;
@@ -156,7 +164,7 @@ function buildLeftHeaderRows(
     }
 
     const cellRows: CellSpan[][] = [[]];
-    renderLeftTree(leftTree, dimsInRow, 0, cellRows, measInRow.length, displayOffset, labels);
+    renderLeftTree(leftTree, dimsInRow, 0, cellRows, measInRow.length, displayOffset, labels, dateFormat, locale);
     cellRows[0].shift();
 
     const rowMeta: { leafIndex: number; measureIndex: number | null }[] = [];
@@ -196,7 +204,9 @@ function buildTopHeaderRows(
     measInCol: IField[],
     displayOffset?: number,
     labels?: PivotSummaryLabels,
-    repeatLabels = false
+    repeatLabels = false,
+    dateFormat?: PivotDateFormat,
+    locale?: string
 ): TopHeaderBuildResult {
     const meaNumber = Math.max(measInCol.length, 1);
     if (repeatLabels) {
@@ -206,7 +216,7 @@ function buildTopHeaderRows(
         for (const leaf of leaves) {
             for (let depth = 0; depth < dimsInCol.length; depth++) {
                 const node = leaf.chain[depth] ?? leaf.node;
-                const label = formatNodeValue(node, dimsInCol[depth], dimsInCol, displayOffset, labels);
+                const label = formatNodeValue(node, dimsInCol[depth], dimsInCol, displayOffset, labels, dateFormat, locale);
                 for (let copy = 0; copy < copies; copy++) {
                     headerRows[depth].push({ value: label });
                 }
@@ -235,7 +245,7 @@ function buildTopHeaderRows(
     }
 
     const cellRows: CellSpan[][] = new Array(dimsInCol.length + 1).fill(0).map(() => []);
-    renderTopTree(topTree, dimsInCol, 0, cellRows, measInCol.length, displayOffset, labels);
+    renderTopTree(topTree, dimsInCol, 0, cellRows, measInCol.length, displayOffset, labels, dateFormat, locale);
 
     cellRows.forEach((row) => {
         const rowSpanValues = row.map((cell) => cell.rowSpan ?? 1);
@@ -354,6 +364,8 @@ export function buildPivotSheet(params: {
     displayOffset?: number;
     summaryLabels?: PivotSummaryLabels;
     repeatLabels?: boolean;
+    dateFormat?: PivotDateFormat;
+    locale?: string;
 }): { data: SheetCellValue[][]; merges: Range[] } {
     const {
         leftTree,
@@ -366,10 +378,12 @@ export function buildPivotSheet(params: {
         displayOffset,
         summaryLabels,
         repeatLabels = false,
+        dateFormat,
+        locale,
     } = params;
 
-    const leftBuild = buildLeftHeaderRows(leftTree, dimsInRow, measInRow, displayOffset, summaryLabels, repeatLabels);
-    const topBuild = buildTopHeaderRows(topTree, dimsInColumn, measInColumn, displayOffset, summaryLabels, repeatLabels);
+    const leftBuild = buildLeftHeaderRows(leftTree, dimsInRow, measInRow, displayOffset, summaryLabels, repeatLabels, dateFormat, locale);
+    const topBuild = buildTopHeaderRows(topTree, dimsInColumn, measInColumn, displayOffset, summaryLabels, repeatLabels, dateFormat, locale);
 
     const headerRowsCount = topBuild.rows.length;
     const leftCols = dimsInRow.length + (measInRow.length > 0 ? 1 : 0);

@@ -3,7 +3,7 @@ import React, { forwardRef, useMemo, useContext, useState, useCallback, useEffec
 
 import { PivotTableCore } from '../components/pivotTable';
 import type { IPivotTablePath } from '../components/pivotTable/interface';
-import { resolvePivotColorMode, resolvePivotHeaderMode, resolvePivotPercentMode, resolvePivotTotals, type PivotColorMode, type PivotPercentMode, type PivotTotalsMode } from '../components/pivotTable/display';
+import { resolvePivotColorMode, resolvePivotDateFormat, resolvePivotHeaderMode, resolvePivotPercentMode, resolvePivotTotals, type PivotColorMode, type PivotDateFormat, type PivotPercentMode, type PivotTotalsMode } from '../components/pivotTable/display';
 import LeafletRenderer, { LEAFLET_DEFAULT_HEIGHT, LEAFLET_DEFAULT_WIDTH } from '../components/leafletRenderer';
 import ReactVega, { IReactVegaHandler } from '../vis/react-vega';
 import ReactEcharts from '../vis/react-echarts';
@@ -43,6 +43,7 @@ interface SpecRendererProps {
     onPivotRowTotalsChange?: (mode: PivotTotalsMode) => void;
     onPivotColumnTotalsChange?: (mode: PivotTotalsMode) => void;
     onPivotRepeatLabelsChange?: (repeat: boolean) => void;
+    onPivotDateFormatChange?: (mode: PivotDateFormat) => void;
     onPivotHeaderSort?: (fid: string) => void;
     onPivotKeepPath?: (path: IPivotTablePath) => void;
     onChartChromeChange?: (patch: Partial<ChartChrome>) => void;
@@ -53,7 +54,7 @@ interface SpecRendererProps {
  * This is a pure component, which means it will not depend on any global state.
  */
 const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
-    { name, layout, data, draggableFieldState, visualConfig, onGeomClick, onChartResize, locale, onReportSpec, vizThemeConfig, scales, disableCollapse, exportHandlerRef, onPivotColorModeChange, onPivotPercentModeChange, onPivotRowTotalsChange, onPivotColumnTotalsChange, onPivotRepeatLabelsChange, onPivotHeaderSort, onPivotKeepPath, onChartChromeChange, onStackChange },
+    { name, layout, data, draggableFieldState, visualConfig, onGeomClick, onChartResize, locale, onReportSpec, vizThemeConfig, scales, disableCollapse, exportHandlerRef, onPivotColorModeChange, onPivotPercentModeChange, onPivotRowTotalsChange, onPivotColumnTotalsChange, onPivotRepeatLabelsChange, onPivotDateFormatChange, onPivotHeaderSort, onPivotKeepPath, onChartChromeChange, onStackChange },
     ref
 ) {
     // const { draggableFieldState, visualConfig } = vizStore;
@@ -212,6 +213,8 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                 onColumnTotalsChange={onPivotColumnTotalsChange}
                 repeatLabels={resolvePivotHeaderMode(layout.pivotRepeatLabels) === 'repeat'}
                 onRepeatLabelsChange={onPivotRepeatLabelsChange}
+                dateFormat={resolvePivotDateFormat(layout.pivotDateFormat)}
+                onDateFormatChange={onPivotDateFormatChange}
                 dark={mediaTheme === 'dark'}
                 onHeaderSort={onPivotHeaderSort}
                 onKeepPath={onPivotKeepPath}

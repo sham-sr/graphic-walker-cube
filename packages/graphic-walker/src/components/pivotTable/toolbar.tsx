@@ -1,10 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bars3Icon, ChartBarIcon, FireIcon, HashtagIcon, MinusCircleIcon, PlusCircleIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
+import { Bars3Icon, CalendarDaysIcon, ChartBarIcon, FireIcon, HashtagIcon, MinusCircleIcon, PlusCircleIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
 import { Toggle } from '../ui/toggle';
 import { Button } from '../ui/button';
 import Tooltip from '../tooltip';
-import type { PivotColorMode, PivotHeaderMode, PivotPercentMode, PivotTotalsMode } from './display';
+import type { PivotColorMode, PivotDateFormat, PivotHeaderMode, PivotPercentMode, PivotTotalsMode } from './display';
 import { cn } from '@/utils';
 
 export interface PivotTableToolbarProps {
@@ -13,13 +13,16 @@ export interface PivotTableToolbarProps {
     rowTotals: PivotTotalsMode;
     columnTotals: PivotTotalsMode;
     headerMode: PivotHeaderMode;
+    dateFormat: PivotDateFormat;
     onColorModeChange: (mode: PivotColorMode) => void;
     onPercentModeChange: (mode: PivotPercentMode) => void;
     onRowTotalsChange: (mode: PivotTotalsMode) => void;
     onColumnTotalsChange: (mode: PivotTotalsMode) => void;
     onHeaderModeChange: (mode: PivotHeaderMode) => void;
+    onDateFormatChange: (mode: PivotDateFormat) => void;
     showKeepHint?: boolean;
     showHeaderMode?: boolean;
+    showDateFormat?: boolean;
     showCollapseAll?: boolean;
     anyCollapsed?: boolean;
     onCollapseAllToggle?: () => void;
@@ -66,13 +69,16 @@ export function PivotTableToolbar({
     rowTotals,
     columnTotals,
     headerMode,
+    dateFormat,
     onColorModeChange,
     onPercentModeChange,
     onRowTotalsChange,
     onColumnTotalsChange,
     onHeaderModeChange,
+    onDateFormatChange,
     showKeepHint,
     showHeaderMode = true,
+    showDateFormat = false,
     showCollapseAll = false,
     anyCollapsed = false,
     onCollapseAllToggle,
@@ -125,6 +131,16 @@ export function PivotTableToolbar({
                     options={[
                         { id: 'nested', label: '', title: t('pivotTable.headers_nested'), icon: Squares2X2Icon },
                         { id: 'repeat', label: '', title: t('pivotTable.headers_repeat'), icon: Bars3Icon },
+                    ]}
+                />
+            )}
+            {showDateFormat && (
+                <Segment
+                    value={dateFormat}
+                    onChange={onDateFormatChange}
+                    options={[
+                        { id: 'human', label: '', title: t('pivotTable.date_human'), icon: CalendarDaysIcon },
+                        { id: 'technical', label: 'ISO', title: t('pivotTable.date_technical') },
                     ]}
                 />
             )}

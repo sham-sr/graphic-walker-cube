@@ -10,6 +10,7 @@ import {
     percentShare,
     readNumericCell,
     resolvePivotColorMode,
+    resolvePivotDateFormat,
     resolvePivotHeaderMode,
     resolvePivotPercentMode,
     resolvePivotTotals,
@@ -152,5 +153,25 @@ describe('pivot display helpers', () => {
         expect(resolvePivotHeaderMode('nested')).toBe('nested');
         expect(resolvePivotHeaderMode(true)).toBe('repeat');
         expect(resolvePivotHeaderMode('repeat')).toBe('repeat');
+    });
+
+    test('formats temporal headers as localized grain or truncated ISO', () => {
+        expect(resolvePivotDateFormat(undefined)).toBe('human');
+        expect(resolvePivotDateFormat('technical')).toBe('technical');
+        const monthField = { fid: 'tickets.sell_date.month', name: 'Month', analyticType: 'dimension' as const, semanticType: 'temporal' as const };
+        const node = {
+            kind: 'value' as const,
+            key: 't',
+            value: '2025-02-01T00:00:00.000Z',
+            sort: '',
+            uniqueKey: 'm',
+            fieldKey: monthField.fid,
+            children: [],
+            height: 0,
+            isCollapsed: true,
+            path: [{ key: monthField.fid, value: '2025-02-01T00:00:00.000Z' }],
+        };
+        expect(formatPivotHeaderValue(node, monthField, [monthField], 0, undefined, 'technical')).toBe('2025-02');
+        expect(formatPivotHeaderValue(node, monthField, [monthField], 0, undefined, 'human', 'en-US').toLowerCase()).toMatch(/feb/);
     });
 });

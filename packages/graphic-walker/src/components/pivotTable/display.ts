@@ -1,13 +1,13 @@
 import type { IField } from '../../interfaces';
 import type { INestNode, IPivotCube, IPivotTablePath } from './interface';
-import { formatDate } from '@/utils';
-import { parsedOffsetDate } from '@/lib/op/offset';
+import { formatTemporalValue, resolveTimeGrain } from '@/vis/echarts/formatTemporal';
 import { getCubeCell } from './cube';
 
 export type PivotColorMode = 'none' | 'heatmap' | 'bar';
 export type PivotPercentMode = 'none' | 'row' | 'column' | 'grand';
 export type PivotTotalsMode = 'off' | 'grand' | 'all';
 export type PivotHeaderMode = 'nested' | 'repeat';
+export type PivotDateFormat = 'human' | 'technical';
 
 export interface PivotTotalsConfig {
     rows: PivotTotalsMode;
@@ -26,6 +26,7 @@ export const DEFAULT_PIVOT_COLOR_MODE: PivotColorMode = 'heatmap';
 export const DEFAULT_PIVOT_PERCENT_MODE: PivotPercentMode = 'none';
 export const DEFAULT_PIVOT_TOTALS_MODE: PivotTotalsMode = 'off';
 export const DEFAULT_PIVOT_HEADER_MODE: PivotHeaderMode = 'nested';
+export const DEFAULT_PIVOT_DATE_FORMAT: PivotDateFormat = 'human';
 export const PIVOT_SUMMARY_KEY = '__pivot_summary__';
 
 export const DEFAULT_PIVOT_SUMMARY_LABELS: PivotSummaryLabels = {
@@ -45,6 +46,14 @@ export function resolvePivotHeaderMode(mode?: PivotHeaderMode | boolean): PivotH
     if (mode === true || mode === 'repeat') return 'repeat';
     if (mode === false || mode === 'nested' || mode == null) return 'nested';
     return DEFAULT_PIVOT_HEADER_MODE;
+}
+
+export function resolvePivotDateFormat(mode?: PivotDateFormat): PivotDateFormat {
+    return mode === 'technical' ? 'technical' : DEFAULT_PIVOT_DATE_FORMAT;
+}
+
+export function fieldLooksTemporal(field: Pick<IField, 'fid' | 'semanticType' | 'timeUnit' | 'expression'>): boolean {
+    return field.semanticType === 'temporal' || resolveTimeGrain(field) !== undefined;
 }
 
 export function isPivotTotalsMode(value: unknown): value is PivotTotalsMode {
@@ -93,9 +102,14 @@ export function showTableSummaryFromTotals(totals: PivotTotalsConfig): boolean {
     return totals.rows !== 'off' || totals.columns !== 'off';
 }
 
-function formatFieldValue(value: unknown, field: IField | undefined, displayOffset?: number): string {
-    if (field?.semanticType === 'temporal') {
-        return formatDate(parsedOffsetDate(displayOffset, field.offset)(value as string | number | Date | null));
+function formatFieldValue(
+    value: unknown,
+    field: IField | undefined,
+    dateFormat: PivotDateFormat,
+    locale?: string
+): string {
+    if (field && fieldLooksTemporal(field)) {
+        return formatTemporalValue(value, field, dateFormat, locale);
     }
     return `${value}`;
 }
@@ -104,8 +118,10 @@ export function formatPivotHeaderValue(
     node: INestNode,
     field: IField | undefined,
     dims: readonly IField[],
-    displayOffset: number | undefined,
-    labels: PivotSummaryLabels = DEFAULT_PIVOT_SUMMARY_LABELS
+    _displayOffset: number | undefined,
+    labels: PivotSummaryLabels = DEFAULT_PIVOT_SUMMARY_LABELS,
+    dateFormat: PivotDateFormat = DEFAULT_PIVOT_DATE_FORMAT,
+    locale?: string
 ): string {
     if (node.kind === 'summary' || node.value === PIVOT_SUMMARY_KEY) {
         if (node.path.length === 0) {
@@ -113,9 +129,9 @@ export function formatPivotHeaderValue(
         }
         const last = node.path[node.path.length - 1];
         const parentField = dims[node.path.length - 1];
-        return labels.totalOf(formatFieldValue(last.value, parentField, displayOffset));
+        return labels.totalOf(formatFieldValue(last.value, parentField, dateFormat, locale));
     }
-    return formatFieldValue(node.value, field, displayOffset);
+    return formatFieldValue(node.value, field, dateFormat, locale);
 }
 
 export function measureValueKey(measure: Pick<IField, 'fid' | 'aggName'>, aggregated: boolean): string {

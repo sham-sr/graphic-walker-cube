@@ -8,7 +8,7 @@ import { getPivotTableFields } from './query';
 import { collectVisibleLeaves } from './treeWalk';
 import { createPivotPathKey } from './pathKey';
 import { VirtualizedPivotView } from './virtualizedView';
-import type { PivotColorMode, PivotPercentMode, PivotSummaryLabels } from './display';
+import type { PivotColorMode, PivotDateFormat, PivotPercentMode, PivotSummaryLabels } from './display';
 import { PIVOT_SCROLLPORT_CLASS, PIVOT_TABLE_CLASS } from './scrollport';
 
 /** Below this visible leaf count the classic HTML table is cheaper than a virtualizer. */
@@ -33,6 +33,8 @@ export interface PivotTableViewProps {
     onKeepPath?: (path: IPivotTablePath) => void;
     summaryLabels?: PivotSummaryLabels;
     repeatLabels?: boolean;
+    dateFormat?: PivotDateFormat;
+    locale?: string;
 }
 
 export const PivotTableView: React.FC<PivotTableViewProps> = ({
@@ -54,6 +56,8 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
     onKeepPath,
     summaryLabels,
     repeatLabels,
+    dateFormat,
+    locale,
 }) => {
     const { dimsInRow, dimsInColumn, measInRow, measInColumn } = useMemo(() => getPivotTableFields(rows, columns), [rows, columns]);
     const collapsedKeySet = useMemo(
@@ -83,8 +87,10 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                       sortedDir,
                       summaryLabels,
                       repeatLabels,
+                      dateFormat,
+                      locale,
                   }),
-        [shouldVirtualize, model.leftTree, dimsInRow, measInRow, onHeaderCollapse, enableCollapse, defaultAggregated, timezoneDisplayOffset, collapsedKeySet, onHeaderSort, sortedFid, sortedDir, summaryLabels, repeatLabels]
+        [shouldVirtualize, model.leftTree, dimsInRow, measInRow, onHeaderCollapse, enableCollapse, defaultAggregated, timezoneDisplayOffset, collapsedKeySet, onHeaderSort, sortedFid, sortedDir, summaryLabels, repeatLabels, dateFormat, locale]
     );
 
     if (shouldVirtualize) {
@@ -112,6 +118,8 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                 onKeepPath={onKeepPath}
                 summaryLabels={summaryLabels}
                 repeatLabels={repeatLabels}
+                dateFormat={dateFormat}
+                locale={locale}
             />
         );
     }
@@ -135,6 +143,8 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                     sortedDir={sortedDir}
                     summaryLabels={summaryLabels}
                     repeatLabels={repeatLabels}
+                    dateFormat={dateFormat}
+                    locale={locale}
                 />
                 <MetricTable
                     cube={model.cube}

@@ -451,6 +451,10 @@ export interface IVisualLayout {
      * Omitted charts keep merged nested headers.
      */
     pivotRepeatLabels?: boolean;
+    /**
+     * Pivot date headers: localized by grain (`human`, default) or truncated ISO (`technical`).
+     */
+    pivotDateFormat?: 'human' | 'technical';
     /** Show value labels on marks. */
     chartShowLabels?: boolean;
     /** Overlay a second measure as a line, optionally on an independent axis. */

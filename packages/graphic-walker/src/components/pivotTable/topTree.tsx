@@ -5,7 +5,7 @@ import { MinusCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 import { cn, getMeaAggName } from '@/utils';
 import { collectPivotLeafChains } from './headerWindow';
 import { getLeafSpan, isPivotNodeCollapsed } from './treeWalk';
-import { formatPivotHeaderValue, sortMark, type PivotSummaryLabels } from './display';
+import { formatPivotHeaderValue, sortMark, type PivotDateFormat, type PivotSummaryLabels } from './display';
 
 const headerClass = (extra?: string) =>
     cn('sticky top-0 z-20 bg-secondary text-secondary-foreground align-top whitespace-nowrap p-2 text-xs border font-normal text-left', extra);
@@ -26,6 +26,8 @@ function TopHeaderCell({
     summaryLabels,
     hideCollapse,
     cellKey,
+    dateFormat,
+    locale,
 }: {
     node: INestNode;
     field: IField | undefined;
@@ -42,8 +44,10 @@ function TopHeaderCell({
     summaryLabels?: PivotSummaryLabels;
     hideCollapse?: boolean;
     cellKey: string;
+    dateFormat?: PivotDateFormat;
+    locale?: string;
 }) {
-    const label = formatPivotHeaderValue(node, field, dimsInCol, displayOffset, summaryLabels);
+    const label = formatPivotHeaderValue(node, field, dimsInCol, displayOffset, summaryLabels, dateFormat, locale);
     return (
         <th
             key={cellKey}
@@ -98,7 +102,9 @@ function renderTree(
     onHeaderSort?: (fid: string) => void,
     sortedFid?: string,
     sortedDir?: string,
-    summaryLabels?: PivotSummaryLabels
+    summaryLabels?: PivotSummaryLabels,
+    dateFormat?: PivotDateFormat,
+    locale?: string
 ) {
     const childrenSize = getLeafSpan(node, collapsedKeySet);
     const isCollapsed = isPivotNodeCollapsed(node, collapsedKeySet);
@@ -123,6 +129,8 @@ function renderTree(
             sortedFid={sortedFid}
             sortedDir={sortedDir}
             summaryLabels={summaryLabels}
+            dateFormat={dateFormat}
+            locale={locale}
         />
     );
     if (isCollapsed) return;
@@ -141,7 +149,9 @@ function renderTree(
             onHeaderSort,
             sortedFid,
             sortedDir,
-            summaryLabels
+            summaryLabels,
+            dateFormat,
+            locale
         );
     }
 }
@@ -157,7 +167,9 @@ function renderRepeatedTree(
     onHeaderSort: ((fid: string) => void) | undefined,
     sortedFid: string | undefined,
     sortedDir: string | undefined,
-    summaryLabels: PivotSummaryLabels | undefined
+    summaryLabels: PivotSummaryLabels | undefined,
+    dateFormat?: PivotDateFormat,
+    locale?: string
 ): ReactNode[][] {
     const leaves = collectPivotLeafChains(data, collapsedKeySet);
     const copies = Math.max(measInCol.length, 1);
@@ -192,6 +204,8 @@ function renderRepeatedTree(
                         sortedDir={sortedDir}
                         summaryLabels={summaryLabels}
                         hideCollapse={!showCollapse}
+                        dateFormat={dateFormat}
+                        locale={locale}
                     />
                 );
             }
@@ -216,6 +230,8 @@ export interface TreeProps {
     sortedDir?: string;
     summaryLabels?: PivotSummaryLabels;
     repeatLabels?: boolean;
+    dateFormat?: PivotDateFormat;
+    locale?: string;
 }
 const TopTree: React.FC<TreeProps> = (props) => {
     const { data, dimsInCol, measInCol, dimsInRow, measInRow, onHeaderCollapse, onHeaderSort, sortedFid, sortedDir, summaryLabels } = props;
@@ -234,7 +250,9 @@ const TopTree: React.FC<TreeProps> = (props) => {
                 onHeaderSort,
                 sortedFid,
                 sortedDir,
-                summaryLabels
+                summaryLabels,
+                props.dateFormat,
+                props.locale
             );
             if (measInCol.length > 0) {
                 const leaves = collectPivotLeafChains(data, props.collapsedKeySet);
@@ -269,7 +287,9 @@ const TopTree: React.FC<TreeProps> = (props) => {
                 onHeaderSort,
                 sortedFid,
                 sortedDir,
-                summaryLabels
+                summaryLabels,
+                props.dateFormat,
+                props.locale
             );
             const totalChildrenSize = getLeafSpan(data, props.collapsedKeySet);
 
@@ -367,6 +387,8 @@ const TopTree: React.FC<TreeProps> = (props) => {
         props.displayOffset,
         props.collapsedKeySet,
         props.repeatLabels,
+        props.dateFormat,
+        props.locale,
         summaryLabels,
     ]);
 
