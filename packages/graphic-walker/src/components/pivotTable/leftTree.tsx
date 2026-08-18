@@ -2,56 +2,76 @@ import React, { ReactNode } from 'react';
 import { INestNode } from './interface';
 import { IField } from '../../interfaces';
 import { MinusCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
-import { formatDate, getMeaAggName } from '@/utils';
-import { parsedOffsetDate } from '@/lib/op/offset';
-import { collectPivotLeafChains, windowedHeaderCells } from './headerWindow';
+import { cn, getMeaAggName } from '@/utils';
+import { collectPivotLeafChains, windowedHeaderCells, type IPivotLeafAncestorIndex, type IPivotLeafChain } from './headerWindow';
 import { isPivotNodeCollapsed } from './treeWalk';
-
-function formatHeaderValue(node: INestNode, field: IField | undefined, displayOffset?: number): string {
-    const formatter =
-        node.kind === 'value' && field?.semanticType === 'temporal'
-            ? (x) => formatDate(parsedOffsetDate(displayOffset, field.offset)(x))
-            : (x) => `${x}`;
-    return formatter(node.value);
-}
+import { formatPivotHeaderValue, sortMark, type PivotSummaryLabels } from './display';
 
 function LeftHeaderCell({
     node,
     field,
+    dimsInRow,
     rowSpan,
     colSpan,
     enableCollapse,
     isCollapsed,
     displayOffset,
     onHeaderCollapse,
+    onHeaderSort,
+    sortedFid,
+    sortedDir,
+    stickyLeft,
+    summaryLabels,
+    hideCollapse,
 }: {
     node: INestNode;
     field: IField | undefined;
+    dimsInRow: IField[];
     rowSpan: number;
     colSpan: number;
     enableCollapse: boolean;
     isCollapsed: boolean;
     displayOffset?: number;
     onHeaderCollapse: (node: INestNode) => void;
+    onHeaderSort?: (fid: string) => void;
+    sortedFid?: string;
+    sortedDir?: string;
+    stickyLeft?: boolean;
+    summaryLabels?: PivotSummaryLabels;
+    hideCollapse?: boolean;
 }) {
-    const label = formatHeaderValue(node, field, displayOffset);
+    const label = formatPivotHeaderValue(node, field, dimsInRow, displayOffset, summaryLabels);
+    const mark = sortMark(field?.fid, sortedFid, sortedDir);
     return (
         <th
             key={node.uniqueKey}
             scope="row"
-            className="bg-secondary text-secondary-foreground align-top whitespace-nowrap p-2 text-xs m-1 border font-normal text-left"
+            className={cn(
+                'bg-secondary text-secondary-foreground align-top whitespace-nowrap text-xs border font-normal text-left',
+                rowSpan <= 1 ? 'h-8 max-h-8 px-2 py-0 leading-8' : 'px-2 py-1',
+                node.kind === 'summary' && 'bg-muted font-medium',
+                stickyLeft && 'sticky left-0 z-10',
+                onHeaderSort && field && 'cursor-pointer'
+            )}
             colSpan={colSpan}
             rowSpan={rowSpan}
+            onClick={() => field && onHeaderSort?.(field.fid)}
         >
             <div className="flex">
-                <div>{label}</div>
-                {node.kind === 'value' && node.height > 0 && enableCollapse && (
+                <div>
+                    {label}
+                    {mark}
+                </div>
+                {node.kind === 'value' && node.height > 0 && enableCollapse && !hideCollapse && (
                     <button
                         type="button"
                         className="ml-1 self-center cursor-pointer"
                         aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${label}`}
                         aria-expanded={!isCollapsed}
-                        onClick={() => onHeaderCollapse(node)}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onHeaderCollapse(node);
+                        }}
                     >
                         {isCollapsed ? <PlusCircleIcon className="w-3" /> : <MinusCircleIcon className="w-3" />}
                     </button>
@@ -70,32 +90,46 @@ export interface TreeProps {
     defaultAggregated: boolean;
     displayOffset?: number;
     collapsedKeySet?: ReadonlySet<string>;
+    onHeaderSort?: (fid: string) => void;
+    sortedFid?: string;
+    sortedDir?: string;
+    summaryLabels?: PivotSummaryLabels;
+    leaves?: readonly IPivotLeafChain[];
+    ancestorIndex?: IPivotLeafAncestorIndex;
+    repeatLabels?: boolean;
 }
 
-export function buildWindowedLeftTreeRows(
-    props: TreeProps,
-    start: number,
-    end: number
-): ReactNode[][] {
-    const leaves = collectPivotLeafChains(props.data, props.collapsedKeySet);
-    const windowCells = windowedHeaderCells(leaves, start, end);
+export function buildWindowedLeftTreeRows(props: TreeProps, start: number, end: number): ReactNode[][] {
+    const leaves = props.leaves ?? collectPivotLeafChains(props.data, props.collapsedKeySet);
+    const windowCells = windowedHeaderCells(leaves, start, end, props.ancestorIndex, {
+        repeatLabels: props.repeatLabels,
+        dimCount: props.dimsInRow.length,
+    });
     const meaNumber = Math.max(props.measInRow.length, 1);
+    const repeatLabels = Boolean(props.repeatLabels);
     const cellRows: ReactNode[][] = windowCells.map((cells) =>
-        cells.map((cell) => {
+        cells.map((cell, dimIndex) => {
             const isCollapsed = isPivotNodeCollapsed(cell.node, props.collapsedKeySet);
             const depth = cell.node.path.length;
-            const field = depth > 0 ? props.dimsInRow[depth - 1] : undefined;
+            const field = repeatLabels ? props.dimsInRow[dimIndex] : depth > 0 ? props.dimsInRow[depth - 1] : undefined;
             return (
                 <LeftHeaderCell
-                    key={cell.node.uniqueKey}
+                    key={`${cell.node.uniqueKey}-${dimIndex}`}
                     node={cell.node}
                     field={field}
-                    colSpan={isCollapsed ? cell.node.height + 1 : 1}
-                    rowSpan={isCollapsed ? meaNumber : cell.span * meaNumber}
+                    dimsInRow={props.dimsInRow}
+                    colSpan={repeatLabels || !isCollapsed ? 1 : cell.node.height + 1}
+                    rowSpan={repeatLabels ? 1 : isCollapsed ? meaNumber : cell.span * meaNumber}
                     enableCollapse={props.enableCollapse}
                     isCollapsed={isCollapsed}
                     displayOffset={props.displayOffset}
                     onHeaderCollapse={props.onHeaderCollapse}
+                    onHeaderSort={props.onHeaderSort}
+                    sortedFid={props.sortedFid}
+                    sortedDir={props.sortedDir}
+                    stickyLeft={dimIndex === 0}
+                    summaryLabels={props.summaryLabels}
+                    hideCollapse={cell.repeated}
                 />
             );
         })
@@ -107,13 +141,18 @@ export function buildWindowedLeftTreeRows(
             for (let index = 0; index < props.measInRow.length; index++) {
                 const measure = props.measInRow[index];
                 result.push([
-                    ...(index === 0 ? row : []),
+                    ...(repeatLabels || index === 0 ? row : []),
                     <th
                         key={`${index}-${measure.fid}-${measure.aggName}`}
                         scope="row"
-                        className="bg-secondary text-secondary-foreground whitespace-nowrap p-2 text-xs m-1 border font-normal text-left"
+                        className={cn(
+                            'bg-secondary text-secondary-foreground h-8 max-h-8 whitespace-nowrap px-2 py-0 text-xs leading-8 border font-normal text-left',
+                            props.onHeaderSort && 'cursor-pointer'
+                        )}
+                        onClick={() => props.onHeaderSort?.(measure.fid)}
                     >
                         {props.defaultAggregated ? getMeaAggName(measure.name, measure.aggName) : measure.name}
+                        {sortMark(measure.fid, props.sortedFid, props.sortedDir)}
                     </th>,
                 ]);
             }

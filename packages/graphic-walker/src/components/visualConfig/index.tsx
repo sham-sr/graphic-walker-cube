@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useVizStore } from '../../store';
 import { GLOBAL_CONFIG } from '../../config';
-import { IConfigScale, IVisualConfig, IVisualLayout, IThemeKey } from '../../interfaces';
+import { IConfigScale, IVisualConfig, IVisualLayout, IThemeKey, IChartRenderer } from '../../interfaces';
 import Toggle from '../toggle';
 import { ColorSchemes, extractRGBA } from './colorScheme';
 import { DomainScale, RangeScale } from './range-scale';
@@ -160,7 +160,7 @@ const VisualConfigPanel: React.FC = () => {
     const [svg, setSvg] = useState<boolean>(layout.useSvg ?? false);
     const [scaleIncludeUnmatchedChoropleth, setScaleIncludeUnmatchedChoropleth] = useState<boolean>(layout.scaleIncludeUnmatchedChoropleth ?? false);
     const [showAllGeoshapeInChoropleth, setShowAllGeoshapeInChoropleth] = useState<boolean>(layout.showAllGeoshapeInChoropleth ?? false);
-    const [renderer, setRenderer] = useState<'vega-lite' | 'observable-plot'>(layout.renderer ?? 'vega-lite');
+    const [renderer, setRenderer] = useState<IChartRenderer>(layout.renderer ?? 'echarts');
     const [background, setBackground] = useState({ r: 255, g: 255, b: 255, a: 0 });
     const [defaultColor, setDefaultColor] = useState({ r: 91, g: 143, b: 249, a: 1 });
     const [primaryColorEdited, setPrimaryColorEdited] = useState(false);
@@ -170,7 +170,7 @@ const VisualConfigPanel: React.FC = () => {
     const [colorPalette, setColorPalette] = useState('');
     const { vizThemeConfig, setVizThemeConfig } = useContext(vegaThemeContext);
     const [themeKey, setThemeKey] = useState<IThemeKey>(
-        typeof vizThemeConfig === 'string' ? vizThemeConfig : 'vega'
+        typeof vizThemeConfig === 'string' ? vizThemeConfig : 'cube'
     );
     const [geoMapTileUrl, setGeoMapTileUrl] = useState<string | undefined>(undefined);
     const [displayOffset, setDisplayOffset] = useState<number | undefined>(undefined);
@@ -189,7 +189,7 @@ const VisualConfigPanel: React.FC = () => {
     useEffect(() => {
         setZeroScale(layout.zeroScale);
         setSvg(layout.useSvg ?? false);
-        setRenderer(layout.renderer ?? 'vega-lite');
+        setRenderer(layout.renderer ?? 'echarts');
         setBackground(
             extractRGBA(
                 {
@@ -212,7 +212,7 @@ const VisualConfigPanel: React.FC = () => {
             normalizedNumberFormat: layout.format.normalizedNumberFormat,
         });
         setColorPalette(layout.colorPalette ?? '');
-        setThemeKey(typeof vizThemeConfig === 'string' ? vizThemeConfig : 'vega');
+        setThemeKey(typeof vizThemeConfig === 'string' ? vizThemeConfig : 'cube');
         const enabledScales = Object.entries(layout.scale ?? {})
             .filter(([_k, scale]) => Object.entries(scale).filter(([_k, v]) => !!v).length > 0)
             .map(([k]) => k);
@@ -247,6 +247,51 @@ const VisualConfigPanel: React.FC = () => {
                     <div className="overflow-y-auto flex-shrink-1 min-h-0 px-6">
                         <ConfigItemContainer>
                             <ConfigItemHeader>
+                                <ConfigItemTitle>{t('config.appearance')}</ConfigItemTitle>
+                                <ConfigItemDescription>{t('config.appearance_desc')}</ConfigItemDescription>
+                            </ConfigItemHeader>
+                            <ConfigItemContent>
+                                <div className="border rounded-md divide-y">
+                                    <SettingRow title={t('config.renderer')} description={t('config.renderer_desc')}>
+                                        <Combobox
+                                            className="w-56 h-fit"
+                                            popClassName="w-56"
+                                            selectedKey={renderer}
+                                            onSelect={(value) => setRenderer(value as IChartRenderer)}
+                                            options={GLOBAL_CONFIG.RENDERER_TYPES.map((type) => ({
+                                                value: type,
+                                                label:
+                                                    type === 'echarts'
+                                                        ? t('config.renderer_echarts')
+                                                        : type === 'vega-lite'
+                                                          ? t('config.renderer_vega')
+                                                          : t('config.renderer_plot'),
+                                            }))}
+                                        />
+                                    </SettingRow>
+                                    <SettingRow title={t('config.theme')} description={t('config.theme_desc')}>
+                                        <Combobox
+                                            className="w-56 h-fit"
+                                            popClassName="w-56"
+                                            selectedKey={themeKey}
+                                            onSelect={(v) => setThemeKey(v as IThemeKey)}
+                                            options={[
+                                                { value: 'cube', label: t('config.theme_cube') },
+                                                { value: 'vega', label: t('config.theme_vega') },
+                                                { value: 'g2', label: t('config.theme_g2') },
+                                                { value: 'streamlit', label: t('config.theme_streamlit') },
+                                                { value: 'danqing', label: t('config.theme_danqing') },
+                                                { value: 'sodapop', label: t('config.theme_sodapop') },
+                                            ]}
+                                        />
+                                    </SettingRow>
+                                    <div className="p-4 text-xs text-muted-foreground">{t('config.theme_presets_hint')}</div>
+                                    <div className="p-4 text-xs text-muted-foreground">{t('config.layout_mode_desc')}</div>
+                                </div>
+                            </ConfigItemContent>
+                        </ConfigItemContainer>
+                        <ConfigItemContainer>
+                            <ConfigItemHeader>
                                 <ConfigItemTitle>{t('config.colors')}</ConfigItemTitle>
                                 <ConfigItemDescription>{t('config.colors_desc')}</ConfigItemDescription>
                             </ConfigItemHeader>
@@ -273,21 +318,6 @@ const VisualConfigPanel: React.FC = () => {
                                             displayColorPicker={displayBackgroundPicker}
                                             setDisplayColorPicker={setDisplayBackgroundPicker}
                                             align="right"
-                                        />
-                                    </SettingRow>
-                                    <SettingRow title={t('config.theme')} description={t('config.theme_desc')}>
-                                        <Combobox
-                                            className="w-48 h-fit"
-                                            popClassName="w-48"
-                                            selectedKey={themeKey}
-                                            onSelect={(v) => setThemeKey(v as IThemeKey)}
-                                            options={[
-                                                { value: 'vega', label: 'vega' },
-                                                { value: 'g2', label: 'g2' },
-                                                { value: 'streamlit', label: 'streamlit' },
-                                                { value: 'danqing', label: 'danqing' },
-                                                { value: 'sodapop', label: 'sodapop' },
-                                            ]}
                                         />
                                     </SettingRow>
                                     <SettingRow title={t('config.color_palette')} description={t('config.color_palette_desc')}>
@@ -560,7 +590,7 @@ const VisualConfigPanel: React.FC = () => {
                                             </div>
 
                                             <hr />
-                                            
+
                                             <div className='p-4'>
                                                 <div className="flex justify-between items-center">
                                                     <div>
@@ -574,29 +604,6 @@ const VisualConfigPanel: React.FC = () => {
                                                         onChange={(en) => {
                                                             setSvg(en);
                                                         }}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <hr />
-                                            
-                                            <div className='p-4'>
-                                                <div className="flex justify-between items-center">
-                                                    <div>
-                                                        <label className="text-xs font-medium leading-6">Renderer</label>
-                                                        <p className="text-xs text-gray-500">
-                                                            Choose between VegaLite and Observable Plot renderers
-                                                        </p>
-                                                    </div>
-                                                    <Combobox
-                                                        className="w-40 h-fit"
-                                                        popClassName="w-40"
-                                                        selectedKey={renderer}
-                                                        onSelect={(value) => setRenderer(value as 'vega-lite' | 'observable-plot')}
-                                                        options={GLOBAL_CONFIG.RENDERER_TYPES.map((type) => ({
-                                                            value: type,
-                                                            label: type === 'vega-lite' ? 'VegaLite' : 'Observable Plot',
-                                                        }))}
                                                     />
                                                 </div>
                                             </div>

@@ -13,18 +13,22 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': path.resolve(packageRoot, 'src'),
+            '@kanaries/graphic-walker': path.resolve(packageRoot, 'src/index.tsx'),
         },
     },
     build: {
         outDir: path.resolve(workspaceRoot, 'node_modules/.cache/graphic-walker-e2e'),
         emptyOutDir: true,
         rollupOptions: {
-            input: path.resolve(__dirname, 'issue-501.html'),
+            input: [
+                path.resolve(__dirname, 'issue-501.html'),
+                path.resolve(__dirname, 'chart-chrome.html'),
+            ],
         },
     },
     preview: {
         host: '127.0.0.1',
-        port: 4175,
+        port: 4176,
         strictPort: true,
     },
 });

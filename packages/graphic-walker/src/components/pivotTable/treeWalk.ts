@@ -1,4 +1,4 @@
-import type { INestNode } from './interface';
+import type { INestNode, IPivotTablePath } from './interface';
 
 export function isPivotNodeCollapsed(node: INestNode, collapsedKeySet?: ReadonlySet<string>): boolean {
     if (node.kind === 'summary' || node.children.length === 0) {
@@ -48,4 +48,19 @@ export function getLeafSpan(node: INestNode, collapsedKeySet?: ReadonlySet<strin
         span += getLeafSpan(child, collapsedKeySet);
     }
     return span;
+}
+
+export function collectCollapsiblePaths(tree: INestNode): IPivotTablePath[] {
+    const paths: IPivotTablePath[] = [];
+    const stack: INestNode[] = [tree];
+    while (stack.length > 0) {
+        const node = stack.pop()!;
+        if (node.kind === 'value' && node.height > 0 && node.children.length > 0) {
+            paths.push(node.path.map((item) => ({ ...item })));
+        }
+        for (const child of node.children) {
+            stack.push(child);
+        }
+    }
+    return paths;
 }

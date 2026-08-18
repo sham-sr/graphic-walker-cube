@@ -3,11 +3,13 @@ import type { IViewField } from '../../interfaces';
 import { buildLeftTreeRows } from './leftTree';
 import MetricTable from './metricTable';
 import TopTree from './topTree';
-import type { INestNode, IPivotTableModel, PivotTableValue } from './interface';
+import type { INestNode, IPivotTableModel, IPivotTablePath, PivotTableValue } from './interface';
 import { getPivotTableFields } from './query';
 import { collectVisibleLeaves } from './treeWalk';
 import { createPivotPathKey } from './pathKey';
 import { VirtualizedPivotView } from './virtualizedView';
+import type { PivotColorMode, PivotPercentMode, PivotSummaryLabels } from './display';
+import { PIVOT_SCROLLPORT_CLASS, PIVOT_TABLE_CLASS } from './scrollport';
 
 /** Below this visible leaf count the classic HTML table is cheaper than a virtualizer. */
 const PIVOT_TABLE_VIRTUALIZE_AFTER = 64;
@@ -22,6 +24,15 @@ export interface PivotTableViewProps {
     enableCollapse: boolean;
     onHeaderCollapse: (node: INestNode) => void;
     collapsedPaths?: readonly { key: string; value: unknown }[][];
+    colorMode?: PivotColorMode;
+    percentMode?: PivotPercentMode;
+    dark?: boolean;
+    onHeaderSort?: (fid: string) => void;
+    sortedFid?: string;
+    sortedDir?: string;
+    onKeepPath?: (path: IPivotTablePath) => void;
+    summaryLabels?: PivotSummaryLabels;
+    repeatLabels?: boolean;
 }
 
 export const PivotTableView: React.FC<PivotTableViewProps> = ({
@@ -34,6 +45,15 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
     enableCollapse,
     onHeaderCollapse,
     collapsedPaths,
+    colorMode = 'none',
+    percentMode = 'none',
+    dark = false,
+    onHeaderSort,
+    sortedFid,
+    sortedDir,
+    onKeepPath,
+    summaryLabels,
+    repeatLabels,
 }) => {
     const { dimsInRow, dimsInColumn, measInRow, measInColumn } = useMemo(() => getPivotTableFields(rows, columns), [rows, columns]);
     const collapsedKeySet = useMemo(
@@ -58,8 +78,13 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                       defaultAggregated,
                       displayOffset: timezoneDisplayOffset,
                       collapsedKeySet,
+                      onHeaderSort,
+                      sortedFid,
+                      sortedDir,
+                      summaryLabels,
+                      repeatLabels,
                   }),
-        [shouldVirtualize, model.leftTree, dimsInRow, measInRow, onHeaderCollapse, enableCollapse, defaultAggregated, timezoneDisplayOffset, collapsedKeySet]
+        [shouldVirtualize, model.leftTree, dimsInRow, measInRow, onHeaderCollapse, enableCollapse, defaultAggregated, timezoneDisplayOffset, collapsedKeySet, onHeaderSort, sortedFid, sortedDir, summaryLabels, repeatLabels]
     );
 
     if (shouldVirtualize) {
@@ -78,13 +103,22 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                 enableCollapse={enableCollapse}
                 onHeaderCollapse={onHeaderCollapse}
                 collapsedKeySet={collapsedKeySet}
+                colorMode={colorMode}
+                percentMode={percentMode}
+                dark={dark}
+                onHeaderSort={onHeaderSort}
+                sortedFid={sortedFid}
+                sortedDir={sortedDir}
+                onKeepPath={onKeepPath}
+                summaryLabels={summaryLabels}
+                repeatLabels={repeatLabels}
             />
         );
     }
 
     return (
-        <div className="min-w-max" data-testid="pivot-table-view">
-            <table className="border border-collapse">
+        <div className={PIVOT_SCROLLPORT_CLASS} data-testid="pivot-table-view">
+            <table className={PIVOT_TABLE_CLASS}>
                 <TopTree
                     data={model.topTree}
                     dimsInCol={dimsInColumn}
@@ -96,6 +130,11 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                     defaultAggregated={defaultAggregated}
                     displayOffset={timezoneDisplayOffset}
                     collapsedKeySet={collapsedKeySet}
+                    onHeaderSort={onHeaderSort}
+                    sortedFid={sortedFid}
+                    sortedDir={sortedDir}
+                    summaryLabels={summaryLabels}
+                    repeatLabels={repeatLabels}
                 />
                 <MetricTable
                     cube={model.cube}
@@ -106,6 +145,10 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                     meaInRows={measInRow}
                     defaultAggregated={defaultAggregated}
                     numberFormat={numberFormat}
+                    colorMode={colorMode}
+                    percentMode={percentMode}
+                    dark={dark}
+                    onKeepPath={onKeepPath}
                 />
             </table>
         </div>

@@ -5,6 +5,7 @@ import { getMeaAggKey, getSort, getSortedEncoding } from '../../utils';
 import { toWorkflow } from '../../utils/workflow';
 import type { IPivotRollupMeasure } from './cube';
 import { toRollupMeasures } from './cube';
+import { pivotTotalsFromInput, resolvePivotTotals, type PivotTableTotalsArg, type PivotTotalsMode } from './display';
 import type { IPivotTableModel, IPivotTablePath } from './interface';
 import { createPivotPathKey } from './utils';
 
@@ -19,6 +20,9 @@ export interface IPivotTableQueryInput {
     limit: number;
     timezoneDisplayOffset?: number;
     showTableSummary: boolean;
+    /** Independent of `showTableSummary`. When omitted, `showTableSummary` maps to both axes. */
+    rowTotals?: PivotTotalsMode;
+    columnTotals?: PivotTotalsMode;
     collapsedPaths: readonly IPivotTablePath[];
     /** Aggregated leaf data that has already been queried by a parent renderer. */
     viewData?: readonly IRow[];
@@ -36,7 +40,7 @@ export type PivotTableModelBuilder = (
     allData: IRow[],
     aggregatedData: IRow[],
     collapsedKeys: string[],
-    showTableSummary: boolean,
+    showTableSummary: PivotTableTotalsArg,
     sort?: {
         fid: string;
         type: 'ascending' | 'descending';
@@ -85,27 +89,39 @@ export function getPivotTableFields(rows: readonly IViewField[], columns: readon
     };
 }
 
+function axisGroupPrefixes(
+    dims: readonly IViewField[],
+    collapsedPaths: readonly IPivotTablePath[],
+    mode: PivotTotalsMode
+): IViewField[][] {
+    const collapsedFieldKeys = new Set(collapsedPaths.map((path) => path[path.length - 1]?.key).filter(Boolean));
+    const collapsedPrefixes = dims
+        .filter((field) => collapsedFieldKeys.has(field.fid))
+        .map((field) => dims.slice(0, dims.indexOf(field) + 1));
+    if (mode === 'all') {
+        return dims.map((_, index) => dims.slice(0, index));
+    }
+    if (mode === 'grand') {
+        const prefixes: IViewField[][] = [[]];
+        for (const prefix of collapsedPrefixes) {
+            if (prefix.length > 0) {
+                prefixes.push(prefix);
+            }
+        }
+        return prefixes;
+    }
+    return collapsedPrefixes;
+}
+
 export function getPivotGroupByCombinations(
     dimsInRow: readonly IViewField[],
     dimsInColumn: readonly IViewField[],
     collapsedPaths: readonly IPivotTablePath[],
-    showTableSummary: boolean
+    showTableSummary: PivotTableTotalsArg
 ): IViewField[][] {
-    let rowCombinations: IViewField[][];
-    let columnCombinations: IViewField[][];
-
-    if (showTableSummary) {
-        rowCombinations = dimsInRow.map((_, index) => dimsInRow.slice(0, index));
-        columnCombinations = dimsInColumn.map((_, index) => dimsInColumn.slice(0, index));
-    } else {
-        const collapsedFieldKeys = new Set(collapsedPaths.map((path) => path[path.length - 1]?.key).filter(Boolean));
-        rowCombinations = dimsInRow
-            .filter((field) => collapsedFieldKeys.has(field.fid))
-            .map((field) => dimsInRow.slice(0, dimsInRow.indexOf(field) + 1));
-        columnCombinations = dimsInColumn
-            .filter((field) => collapsedFieldKeys.has(field.fid))
-            .map((field) => dimsInColumn.slice(0, dimsInColumn.indexOf(field) + 1));
-    }
+    const totals = pivotTotalsFromInput(showTableSummary);
+    const rowCombinations = axisGroupPrefixes(dimsInRow, collapsedPaths, totals.rows);
+    const columnCombinations = axisGroupPrefixes(dimsInColumn, collapsedPaths, totals.columns);
 
     rowCombinations.push([...dimsInRow]);
     columnCombinations.push([...dimsInColumn]);
@@ -114,27 +130,38 @@ export function getPivotGroupByCombinations(
     return combinations.slice(0, -1);
 }
 
-function getPivotSort(rows: readonly IViewField[], columns: readonly IViewField[], defaultAggregated: boolean) {
-    const sort = getSort({ rows, columns });
-    const mode = getSortedEncoding({ rows, columns });
-    if (sort === 'none' || mode === 'none') {
+export function getPivotSort(rows: readonly IViewField[], columns: readonly IViewField[], defaultAggregated: boolean) {
+    const sortedOnRows = rows.find((field) => field.sort && field.sort !== 'none');
+    const sortedOnColumns = columns.find((field) => field.sort && field.sort !== 'none');
+    const sortedField = sortedOnRows ?? sortedOnColumns;
+    if (!sortedField || sortedField.sort === 'none') {
         return undefined;
     }
-
+    const type = sortedField.sort;
+    const mode: 'row' | 'column' = sortedOnRows
+        ? sortedField.analyticType === 'measure'
+            ? 'column'
+            : 'row'
+        : sortedField.analyticType === 'measure'
+          ? 'row'
+          : 'column';
     const { measInRow, measInColumn } = getPivotTableFields(rows, columns);
-    const measure = mode === 'column' ? measInRow[0] : measInColumn[0];
-    const sortedDimensions = mode === 'row' ? rows : columns;
+    const clickedMeasure = sortedField.analyticType === 'measure' ? sortedField : undefined;
+    const oppositeMeasure = mode === 'row' ? measInColumn[0] : measInRow[0];
+    const measure = clickedMeasure ?? oppositeMeasure;
     const sortFieldId = measure
         ? defaultAggregated
             ? getMeaAggKey(measure.fid, measure.aggName)
             : measure.fid
-        : sortedDimensions[sortedDimensions.length - 1]?.fid;
-    if (!sortFieldId) return undefined;
+        : sortedField.fid;
+    if (!sortFieldId || (type !== 'ascending' && type !== 'descending')) {
+        return undefined;
+    }
 
     return {
         fid: sortFieldId,
         mode,
-        type: sort,
+        type,
     } as const;
 }
 
@@ -186,7 +213,14 @@ export async function queryPivotTable(
     buildModel: PivotTableModelBuilder = buildPivotTableModelInWorker
 ): Promise<IPivotTableModel> {
     const collapsedPaths = input.defaultAggregated ? input.collapsedPaths : [];
-    const showTableSummary = input.defaultAggregated && input.showTableSummary;
+    const totals = resolvePivotTotals(
+        {
+            showTableSummary: input.showTableSummary,
+            pivotRowTotals: input.rowTotals,
+            pivotColumnTotals: input.columnTotals,
+        },
+        input.defaultAggregated
+    );
     const { dimsInRow, dimsInColumn, measInRow, measInColumn } = getPivotTableFields(input.rows, input.columns);
     const fields = uniqueFields(input.fields);
     const filters = input.filters ? [...input.filters] : [];
@@ -216,7 +250,7 @@ export async function queryPivotTable(
         viewData,
         [],
         collapsedPaths.map(createPivotPathKey),
-        showTableSummary,
+        totals,
         getPivotSort(input.rows, input.columns, input.defaultAggregated),
         toRollupMeasures(viewMeasures, input.defaultAggregated)
     );

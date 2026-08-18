@@ -10,6 +10,20 @@ export const GW_ARTIFACT_VERSION = 1 as const;
 export const GW_CONFIG_EXTENSION = '.cube-config.json';
 export const GW_REPORT_EXTENSION = '.cube-report.json';
 
+/** Toolbar keys Graphic Walker already supports via `toolbar.exclude`. */
+export const GW_TOOLBAR_KANARIES = 'kanaries';
+export const GW_TOOLBAR_DEBUG = 'debug';
+export const GW_DEFAULT_TOOLBAR_EXCLUDE = [GW_TOOLBAR_KANARIES, GW_TOOLBAR_DEBUG] as const;
+
+/** Graphic Walker experimental flags. Computed fields match the upstream playground. */
+export interface GraphicWalkerExperimentalFeatures {
+    computedField?: boolean;
+}
+
+export const GW_DEFAULT_EXPERIMENTAL_FEATURES: GraphicWalkerExperimentalFeatures = {
+    computedField: true,
+};
+
 export type WalkerSemanticType = 'quantitative' | 'nominal' | 'ordinal' | 'temporal';
 export type WalkerAnalyticType = 'dimension' | 'measure';
 
@@ -98,21 +112,34 @@ export interface GraphicWalkerHostOptions {
     maxRows?: number;
     i18nLang?: string;
     appearance?: 'light' | 'dark';
+    /** Hide toolbar items by Graphic Walker key. Default: Kanaries docs and debug. */
+    toolbarExclude?: readonly string[];
+    /** Graphic Walker experimental flags. Default: computed fields enabled. */
+    experimentalFeatures?: GraphicWalkerExperimentalFeatures;
+}
+
+export interface WalkerReplaceResult {
+    id: string;
+    /** True when previous charts could not be applied to the new fields */
+    chartsCleared?: boolean;
 }
 
 export interface GraphicWalkerHost {
     setLocale(lang: string): void;
     setAppearance(mode: 'light' | 'dark'): void;
     addDataset(input: WalkerDatasetInput): Promise<{ id: string }>;
-    replaceDataset(id: string, input: WalkerDatasetInput): Promise<{ id: string }>;
+    replaceDataset(id: string, input: WalkerDatasetInput): Promise<WalkerReplaceResult>;
     removeDataset(id: string): Promise<void>;
     listDatasets(): Promise<{ id: string; name: string }[]>;
     exportConfig(): Promise<GraphicWalkerConfig>;
     exportReport(): Promise<GraphicWalkerReport>;
     applyConfig(config: GraphicWalkerConfig, rowsById: Record<string, WalkerRow[]>): Promise<void>;
     importReport(report: GraphicWalkerReport): Promise<void>;
+    selectDataset(id: string): void;
     destroy(): void;
 }
+
+export { canReuseWalkerSpecs, resolveReplaceSpecs } from './canReuseWalkerSpecs';
 
 export function isGraphicWalkerConfig(value: unknown): value is GraphicWalkerConfig {
     return isArtifact(value, GW_CONFIG_KIND);

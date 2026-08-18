@@ -49,7 +49,16 @@ export const ShadowDom: React.FC<IShadowDomProps> = function ShadowDom({
     }, []);
 
     return (
-        <root.div {...attrs} style={containOverlays ? { contain: 'layout', ...hostStyle } : hostStyle} mode="open" ref={rootRef}>
+        <root.div
+            {...attrs}
+            style={
+                containOverlays
+                    ? { contain: 'layout', width: '100%', height: '100%', minHeight: 0, ...hostStyle }
+                    : { width: '100%', height: '100%', minHeight: 0, ...hostStyle }
+            }
+            mode="open"
+            ref={rootRef}
+        >
             <uiThemeContext.Provider value={uiTheme}>
                 <style>{tailwindStyle}</style>
                 <style>{style}</style>

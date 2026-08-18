@@ -2,7 +2,7 @@ import type { IDataQueryPayload, IRow, IViewField } from '../../interfaces';
 import { getComputation } from '../../computation/clientComputation';
 import { buildPivotTable } from '../../workers/buildPivotTable';
 import { MEA_KEY_ID, MEA_VAL_ID } from '../../constants';
-import { getPivotGroupByCombinations, queryPivotTable, type PivotTableModelBuilder } from './query';
+import { getPivotGroupByCombinations, getPivotSort, queryPivotTable, type PivotTableModelBuilder } from './query';
 import { materializeMetricMatrix } from './utils';
 
 jest.mock('../../services', () => {
@@ -60,6 +60,11 @@ describe('pivot table query orchestration', () => {
             ['year'],
             ['year', 'region'],
         ]);
+    });
+
+    test('plans only the grand-total grouping when mode is grand', () => {
+        const combinations = getPivotGroupByCombinations([region, city], [year], [], 'grand');
+        expect(combinations.map((combination) => combination.map((item) => item.fid))).toEqual([[], ['region', 'city'], ['year']]);
     });
 
     test('plans only the subtotal needed by a collapsed path', () => {
@@ -271,6 +276,33 @@ describe('pivot table query orchestration', () => {
         expect(result.leftTree.children.map((node) => node.value)).toEqual(['West', 'East']);
     });
 
+    test('sorts row categories when a column measure carries sort', async () => {
+        const sortedSales = { ...sales, sort: 'descending' as const };
+        const result = await queryPivotTable(
+            {
+                computation: getComputation([
+                    { region: 'East', sales: 9 },
+                    { region: 'West', sales: 30 },
+                ]),
+                fields: [region, sales],
+                rows: [region],
+                columns: [sortedSales],
+                defaultAggregated: true,
+                limit: -1,
+                showTableSummary: false,
+                collapsedPaths: [],
+            },
+            buildModel
+        );
+
+        expect(getPivotSort([region], [sortedSales], true)).toEqual({
+            fid: 'sales_sum',
+            mode: 'row',
+            type: 'descending',
+        });
+        expect(result.leftTree.children.map((node) => node.value)).toEqual(['West', 'East']);
+    });
+
     test('uses raw folded measure values when aggregation is disabled', async () => {
         const profit = field('profit', 'measure', 'sum');
         const measureKey = field(MEA_KEY_ID, 'dimension');
@@ -298,6 +330,28 @@ describe('pivot table query orchestration', () => {
             [3, 9],
             [8, 30],
         ]);
+    });
+
+    test('explicit off totals hide summaries even when showTableSummary is true', async () => {
+        const result = await queryPivotTable(
+            {
+                computation: getComputation(leafRows),
+                fields,
+                rows: [region, city],
+                columns: [year, sales],
+                defaultAggregated: true,
+                limit: -1,
+                showTableSummary: true,
+                rowTotals: 'off',
+                columnTotals: 'off',
+                collapsedPaths: [],
+            },
+            buildModel
+        );
+
+        expect(result.leftTree.children.some((node) => node.kind === 'summary')).toBe(false);
+        expect(result.topTree.children.some((node) => node.kind === 'summary')).toBe(false);
+        expect(result.leftTree.children.every((node) => node.kind === 'value')).toBe(true);
     });
 
     test('keeps raw mode at leaf granularity when collapse and summaries are requested', async () => {

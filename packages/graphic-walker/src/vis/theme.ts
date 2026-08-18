@@ -465,7 +465,76 @@ export const SodaPopTheme: GWGlobalConfig = {
     },
 };
 
+export const CubeTheme = {
+    light: {
+        background: 'transparent',
+        font: 'Inter, "Segoe UI", system-ui, sans-serif',
+        boxplot: { ticks: true },
+        axis: {
+            gridColor: '#e5e7eb',
+            domainColor: '#9ca3af',
+            tickColor: '#9ca3af',
+            labelColor: '#4b5563',
+            titleColor: '#111827',
+            labelFontSize: 11,
+            titleFontSize: 12,
+        },
+        legend: {
+            labelColor: '#4b5563',
+            titleColor: '#111827',
+        },
+        header: {
+            labelColor: '#4b5563',
+            titleColor: '#111827',
+        },
+        text: { color: '#111827' },
+        view: { stroke: 'transparent' },
+        range: {
+            category: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899', '#14b8a6', '#64748b'],
+            diverging: ['#1d4ed8', '#3b82f6', '#93c5fd', '#e5e7eb', '#fca5a5', '#ef4444', '#b91c1c'],
+            heatmap: ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
+            ramp: ['#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a'],
+        },
+        area: { fill: '#3b82f6' },
+        bar: { fill: '#3b82f6', cornerRadiusEnd: 2 },
+        line: { stroke: '#3b82f6', strokeWidth: 2 },
+        point: { stroke: '#3b82f6', fill: '#ffffff' },
+        arc: { fill: '#3b82f6' },
+        scale: {
+            continuous: { range: ['#dbeafe', '#1d4ed8'] },
+        },
+    },
+    dark: {
+        ...DARK_COMMON_DESIGN,
+        background: 'transparent',
+        font: 'Inter, "Segoe UI", system-ui, sans-serif',
+        axis: {
+            ...DARK_COMMON_DESIGN.axis,
+            gridColor: '#2b3340',
+            domainColor: '#6b7280',
+            tickColor: '#6b7280',
+            labelColor: '#9ca3af',
+            titleColor: '#f9fafb',
+        },
+        range: {
+            category: ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#22d3ee', '#fb923c', '#f472b6', '#2dd4bf', '#94a3b8'],
+            diverging: ['#1d4ed8', '#3b82f6', '#93c5fd', '#374151', '#fca5a5', '#ef4444', '#b91c1c'],
+            heatmap: ['#1e3a8a', '#1d4ed8', '#3b82f6', '#93c5fd', '#dbeafe'],
+            ramp: ['#1e3a8a', '#1d4ed8', '#3b82f6', '#93c5fd', '#dbeafe'],
+        },
+        area: { fill: '#60a5fa' },
+        bar: { fill: '#60a5fa', cornerRadiusEnd: 2 },
+        line: { stroke: '#60a5fa', strokeWidth: 2 },
+        point: { stroke: '#60a5fa', fill: '#1a1f29' },
+        arc: { fill: '#60a5fa' },
+        scale: {
+            continuous: { range: ['#1e3a8a', '#93c5fd'] },
+        },
+    },
+} as const;
+
 export const builtInThemes: { [themeKey: string]: { light: VegaGlobalConfig; dark: VegaGlobalConfig } } = {
+    cube: CubeTheme as unknown as GWGlobalConfig,
     vega: VegaTheme,
     g2: AntVTheme,
     streamlit: StreamlitTheme as unknown as GWGlobalConfig,

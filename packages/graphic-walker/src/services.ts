@@ -1,6 +1,7 @@
 import { IRow, IMutField, Specification, IFilterFiledSimple, IExpression, IViewQuery, IViewField } from './interfaces';
 import { INestNode, IPivotCube } from './components/pivotTable/interface';
 import type { IPivotRollupMeasure } from './components/pivotTable/cube';
+import { showTableSummaryFromTotals, type PivotTableTotalsArg, pivotTotalsFromInput } from './components/pivotTable/display';
 /* eslint import/no-webpack-loader-syntax:0 */
 // @ts-ignore
 // eslint-disable-next-line
@@ -158,7 +159,7 @@ export const buildPivotTableService = async (
     allData: IRow[],
     aggData: IRow[],
     collapsedKeyList: string[],
-    showTableSummary: boolean,
+    showTableSummary: PivotTableTotalsArg,
     sort?: {
         fid: string;
         type: 'ascending' | 'descending';
@@ -167,6 +168,7 @@ export const buildPivotTableService = async (
     rollupMeasures?: IPivotRollupMeasure[]
 ): Promise<{ lt: INestNode; tt: INestNode; cube: IPivotCube }> => {
     const worker = new BuildMetricTableWorker();
+    const totals = pivotTotalsFromInput(showTableSummary);
     try {
         const res: { lt: INestNode; tt: INestNode; cube: IPivotCube } = await workerService(worker, {
             dimsInRow,
@@ -174,7 +176,8 @@ export const buildPivotTableService = async (
             allData,
             aggData,
             collapsedKeyList,
-            showTableSummary,
+            showTableSummary: showTableSummaryFromTotals(totals),
+            totals,
             sort,
             rollupMeasures,
         });

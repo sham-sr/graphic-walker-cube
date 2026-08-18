@@ -34,7 +34,7 @@ const AGGREGATOR_LIST: IAggregator[] = ['sum', 'mean', 'median', 'count', 'min',
 
 const EMBEDED_MENU_LIST: IEmbedMenuItem[] = ['data_interpretation', 'data_view'];
 
-const RENDERER_TYPES: ('vega-lite' | 'observable-plot')[] = ['vega-lite', 'observable-plot'];
+const RENDERER_TYPES: Array<'vega-lite' | 'echarts' | 'observable-plot'> = ['echarts', 'vega-lite', 'observable-plot'];
 
 export const GLOBAL_CONFIG = {
     AGGREGATOR_LIST,

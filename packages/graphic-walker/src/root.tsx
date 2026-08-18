@@ -55,7 +55,14 @@ export const GraphicWalker = observer(
             <AppRoot ref={ref as ForwardedRef<IGWHandlerInsider>}>
                 <ShadowDom
                     className={props.className}
-                    style={props.style}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        minHeight: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        ...props.style,
+                    }}
                     onMount={handleMount}
                     onUnmount={handleUnmount}
                     uiTheme={props.uiTheme ?? props.colorConfig}

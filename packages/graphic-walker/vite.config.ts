@@ -100,5 +100,7 @@ export default defineConfig({
     },
     minify: 'esbuild',
     sourcemap: true,
+    // Keep dist usable while `yarn vite build` runs — cube_front imports these files.
+    emptyOutDir: false,
   }
 })

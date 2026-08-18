@@ -74,7 +74,7 @@ describe('normalize', () => {
         expect(result.name).toBe('Chart');
         expect(result.config).toEqual({ defaultAggregated: true, geoms: ['auto'], coordSystem: 'generic', limit: -1 });
         expect(result.layout.size).toEqual({ mode: 'auto', width: 320, height: 200 });
-        expect(result.layout.renderer).toBe('vega-lite');
+        expect(result.layout.renderer).toBe('echarts');
         expect(result.encodings.columns).toEqual([dim('category')]);
         expect(result.encodings.rows).toEqual([mea('sales')]);
         expect(result.$schema).toBe(IChartSchemaUrl);

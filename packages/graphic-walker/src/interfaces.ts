@@ -430,8 +430,49 @@ export interface IVisualLayout {
     /** @default false */
     scaleIncludeUnmatchedChoropleth?: boolean;
     showAllGeoshapeInChoropleth?: boolean;
-    /** @default "vega-lite" */
-    renderer?: 'vega-lite' | 'observable-plot';
+    /** @default "echarts" */
+    renderer?: 'vega-lite' | 'observable-plot' | 'echarts';
+    /** Pivot table cell coloring. Omitted charts use heatmap. */
+    pivotColorMode?: 'none' | 'heatmap' | 'bar';
+    /** Pivot table share-of-total display. Omitted charts use absolute values. */
+    pivotPercentMode?: 'none' | 'row' | 'column' | 'grand';
+    /**
+     * Row-axis pivot totals. Omitted charts inherit `showTableSummary`
+     * (`true` → `'all'`, `false` → `'off'`). `'off'` hides row totals even when
+     * the legacy flag is true.
+     */
+    pivotRowTotals?: 'off' | 'grand' | 'all';
+    /**
+     * Column-axis pivot totals. Same inheritance as `pivotRowTotals`.
+     */
+    pivotColumnTotals?: 'off' | 'grand' | 'all';
+    /**
+     * Repeat nested group labels on every leaf (flat table for Excel pivot).
+     * Omitted charts keep merged nested headers.
+     */
+    pivotRepeatLabels?: boolean;
+    /** Show value labels on marks. */
+    chartShowLabels?: boolean;
+    /** Overlay a second measure as a line, optionally on an independent axis. */
+    chartOverlay?: 'none' | 'line' | 'dual';
+    /** Rule at the mean or median of the primary measure. */
+    chartReference?: 'none' | 'mean' | 'median';
+    /** Inner radius for pie (arc) charts. */
+    chartDonut?: boolean;
+    /** Nightingale / rose pie: radius encodes the measure. */
+    chartRose?: boolean;
+    /** OLS trend line on quantitative scatter / line. */
+    chartTrendline?: boolean;
+    /** Tooltip fields: encoded channels, or every view field. */
+    chartTooltip?: 'encoded' | 'all';
+    /** Click a temporal mark to refine its time unit. */
+    chartTimeDrill?: boolean;
+    /** Line / area interpolation. */
+    chartLineShape?: 'linear' | 'smooth' | 'step';
+    /** Value-label content when labels are on. */
+    chartLabelFormat?: 'value' | 'percent';
+    /** Draw bar charts with the category on Y (ranking). */
+    chartHorizontal?: boolean;
 }
 
 export interface IVisualConfigNew {
@@ -463,7 +504,8 @@ export enum ISegmentKey {
     chat = 'chat',
 }
 
-export type IThemeKey = 'vega' | 'g2' | 'streamlit' | 'danqing' | 'sodapop';
+export type IThemeKey = 'cube' | 'vega' | 'g2' | 'streamlit' | 'danqing' | 'sodapop';
+export type IChartRenderer = NonNullable<IVisualLayout['renderer']>;
 export type IDarkMode = 'media' | 'light' | 'dark';
 export type IComputationFunction = (payload: IDataQueryPayload) => Promise<IRow[]>;
 
@@ -1019,7 +1061,7 @@ export interface IVizStoreProps {
     fields?: IMutField[];
     onMetaChange?: (fid: string, meta: Partial<IMutField>) => void;
     defaultConfig?: IDefaultConfig;
-    defaultRenderer?: 'vega-lite' | 'observable-plot';
+    defaultRenderer?: 'vega-lite' | 'observable-plot' | 'echarts';
 }
 
 export interface ILocalComputationProps {

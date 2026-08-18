@@ -92,7 +92,21 @@ export const emptyVisualLayout: IVisualLayout = {
         shape: false,
         size: false,
     },
-    renderer: 'vega-lite',
+    renderer: 'echarts',
+    pivotColorMode: 'heatmap',
+    pivotPercentMode: 'none',
+    pivotRepeatLabels: false,
+    chartShowLabels: false,
+    chartOverlay: 'none',
+    chartReference: 'none',
+    chartDonut: false,
+    chartRose: false,
+    chartTrendline: false,
+    chartTooltip: 'encoded',
+    chartTimeDrill: false,
+    chartLineShape: 'linear',
+    chartLabelFormat: 'value',
+    chartHorizontal: false,
 };
 
 export const emptyVisualConfig: IVisualConfigNew = {

@@ -12,7 +12,7 @@ export default defineConfig({
     },
     reporter: 'line',
     use: {
-        baseURL: 'http://127.0.0.1:4175',
+        baseURL: 'http://127.0.0.1:4176',
         viewport: {
             width: 1200,
             height: 953,
@@ -40,8 +40,10 @@ export default defineConfig({
         // inspector while it processes hundreds of concurrent module responses.
         command:
             'yarn vite build --config tests/e2e/vite.config.ts && yarn vite preview --config tests/e2e/vite.config.ts',
-        url: 'http://127.0.0.1:4175/tests/e2e/issue-501.html',
-        reuseExistingServer: !process.env.CI,
+        url: 'http://127.0.0.1:4176/tests/e2e/issue-501.html',
+        // Always rebuild the preview: a reused server on this port served a stale
+        // gallery and produced empty chart screenshots.
+        reuseExistingServer: false,
         timeout: 300_000,
     },
 });

@@ -35,7 +35,7 @@ const deepMergeAll = (...objects: PlainObject[]): PlainObject => {
 
 export function getTheme(props: { vizThemeConfig?: any; primaryColor?: string; colorPalette?: string; mediaTheme: 'dark' | 'light' }): VegaGlobalConfig {
     const { vizThemeConfig, mediaTheme, colorPalette, primaryColor } = props;
-    const presetConfig = (typeof vizThemeConfig === 'string' ? builtInThemes[vizThemeConfig] : vizThemeConfig) ?? builtInThemes.vega;
+    const presetConfig = (typeof vizThemeConfig === 'string' ? builtInThemes[vizThemeConfig] : vizThemeConfig) ?? builtInThemes.cube ?? builtInThemes.vega;
     const colorConfig = primaryColor ? getPrimaryColor(primaryColor) : {};
     const paletteConfig = colorPalette ? getColorPalette(colorPalette) : {};
     const config = deepMergeAll(presetConfig, colorConfig, paletteConfig)?.[mediaTheme];

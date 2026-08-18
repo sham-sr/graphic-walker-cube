@@ -41,3 +41,29 @@ describe('Methods.replaceChart (undoable whole-chart replacement)', () => {
         expect(applied.now.visId).toBe('vis-1');
     });
 });
+
+describe('chart chrome layout persistence', () => {
+    test('toolbar chrome flags survive exportFullRaw / importFull', () => {
+        const patched = performers.setLayout(fromSnapshot(chartA()), [
+            ['chartHorizontal', true],
+            ['chartLineShape', 'smooth'],
+            ['chartRose', true],
+            ['chartLabelFormat', 'percent'],
+            ['chartShowLabels', true],
+            ['chartDonut', true],
+            ['chartOverlay', 'dual'],
+            ['chartReference', 'mean'],
+        ]);
+        const restored = importFull(exportFullRaw(patched));
+        expect(restored.now.layout).toMatchObject({
+            chartHorizontal: true,
+            chartLineShape: 'smooth',
+            chartRose: true,
+            chartLabelFormat: 'percent',
+            chartShowLabels: true,
+            chartDonut: true,
+            chartOverlay: 'dual',
+            chartReference: 'mean',
+        });
+    });
+});

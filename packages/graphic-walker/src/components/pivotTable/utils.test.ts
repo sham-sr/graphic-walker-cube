@@ -1,4 +1,4 @@
-import { buildMetricTableFromNestTree, buildNestTree, createPivotPathKey } from './utils';
+import { buildMetricTableFromNestTree, buildNestTree, collectCollapsiblePaths, createPivotPathKey } from './utils';
 
 describe('pivot table model utilities', () => {
     const rows = [
@@ -51,12 +51,27 @@ describe('pivot table model utilities', () => {
         expect(Number.isNaN(tree.children[0].value)).toBe(true);
     });
 
-    test('adds summary nodes at each non-leaf level', () => {
+    test('adds summary nodes at the end of each non-leaf level', () => {
         const tree = buildNestTree(['region', 'city'], rows, [], true);
 
-        expect(tree.children[0]).toMatchObject({ kind: 'summary', isCollapsed: true });
+        expect(tree.children.at(-1)).toMatchObject({ kind: 'summary', isCollapsed: true });
         const east = tree.children.find((node) => node.value === 'East');
-        expect(east?.children[0]).toMatchObject({ kind: 'summary', isCollapsed: true });
+        expect(east?.children.at(-1)).toMatchObject({ kind: 'summary', isCollapsed: true });
+    });
+
+    test('grand mode adds only a root total', () => {
+        const tree = buildNestTree(['region', 'city'], rows, [], 'grand');
+
+        expect(tree.children.filter((node) => node.kind === 'summary')).toHaveLength(1);
+        expect(tree.children.at(-1)).toMatchObject({ kind: 'summary' });
+        const east = tree.children.find((node) => node.value === 'East');
+        expect(east?.children.every((node) => node.kind === 'value')).toBe(true);
+    });
+
+    test('off mode does not insert summary nodes', () => {
+        const tree = buildNestTree(['region', 'city'], rows, [], 'off');
+        expect(tree.children.every((node) => node.kind === 'value')).toBe(true);
+        expect(tree.children.find((node) => node.value === 'East')?.children.every((node) => node.kind === 'value')).toBe(true);
     });
 
     test('maps row and column leaves to metric records', () => {
@@ -106,7 +121,7 @@ describe('pivot table model utilities', () => {
         const matrix = buildMetricTableFromNestTree(leftTree, topTree, data);
 
         expect(matrix).toHaveLength(3);
-        expect(matrix.slice(1).map((row) => row[0]?.sales_sum).sort()).toEqual([10, 20]);
+        expect(matrix.slice(0, 2).map((row) => row[0]?.sales_sum).sort()).toEqual([10, 20]);
     });
 
     test('uses an exact subtotal record for a collapsed path', () => {
@@ -117,5 +132,13 @@ describe('pivot table model utilities', () => {
 
         expect(matrix).toHaveLength(2);
         expect(matrix[1][0]?.sales_sum).toBe(30);
+    });
+
+    test('collects collapsible parent paths from nested groups', () => {
+        const tree = buildNestTree(['region', 'city'], rows, [], false);
+        expect(collectCollapsiblePaths(tree).map((path) => path.map((item) => item.value))).toEqual(
+            expect.arrayContaining([['East'], ['West']])
+        );
+        expect(collectCollapsiblePaths(tree).every((path) => path.length === 1)).toBe(true);
     });
 });

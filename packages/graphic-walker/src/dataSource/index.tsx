@@ -129,7 +129,11 @@ const DataSourceThemeContext = composeContext({ themeContext, vegaThemeContext, 
 export function DataSourceSegmentComponent(props: {
     provider: IDataSourceProvider;
     hideCreateDataset?: boolean;
+    /** Скрыть панель выбора/удаления датасета — хост управляет слотами сам */
+    hideDatasetToolbar?: boolean;
     displayOffset?: number;
+    /** Внешний выбор датасета (слот Cube / хост) */
+    preferredDatasetId?: string;
     /** @deprecated renamed to appearence */
     dark?: IDarkMode;
     appearance?: IDarkMode;
@@ -169,7 +173,11 @@ export function DataSourceSegmentComponent(props: {
                     persistDatasetSpecs(props.provider, current, datasetStoresRef.current.get(current));
                     specSyncGenerationRef.current += 1;
                 }
-                return list[list.length - 1]?.id ?? '';
+                return (
+                    (props.preferredDatasetId && list.some((item) => item.id === props.preferredDatasetId)
+                        ? props.preferredDatasetId
+                        : list[list.length - 1]?.id) ?? ''
+                );
             });
         };
         props.provider.getDataSourceList().then(applyList);
@@ -179,6 +187,14 @@ export function DataSourceSegmentComponent(props: {
             }
         });
     }, [props.provider]);
+
+    useEffect(() => {
+        const preferredId = props.preferredDatasetId;
+        if (!preferredId || !datasetList.some(item => item.id === preferredId)) {
+            return;
+        }
+        handleSelectIdRef.current(preferredId);
+    }, [props.preferredDatasetId, datasetList]);
 
     const dataset = useMemo(() => datasetList.find((x) => x.id === selectedId), [datasetList, selectedId]);
 
@@ -302,6 +318,7 @@ export function DataSourceSegmentComponent(props: {
 
     return (
         <>
+            {!props.hideDatasetToolbar && (
             <ShadowDom
                 // This host is toolbar-sized, while its create-data-source dialog
                 // must remain reachable in the viewport.
@@ -334,6 +351,7 @@ export function DataSourceSegmentComponent(props: {
                     </div>
                 </DataSourceThemeContext>
             </ShadowDom>
+            )}
             <props.children
                 computation={computation}
                 datasetName={dataset?.name ?? ''}

@@ -40,6 +40,7 @@ declare module '@kanaries/graphic-walker' {
     export const DataSourceSegmentComponent: (props: {
         provider: IDataSourceProvider;
         hideCreateDataset?: boolean;
+        hideDatasetToolbar?: boolean;
         appearance?: 'light' | 'dark';
         children: (slot: {
             meta: IMutField[];

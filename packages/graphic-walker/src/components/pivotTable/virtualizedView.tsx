@@ -4,8 +4,10 @@ import type { IViewField } from '../../interfaces';
 import { buildWindowedLeftTreeRows } from './leftTree';
 import MetricTable from './metricTable';
 import TopTree from './topTree';
-import { collectPivotLeafChains } from './headerWindow';
-import type { INestNode, IPivotTableModel } from './interface';
+import { collectPivotLeafChains, indexPivotLeafAncestors } from './headerWindow';
+import type { INestNode, IPivotTableModel, IPivotTablePath } from './interface';
+import type { PivotColorMode, PivotPercentMode, PivotSummaryLabels } from './display';
+import { PIVOT_ROW_HEIGHT_PX, PIVOT_SCROLLPORT_CLASS, PIVOT_TABLE_CLASS } from './scrollport';
 
 export interface VirtualizedPivotViewProps {
     model: IPivotTableModel;
@@ -21,9 +23,16 @@ export interface VirtualizedPivotViewProps {
     enableCollapse: boolean;
     onHeaderCollapse: (node: INestNode) => void;
     collapsedKeySet: ReadonlySet<string>;
+    colorMode?: PivotColorMode;
+    percentMode?: PivotPercentMode;
+    dark?: boolean;
+    onHeaderSort?: (fid: string) => void;
+    sortedFid?: string;
+    sortedDir?: string;
+    onKeepPath?: (path: IPivotTablePath) => void;
+    summaryLabels?: PivotSummaryLabels;
+    repeatLabels?: boolean;
 }
-
-const ROW_HEIGHT = 32;
 
 export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
     model,
@@ -38,9 +47,19 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
     enableCollapse,
     onHeaderCollapse,
     collapsedKeySet,
+    colorMode = 'none',
+    percentMode = 'none',
+    dark = false,
+    onHeaderSort,
+    sortedFid,
+    sortedDir,
+    onKeepPath,
+    summaryLabels,
+    repeatLabels,
 }) => {
     const parentRef = useRef<HTMLDivElement>(null);
     const leftChains = useMemo(() => collectPivotLeafChains(model.leftTree, collapsedKeySet), [model.leftTree, collapsedKeySet]);
+    const ancestorIndex = useMemo(() => indexPivotLeafAncestors(leftChains), [leftChains]);
     const measureCount = Math.max(measInRow.length, 1);
     const headerColumnCount = dimsInRow.length + (measInRow.length > 0 ? 1 : 0);
     const metricCols = Math.max(topLeaves.length * Math.max(measInColumn.length, 1), 1);
@@ -48,8 +67,9 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
     const rowVirtualizer = useVirtualizer({
         count: leftChains.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => ROW_HEIGHT * measureCount,
-        overscan: 8,
+        estimateSize: () => PIVOT_ROW_HEIGHT_PX * measureCount,
+        overscan: 6,
+        getItemKey: (index) => leftChains[index]?.node.uniqueKey ?? index,
     });
 
     const virtualRows = rowVirtualizer.getVirtualItems();
@@ -71,6 +91,13 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     defaultAggregated,
                     displayOffset: timezoneDisplayOffset,
                     collapsedKeySet,
+                    onHeaderSort,
+                    sortedFid,
+                    sortedDir,
+                    summaryLabels,
+                    leaves: leftChains,
+                    ancestorIndex,
+                    repeatLabels,
                 },
                 rowStart,
                 rowEnd
@@ -84,19 +111,21 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
             defaultAggregated,
             timezoneDisplayOffset,
             collapsedKeySet,
+            onHeaderSort,
+            sortedFid,
+            sortedDir,
+            summaryLabels,
+            leftChains,
+            ancestorIndex,
+            repeatLabels,
             rowStart,
             rowEnd,
         ]
     );
 
     return (
-        <div
-            ref={parentRef}
-            className="relative h-full min-h-[12rem] max-h-[70vh] overflow-auto"
-            data-testid="pivot-table-view"
-            data-virtualized="true"
-        >
-            <table className="border border-collapse">
+        <div ref={parentRef} className={PIVOT_SCROLLPORT_CLASS} data-testid="pivot-table-view" data-virtualized="true">
+            <table className={PIVOT_TABLE_CLASS}>
                 <TopTree
                     data={model.topTree}
                     dimsInCol={dimsInColumn}
@@ -108,6 +137,11 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     defaultAggregated={defaultAggregated}
                     displayOffset={timezoneDisplayOffset}
                     collapsedKeySet={collapsedKeySet}
+                    onHeaderSort={onHeaderSort}
+                    sortedFid={sortedFid}
+                    sortedDir={sortedDir}
+                    summaryLabels={summaryLabels}
+                    repeatLabels={repeatLabels}
                 />
                 <MetricTable
                     cube={model.cube}
@@ -121,6 +155,10 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     paddingTop={paddingTop}
                     paddingBottom={paddingBottom}
                     spacerColumnCount={headerColumnCount + metricCols}
+                    colorMode={colorMode}
+                    percentMode={percentMode}
+                    dark={dark}
+                    onKeepPath={onKeepPath}
                 />
             </table>
         </div>

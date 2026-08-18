@@ -75,8 +75,9 @@ export function getSingleView(props: SingleViewProps) {
         .filter((f) => f.semanticType === 'temporal')
         .map((f) => {
             let offsetTime = (displayOffset ?? new Date().getTimezoneOffset()) * -60000;
+            const dataKey = f.fid;
             const fid = encodeFid(f.fid);
-            const sample = dataSource[0]?.[f.fid];
+            const sample = dataSource[0]?.[dataKey];
             if (sample) {
                 const format = getTimeFormat(sample);
                 if (format !== 'timestamp') {
@@ -89,7 +90,7 @@ export function getSingleView(props: SingleViewProps) {
                         return null;
                     }
                     return {
-                        calculate: `datum[${JSON.stringify(fid)}]!==null?(toDate(datum[${JSON.stringify(fid)}])${formatOffset(offsetTime)}):null`,
+                        calculate: `datum[${JSON.stringify(dataKey)}]!==null?(toDate(datum[${JSON.stringify(dataKey)}])${formatOffset(offsetTime)}):null`,
                         as: fid,
                     };
                 }
@@ -98,7 +99,7 @@ export function getSingleView(props: SingleViewProps) {
                 return null;
             }
             return {
-                calculate: `datum[${JSON.stringify(fid)}]!==null?(datum[${JSON.stringify(fid)}]${formatOffset(offsetTime)}):null`,
+                calculate: `datum[${JSON.stringify(dataKey)}]!==null?(datum[${JSON.stringify(dataKey)}]${formatOffset(offsetTime)}):null`,
                 as: fid,
             };
         })

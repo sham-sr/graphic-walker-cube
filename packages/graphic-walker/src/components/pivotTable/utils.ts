@@ -1,10 +1,11 @@
 import type { IRow } from '../../interfaces';
 import type { INestNode, IPivotTablePath, PivotTableValue } from './interface';
 import { buildPivotCube, materializeMetricMatrix } from './cube';
+import { coercePivotTotalsMode, type PivotTotalsMode } from './display';
 import { createPivotPathKey, createPivotValueKey } from './pathKey';
 
 export { createPivotPathKey, encodePivotTableValue, pivotTableValuesEqual } from './pathKey';
-export { applyCollapseFlags, collectVisibleLeaves, getLeafSpan, isPivotNodeCollapsed } from './treeWalk';
+export { applyCollapseFlags, collectCollapsiblePaths, collectVisibleLeaves, getLeafSpan, isPivotNodeCollapsed } from './treeWalk';
 export {
     buildPivotCube,
     getCubeCell,
@@ -91,31 +92,45 @@ function sortNestTree(
 const ROOT_KEY = '__pivot_root__';
 const SUMMARY_KEY = '__pivot_summary__';
 
-function insertSummaryNode(node: INestNode): void {
-    if (node.children.length > 0) {
-        node.children.unshift({
-            kind: 'summary',
-            key: SUMMARY_KEY,
-            value: `${node.value}(total)`,
-            sort: '',
-            fieldKey: '',
-            uniqueKey: JSON.stringify(['summary', node.uniqueKey]),
-            children: [],
-            path: [...node.path],
-            height: node.children[0].height,
-            isCollapsed: true,
-        });
-        for (let i = 1; i < node.children.length; i++) {
-            insertSummaryNode(node.children[i]);
+function makeSummaryNode(parent: INestNode): INestNode {
+    return {
+        kind: 'summary',
+        key: SUMMARY_KEY,
+        value: SUMMARY_KEY,
+        sort: '',
+        fieldKey: '',
+        uniqueKey: JSON.stringify(['summary', parent.uniqueKey]),
+        children: [],
+        path: [...parent.path],
+        height: parent.children[0].height,
+        isCollapsed: true,
+    };
+}
+
+/** Append Excel-style totals at the end of each group (or only at the root for grand). */
+function insertSummaryNodes(node: INestNode, mode: PivotTotalsMode): void {
+    if (mode === 'off' || node.children.length === 0) {
+        return;
+    }
+    if (mode === 'grand') {
+        if (node.kind === 'root') {
+            node.children.push(makeSummaryNode(node));
+        }
+        return;
+    }
+    for (const child of node.children) {
+        if (child.kind === 'value') {
+            insertSummaryNodes(child, 'all');
         }
     }
+    node.children.push(makeSummaryNode(node));
 }
 
 export function buildNestTree(
     layerKeys: string[],
     data: IRow[],
     collapsedKeyList: string[],
-    showSummary: boolean,
+    showSummary: boolean | PivotTotalsMode,
     sort?: {
         fid: string;
         type: 'ascending' | 'descending';
@@ -145,9 +160,7 @@ export function buildNestTree(
         }
     }
     sortNestTree(tree, 0, layerKeys.length, sort);
-    if (showSummary) {
-        insertSummaryNode(tree);
-    }
+    insertSummaryNodes(tree, coercePivotTotalsMode(showSummary));
     return tree;
 }
 

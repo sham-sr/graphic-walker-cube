@@ -6,9 +6,11 @@ import {
     type GraphicWalkerReport,
     type WalkerDatasetInput,
     type WalkerField,
+    type WalkerReplaceResult,
     type WalkerRow,
 } from './contract';
 import type { DatasetRegistry } from './datasetRegistry';
+import { resolveReplaceSpecs } from './canReuseWalkerSpecs';
 
 function toMutFields(fields: WalkerField[]): IMutField[] {
     return fields.map((field) => ({
@@ -48,8 +50,10 @@ export async function syncSpecsFromProvider(provider: IDataSourceProvider, regis
 
 export async function pushRegistryToProvider(provider: IDataSourceProvider, registry: DatasetRegistry): Promise<void> {
     const snapshot = registry.list().map((info) => registry.get(info.id));
+    const previousSelected = registry.selectedDatasetId;
     await clearProvider(provider);
     registry.clear();
+    let selectedNext: string | undefined;
     for (const record of snapshot) {
         const id = await provider.addDataSource(toRows(record.rows), toMutFields(record.fields), record.name);
         if (record.specsJson && record.specsJson !== '[]') {
@@ -65,12 +69,18 @@ export async function pushRegistryToProvider(provider: IDataSourceProvider, regi
             },
             id
         );
+        if (record.id === previousSelected) {
+            selectedNext = id;
+        }
+    }
+    if (selectedNext) {
+        registry.setSelectedDatasetId(selectedNext);
     }
 }
 
 export interface HostController {
     addDataset(input: WalkerDatasetInput): Promise<{ id: string }>;
-    replaceDataset(id: string, input: WalkerDatasetInput): Promise<{ id: string }>;
+    replaceDataset(id: string, input: WalkerDatasetInput): Promise<WalkerReplaceResult>;
     removeDataset(id: string): Promise<void>;
     listDatasets(): Promise<{ id: string; name: string }[]>;
     exportConfig(): Promise<GraphicWalkerConfig>;
@@ -105,6 +115,16 @@ export function createHostController(
             return { id };
         },
         async replaceDataset(id, input) {
+            await syncSpecsFromProvider(provider, registry);
+            let previousSpecs: string | undefined;
+            if (registry.list().some((dataset) => dataset.id === id)) {
+                previousSpecs = registry.get(id).specsJson;
+            }
+            const { specsJson, chartsCleared } = resolveReplaceSpecs(
+                input.specsJson,
+                previousSpecs,
+                input.fields
+            );
             if (provider.removeDataSource) {
                 try {
                     await provider.removeDataSource(id);
@@ -115,8 +135,8 @@ export function createHostController(
             if (registry.list().some((dataset) => dataset.id === id)) {
                 registry.remove(id);
             }
-            const nextId = await addToProvider(input);
-            return { id: nextId };
+            const nextId = await addToProvider({ ...input, specsJson });
+            return { id: nextId, chartsCleared };
         },
         async removeDataset(id) {
             if (provider.removeDataSource) {

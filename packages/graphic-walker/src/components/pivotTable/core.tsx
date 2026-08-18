@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { IComputationFunction, IFilterField, IRenderStatus, IRow, IViewField } from '../../interfaces';
 import LoadingLayer from '../loadingLayer';
 import { buildPivotSheet } from '../../services/pivotExport';
@@ -8,6 +9,19 @@ import type { INestNode, IPivotTableModel, IPivotTablePath } from './interface';
 import { getPivotTableFields, queryPivotTable, type PivotTableModelBuilder } from './query';
 import { materializeMetricMatrix, pivotTableValuesEqual } from './utils';
 import { PivotTableView } from './view';
+import { PivotTableToolbar } from './toolbar';
+import {
+    resolvePivotColorMode,
+    resolvePivotHeaderMode,
+    resolvePivotPercentMode,
+    resolvePivotTotals,
+    showTableSummaryFromTotals,
+    type PivotColorMode,
+    type PivotHeaderMode,
+    type PivotPercentMode,
+    type PivotTotalsMode,
+} from './display';
+import { collectCollapsiblePaths } from './treeWalk';
 
 const EMPTY_FILTERS: readonly IFilterField[] = [];
 const EMPTY_PATHS: readonly IPivotTablePath[] = [];
@@ -31,6 +45,13 @@ export function togglePivotTablePath(paths: readonly IPivotTablePath[], target: 
     return nextPaths;
 }
 
+export function nextCollapseAllPaths(current: readonly IPivotTablePath[], all: readonly IPivotTablePath[]): IPivotTablePath[] {
+    if (all.length === 0) {
+        return [];
+    }
+    return current.length > 0 ? [] : all.map((path) => path.map((item) => ({ ...item })));
+}
+
 export function shouldRenderPivotTableModel(model: IPivotTableModel | null): boolean {
     return model !== null && !model.isEmpty;
 }
@@ -46,6 +67,8 @@ export interface PivotTableCoreProps {
     limit?: number;
     timezoneDisplayOffset?: number;
     showTableSummary?: boolean;
+    rowTotals?: PivotTotalsMode;
+    columnTotals?: PivotTotalsMode;
     numberFormat?: string;
     disableCollapse?: boolean;
     collapsedPaths?: readonly IPivotTablePath[];
@@ -66,6 +89,18 @@ export interface PivotTableCoreProps {
         downloadXLSX?: () => void;
         downloadODS?: () => void;
     }>;
+    colorMode?: PivotColorMode;
+    percentMode?: PivotPercentMode;
+    onColorModeChange?: (mode: PivotColorMode) => void;
+    onPercentModeChange?: (mode: PivotPercentMode) => void;
+    onRowTotalsChange?: (mode: PivotTotalsMode) => void;
+    onColumnTotalsChange?: (mode: PivotTotalsMode) => void;
+    /** Repeat nested group labels on every leaf. Controlled when `onRepeatLabelsChange` is set. */
+    repeatLabels?: boolean;
+    onRepeatLabelsChange?: (repeat: boolean) => void;
+    dark?: boolean;
+    onHeaderSort?: (fid: string) => void;
+    onKeepPath?: (path: IPivotTablePath) => void;
 }
 
 export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
@@ -79,6 +114,8 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     limit = -1,
     timezoneDisplayOffset,
     showTableSummary = false,
+    rowTotals,
+    columnTotals,
     numberFormat = '',
     disableCollapse = false,
     collapsedPaths,
@@ -91,12 +128,30 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     buildModel,
     name,
     exportHandlerRef,
+    colorMode,
+    percentMode,
+    onColorModeChange,
+    onPercentModeChange,
+    onRowTotalsChange,
+    onColumnTotalsChange,
+    repeatLabels,
+    onRepeatLabelsChange,
+    dark = false,
+    onHeaderSort,
+    onKeepPath,
 }) => {
+    const { t } = useTranslation();
     const [model, setModel] = useState<IPivotTableModel | null>(null);
     const [loading, setLoading] = useState(false);
     const [uncontrolledCollapsedPaths, setUncontrolledCollapsedPaths] = useState<IPivotTablePath[]>(() =>
         defaultCollapsedPaths.map((path) => [...path])
     );
+    const [localColorMode, setLocalColorMode] = useState<PivotColorMode>(() => resolvePivotColorMode(colorMode));
+    const [localPercentMode, setLocalPercentMode] = useState<PivotPercentMode>(() => resolvePivotPercentMode(percentMode));
+    const initialTotals = resolvePivotTotals({ showTableSummary, pivotRowTotals: rowTotals, pivotColumnTotals: columnTotals }, defaultAggregated);
+    const [localRowTotals, setLocalRowTotals] = useState<PivotTotalsMode>(() => initialTotals.rows);
+    const [localColumnTotals, setLocalColumnTotals] = useState<PivotTotalsMode>(() => initialTotals.columns);
+    const [localHeaderMode, setLocalHeaderMode] = useState<PivotHeaderMode>(() => resolvePivotHeaderMode(repeatLabels));
     const requestIdRef = useRef(0);
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const onErrorRef = useRef(onError);
@@ -107,7 +162,19 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     const activeCollapsedPaths = collapsedPaths ?? uncontrolledCollapsedPaths;
     const aggregationFeaturesEnabled = defaultAggregated;
     const effectiveCollapsedPaths = disableCollapse || !aggregationFeaturesEnabled ? EMPTY_PATHS : activeCollapsedPaths;
-    const effectiveShowTableSummary = aggregationFeaturesEnabled && showTableSummary;
+    const resolvedTotals = resolvePivotTotals(
+        { showTableSummary, pivotRowTotals: rowTotals, pivotColumnTotals: columnTotals },
+        aggregationFeaturesEnabled
+    );
+    const activeRowTotals = onRowTotalsChange ? resolvedTotals.rows : aggregationFeaturesEnabled ? localRowTotals : 'off';
+    const activeColumnTotals = onColumnTotalsChange ? resolvedTotals.columns : aggregationFeaturesEnabled ? localColumnTotals : 'off';
+    const summaryLabels = useMemo(
+        () => ({
+            total: t('pivotTable.total'),
+            totalOf: (name: string) => t('pivotTable.total_of', { name }),
+        }),
+        [t]
+    );
 
     const fieldStructureKey = useMemo(
         () =>
@@ -147,7 +214,9 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 folds,
                 limit,
                 timezoneDisplayOffset,
-                showTableSummary: effectiveShowTableSummary,
+                showTableSummary: showTableSummaryFromTotals({ rows: activeRowTotals, columns: activeColumnTotals }),
+                rowTotals: activeRowTotals,
+                columnTotals: activeColumnTotals,
                 collapsedPaths: EMPTY_PATHS,
                 viewData,
             },
@@ -190,7 +259,8 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
         folds,
         limit,
         timezoneDisplayOffset,
-        effectiveShowTableSummary,
+        activeRowTotals,
+        activeColumnTotals,
         viewData,
         buildModel,
     ]);
@@ -219,6 +289,85 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     );
 
     const { dimsInRow, dimsInColumn, measInRow, measInColumn } = useMemo(() => getPivotTableFields(rows, columns), [rows, columns]);
+    const activeColorMode = onColorModeChange ? resolvePivotColorMode(colorMode) : localColorMode;
+    const activePercentMode = onPercentModeChange ? resolvePivotPercentMode(percentMode) : localPercentMode;
+    const activeHeaderMode = onRepeatLabelsChange ? resolvePivotHeaderMode(repeatLabels) : localHeaderMode;
+    const activeRepeatLabels = activeHeaderMode === 'repeat';
+    const collapsiblePaths = useMemo(() => {
+        if (!model?.leftTree || !model.topTree) {
+            return [];
+        }
+        return [...collectCollapsiblePaths(model.leftTree), ...collectCollapsiblePaths(model.topTree)];
+    }, [model]);
+    const showCollapseAll = aggregationFeaturesEnabled && !disableCollapse && collapsiblePaths.length > 0;
+    const showHeaderMode = dimsInRow.length + dimsInColumn.length > 0;
+    const sortedField = useMemo(
+        () => [...rows, ...columns].find((field) => field.sort && field.sort !== 'none'),
+        [columns, rows]
+    );
+
+    const handleColorModeChange = useCallback(
+        (mode: PivotColorMode) => {
+            if (onColorModeChange) {
+                onColorModeChange(mode);
+                return;
+            }
+            setLocalColorMode(mode);
+        },
+        [onColorModeChange]
+    );
+    const handlePercentModeChange = useCallback(
+        (mode: PivotPercentMode) => {
+            if (onPercentModeChange) {
+                onPercentModeChange(mode);
+                return;
+            }
+            setLocalPercentMode(mode);
+        },
+        [onPercentModeChange]
+    );
+    const handleRowTotalsChange = useCallback(
+        (mode: PivotTotalsMode) => {
+            if (onRowTotalsChange) {
+                onRowTotalsChange(mode);
+                return;
+            }
+            setLocalRowTotals(mode);
+        },
+        [onRowTotalsChange]
+    );
+    const handleColumnTotalsChange = useCallback(
+        (mode: PivotTotalsMode) => {
+            if (onColumnTotalsChange) {
+                onColumnTotalsChange(mode);
+                return;
+            }
+            setLocalColumnTotals(mode);
+        },
+        [onColumnTotalsChange]
+    );
+
+    const handleHeaderModeChange = useCallback(
+        (mode: PivotHeaderMode) => {
+            if (onRepeatLabelsChange) {
+                onRepeatLabelsChange(mode === 'repeat');
+                return;
+            }
+            setLocalHeaderMode(mode);
+        },
+        [onRepeatLabelsChange]
+    );
+
+    const handleCollapseAllToggle = useCallback(() => {
+        if (disableCollapse || !aggregationFeaturesEnabled) {
+            return;
+        }
+        const nextPaths = nextCollapseAllPaths(activeCollapsedPaths, collapsiblePaths);
+        if (collapsedPaths === undefined) {
+            setUncontrolledCollapsedPaths(nextPaths);
+        }
+        onCollapsedPathsChange?.(nextPaths);
+    }, [activeCollapsedPaths, aggregationFeaturesEnabled, collapsedPaths, collapsiblePaths, disableCollapse, onCollapsedPathsChange]);
 
     const downloadPivot = useCallback(
         (type: 'csv' | 'xlsx' | 'ods') => {
@@ -235,6 +384,8 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 measInRow,
                 measInColumn,
                 displayOffset: timezoneDisplayOffset,
+                summaryLabels,
+                repeatLabels: activeRepeatLabels,
             });
             const fileName = `${name || 'pivot-table'}.${type}`;
             if (type === 'csv') {
@@ -252,7 +403,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 type
             );
         },
-        [dimsInColumn, dimsInRow, measInColumn, measInRow, model, name, timezoneDisplayOffset]
+        [dimsInColumn, dimsInRow, measInColumn, measInRow, model, name, timezoneDisplayOffset, summaryLabels, activeRepeatLabels]
     );
 
     useEffect(() => {
@@ -265,23 +416,51 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     }, [downloadPivot, exportHandlerRef]);
 
     return (
-        <div className="relative h-full min-h-0 max-h-[70vh] overflow-auto" data-testid="pivot-table-core" aria-busy={loading}>
+        <div className="relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden" data-testid="pivot-table-core" aria-busy={loading}>
             {loading && <LoadingLayer />}
-            {model && shouldRenderPivotTableModel(model) ? (
-                <PivotTableView
-                    model={model}
-                    rows={rows}
-                    columns={columns}
-                    defaultAggregated={defaultAggregated}
-                    numberFormat={numberFormat}
-                    timezoneDisplayOffset={timezoneDisplayOffset}
-                    enableCollapse={aggregationFeaturesEnabled && !disableCollapse}
-                    collapsedPaths={effectiveCollapsedPaths}
-                    onHeaderCollapse={handleHeaderCollapse}
-                />
-            ) : (
-                !loading && emptyContent
-            )}
+            <PivotTableToolbar
+                colorMode={activeColorMode}
+                percentMode={activePercentMode}
+                rowTotals={activeRowTotals}
+                columnTotals={activeColumnTotals}
+                headerMode={activeHeaderMode}
+                onColorModeChange={handleColorModeChange}
+                onPercentModeChange={handlePercentModeChange}
+                onRowTotalsChange={handleRowTotalsChange}
+                onColumnTotalsChange={handleColumnTotalsChange}
+                onHeaderModeChange={handleHeaderModeChange}
+                showKeepHint={Boolean(onKeepPath)}
+                showHeaderMode={showHeaderMode}
+                showCollapseAll={showCollapseAll}
+                anyCollapsed={effectiveCollapsedPaths.length > 0}
+                onCollapseAllToggle={handleCollapseAllToggle}
+            />
+            <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+                {model && shouldRenderPivotTableModel(model) ? (
+                    <PivotTableView
+                        model={model}
+                        rows={rows}
+                        columns={columns}
+                        defaultAggregated={defaultAggregated}
+                        numberFormat={numberFormat}
+                        timezoneDisplayOffset={timezoneDisplayOffset}
+                        enableCollapse={aggregationFeaturesEnabled && !disableCollapse}
+                        collapsedPaths={effectiveCollapsedPaths}
+                        onHeaderCollapse={handleHeaderCollapse}
+                        colorMode={activeColorMode}
+                        percentMode={activePercentMode}
+                        dark={dark}
+                        onHeaderSort={onHeaderSort}
+                        sortedFid={sortedField?.fid}
+                        sortedDir={sortedField?.sort}
+                        onKeepPath={onKeepPath}
+                        summaryLabels={summaryLabels}
+                        repeatLabels={activeRepeatLabels}
+                    />
+                ) : (
+                    !loading && emptyContent
+                )}
+            </div>
         </div>
     );
 };

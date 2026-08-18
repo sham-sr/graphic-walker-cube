@@ -2,7 +2,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { DataSourceSegmentComponent, GraphicWalker } from '@kanaries/graphic-walker';
 import type { IDataSourceProvider } from '@kanaries/graphic-walker';
 import { getMemoryProvider } from '@kanaries/duckdb-computation';
-import type { GraphicWalkerHost, GraphicWalkerHostOptions } from './contract';
+import type { GraphicWalkerExperimentalFeatures, GraphicWalkerHost, GraphicWalkerHostOptions } from './contract';
+import { GW_DEFAULT_EXPERIMENTAL_FEATURES, GW_DEFAULT_TOOLBAR_EXCLUDE } from './contract';
 import { createDatasetRegistry } from './datasetRegistry';
 import { createHostController } from './hostController';
 
@@ -11,6 +12,9 @@ interface HostAppProps {
     i18nLang: string;
     appearance: 'light' | 'dark';
     listVersion: number;
+    preferredDatasetId?: string;
+    toolbarExclude: readonly string[];
+    experimentalFeatures: GraphicWalkerExperimentalFeatures;
     flushSpecsRef: { current: () => void };
 }
 
@@ -20,20 +24,29 @@ function HostApp(props: HostAppProps) {
             key={props.listVersion}
             provider={props.provider}
             hideCreateDataset
+            hideDatasetToolbar
             appearance={props.appearance}
+            preferredDatasetId={props.preferredDatasetId}
         >
             {(slot) => {
                 props.flushSpecsRef.current = slot.syncSpecs;
                 return (
+                    <div style={{ height: '100%', minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <GraphicWalker
                         i18nLang={props.i18nLang}
                         appearance={props.appearance}
+                        vizThemeConfig="cube"
                         computation={slot.computation}
                         rawFields={slot.meta}
                         onMetaChange={slot.onMetaChange}
                         storeRef={slot.storeRef}
                         keepAlive={slot.datasetId || false}
+                        toolbar={{ exclude: [...props.toolbarExclude] }}
+                        experimentalFeatures={props.experimentalFeatures}
+                        hideSegmentNav
+                        style={{ width: '100%', height: '100%', minHeight: 0, flex: 1 }}
                     />
+                    </div>
                 );
             }}
         </DataSourceSegmentComponent>
@@ -67,6 +80,9 @@ export async function createGraphicWalkerHost(
     let i18nLang = options.i18nLang ?? 'ru-RU';
     let appearance: 'light' | 'dark' = options.appearance ?? 'light';
     let listVersion = 0;
+    let preferredDatasetId: string | undefined;
+    const toolbarExclude = options.toolbarExclude ?? GW_DEFAULT_TOOLBAR_EXCLUDE;
+    const experimentalFeatures = options.experimentalFeatures ?? GW_DEFAULT_EXPERIMENTAL_FEATURES;
     let root: Root | null = createRoot(el);
     const flushSpecsRef = { current: () => {} };
 
@@ -77,6 +93,9 @@ export async function createGraphicWalkerHost(
                 i18nLang={i18nLang}
                 appearance={appearance}
                 listVersion={listVersion}
+                preferredDatasetId={preferredDatasetId}
+                toolbarExclude={toolbarExclude}
+                experimentalFeatures={experimentalFeatures}
                 flushSpecsRef={flushSpecsRef}
             />
         );
@@ -105,6 +124,7 @@ export async function createGraphicWalkerHost(
             return result;
         },
         async replaceDataset(id, input) {
+            flushSpecsRef.current();
             const result = await controller.replaceDataset(id, input);
             bumpList();
             return result;
@@ -124,11 +144,18 @@ export async function createGraphicWalkerHost(
         },
         async applyConfig(config, rowsById) {
             await controller.applyConfig(config, rowsById);
+            preferredDatasetId = registry.selectedDatasetId ?? config.selectedDatasetId;
             bumpList();
         },
         async importReport(report) {
             await controller.importReport(report);
+            preferredDatasetId = registry.selectedDatasetId ?? report.selectedDatasetId;
             bumpList();
+        },
+        selectDataset(id: string) {
+            preferredDatasetId = id;
+            registry.setSelectedDatasetId(id);
+            render();
         },
         destroy() {
             flushSpecsRef.current();

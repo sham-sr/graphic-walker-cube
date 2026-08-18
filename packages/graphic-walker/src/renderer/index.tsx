@@ -32,6 +32,9 @@ import LoadingLayer from '@/components/loadingLayer';
 import { getTimeFormat } from '@/lib/inferMeta';
 import { unexceptedUTCParsedPatternFormats } from '@/lib/op/offset';
 import { exportSpreadsheet } from '../services/spreadsheetExport';
+import { layoutEntriesFromChrome } from '../vis/spec/chartChrome';
+import { encodeFid } from '../vis/spec/encode';
+import { resolvePivotTotals, showTableSummaryFromTotals } from '../components/pivotTable/display';
 
 interface RendererProps {
     vizThemeConfig: IThemeKey | GWGlobalConfig;
@@ -188,6 +191,19 @@ const Renderer = forwardRef<IReactVegaHandler, RendererProps>(function (props, r
     const handleGeomClick = useCallback(
         (values: any, e: MouseEvent & { item: Item }) => {
             e.stopPropagation();
+            if (visualLayout.chartTimeDrill && values) {
+                const { vlPoint: _vlPoint, ...datums } = values as Record<string, unknown>;
+                const encoded = viewEncodingKeys(visualConfig.geoms[0]).flatMap((key) => encodings[key] as IViewField[]);
+                const clicked = Object.keys(datums).filter((key) => datums[key] !== undefined);
+                const temporal = encoded.find(
+                    (field) =>
+                        (field.semanticType === 'temporal' || field.expression?.op === 'dateTimeDrill') &&
+                        clicked.some((key) => key === field.fid || key === encodeFid(field.fid))
+                );
+                if (temporal && vizStore.cycleTimeDrill(temporal.fid)) {
+                    return;
+                }
+            }
             if (GLOBAL_CONFIG.EMBEDED_MENU_LIST.length > 0) {
                 runInAction(() => {
                     vizStore.showEmbededMenu([e.clientX, e.clientY]);
@@ -229,7 +245,7 @@ const Renderer = forwardRef<IReactVegaHandler, RendererProps>(function (props, r
                 }
             }
         },
-        [vizStore, viewData, encodings, visualConfig]
+        [vizStore, viewData, encodings, visualConfig, visualLayout]
     );
 
     const handleChartResize = useCallback(
@@ -244,6 +260,14 @@ const Renderer = forwardRef<IReactVegaHandler, RendererProps>(function (props, r
     );
 
     const isSpatial = viewConfig.coordSystem === 'geographic';
+    const displayLayout = useMemo(() => {
+        const size = visualLayout.size;
+        if (size.mode !== 'auto') {
+            return visualLayout;
+        }
+        return { ...visualLayout, size: { ...size, mode: 'full' as const } };
+    }, [visualLayout]);
+    const fillsPane = isPivotTable || displayLayout.size.mode !== 'fixed';
 
     const sizeRef = useRef(visualLayout.size);
     sizeRef.current = visualLayout.size;
@@ -265,9 +289,9 @@ const Renderer = forwardRef<IReactVegaHandler, RendererProps>(function (props, r
     }, [isSpatial, vizStore]);
 
     return (
-        <div className="w-full h-full">
+        <div className="w-full h-full min-h-0 min-w-0">
             {waiting && <LoadingLayer />}
-            <div className="overflow-auto w-full h-full">
+            <div className={`${fillsPane ? 'overflow-hidden' : 'overflow-auto'} w-full h-full min-h-0 min-w-0`}>
                 <SpecRenderer
                     name={chart?.name}
                     data={viewData}
@@ -278,12 +302,41 @@ const Renderer = forwardRef<IReactVegaHandler, RendererProps>(function (props, r
                     visualConfig={viewConfig}
                     onGeomClick={handleGeomClick}
                     onChartResize={handleChartResize}
-                    layout={visualLayout}
+                    layout={displayLayout}
                     scales={props.scales}
                     onReportSpec={(spec) => {
                         vizStore.updateLastSpec(spec);
                     }}
                     exportHandlerRef={csvRef}
+                    onPivotColorModeChange={(mode) => vizStore.setVisualLayout('pivotColorMode', mode)}
+                    onPivotPercentModeChange={(mode) => vizStore.setVisualLayout('pivotPercentMode', mode)}
+                    onPivotRowTotalsChange={(mode) => {
+                        const columns = resolvePivotTotals(layout).columns;
+                        vizStore.setVisualLayout(
+                            ['pivotRowTotals', mode],
+                            ['pivotColumnTotals', columns],
+                            ['showTableSummary', showTableSummaryFromTotals({ rows: mode, columns })]
+                        );
+                    }}
+                    onPivotColumnTotalsChange={(mode) => {
+                        const rows = resolvePivotTotals(layout).rows;
+                        vizStore.setVisualLayout(
+                            ['pivotRowTotals', rows],
+                            ['pivotColumnTotals', mode],
+                            ['showTableSummary', showTableSummaryFromTotals({ rows, columns: mode })]
+                        );
+                    }}
+                    onPivotRepeatLabelsChange={(repeat) => vizStore.setVisualLayout('pivotRepeatLabels', repeat)}
+                    onPivotHeaderSort={(fid) => vizStore.cycleFieldSort(fid)}
+                    onPivotKeepPath={(path) => vizStore.keepDimensionValues(path)}
+                    onChartChromeChange={(patch) => {
+                        const entries = layoutEntriesFromChrome(patch);
+                        if (entries.length === 0) {
+                            return;
+                        }
+                        vizStore.setVisualLayout(...(entries as [keyof IVisualLayout, IVisualLayout[keyof IVisualLayout]][]));
+                    }}
+                    onStackChange={(mode) => vizStore.setVisualLayout('stack', mode)}
                 />
             </div>
         </div>

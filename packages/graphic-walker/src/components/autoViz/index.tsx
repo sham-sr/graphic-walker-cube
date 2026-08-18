@@ -115,7 +115,7 @@ const AutoVizPanel: React.FC = observer(function AutoVizPanel() {
     const availableCount = result?.items.filter((x) => x.available).length ?? 0;
 
     return (
-        <div className="hidden sm:flex my-0.5 ml-0.5 w-[248px] flex-shrink-0 flex-col overflow-hidden rounded-md border bg-background">
+        <div className="hidden sm:flex my-0.5 ml-0.5 h-full min-h-0 w-[248px] flex-shrink-0 flex-col overflow-hidden rounded-md border bg-background">
             {/* header */}
             <div className="flex flex-shrink-0 items-center gap-1.5 border-b px-2.5 py-2">
                 <SparklesIcon className="h-4 w-4 text-primary" />

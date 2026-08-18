@@ -60,6 +60,7 @@ describe('windowed PivotTableView', () => {
         );
 
         expect(markup).toContain('data-virtualized="true"');
+        expect(markup).toContain('min-w-max');
         expect(markup).toContain('<table');
         expect(markup).toContain('scope="row"');
         expect(markup).toContain('aria-label="Collapse R0"');
@@ -68,5 +69,32 @@ describe('windowed PivotTableView', () => {
         expect(markup).toContain('R10');
         expect(markup).not.toContain('R19');
         expect(markup).not.toContain('>R2<');
+    });
+
+    test('keeps row virtualization when Excel-style totals add extra summary leaves', () => {
+        const region = dimension('region', 'Region');
+        const city = dimension('city', 'City');
+        const data = Array.from({ length: 20 }, (_, regionIndex) =>
+            Array.from({ length: 4 }, (_, cityIndex) => ({
+                region: `R${regionIndex}`,
+                city: `C${cityIndex}`,
+                sales_sum: 1,
+            }))
+        ).flat();
+        const result = buildPivotTable([region, city], [], data, [], [], { rows: 'all', columns: 'off' });
+        const markup = renderToStaticMarkup(
+            <PivotTableView
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
+                rows={[region, city, measure]}
+                columns={[]}
+                enableCollapse
+                onHeaderCollapse={() => {}}
+            />
+        );
+
+        expect(markup).toContain('data-virtualized="true"');
+        expect(markup).toContain('Total');
+        expect(markup).toContain('C0');
+        expect(markup).not.toContain('R19');
     });
 });

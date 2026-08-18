@@ -1,4 +1,4 @@
-import { shouldRenderPivotTableModel, togglePivotTablePath } from './core';
+import { nextCollapseAllPaths, shouldRenderPivotTableModel, togglePivotTablePath } from './core';
 import type { IPivotTableModel } from './interface';
 
 describe('PivotTableCore state helpers', () => {
@@ -28,5 +28,12 @@ describe('PivotTableCore state helpers', () => {
         expect(shouldRenderPivotTableModel(null)).toBe(false);
         expect(shouldRenderPivotTableModel({ isEmpty: true } as IPivotTableModel)).toBe(false);
         expect(shouldRenderPivotTableModel({ isEmpty: false } as IPivotTableModel)).toBe(true);
+    });
+
+    test('collapse-all fills every group, then expand-all clears them', () => {
+        const all = [west, east];
+        expect(nextCollapseAllPaths([], all)).toEqual([west, east]);
+        expect(nextCollapseAllPaths([west], all)).toEqual([]);
+        expect(nextCollapseAllPaths([], [])).toEqual([]);
     });
 });

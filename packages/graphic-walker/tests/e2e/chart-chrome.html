@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Chart chrome visual gallery</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                margin: 0;
+                background: #e2e8f0;
+                font-family: sans-serif;
+            }
+            h1 {
+                margin: 0 0 12px;
+                font-size: 18px;
+            }
+            h2 {
+                margin: 0 0 8px;
+                font-size: 14px;
+            }
+            #page {
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .scene {
+                background: #fff;
+                border: 1px solid #94a3b8;
+                border-radius: 8px;
+                padding: 12px;
+                width: 780px;
+            }
+            .chart {
+                width: 740px;
+                min-height: 360px;
+            }
+            #vg-tooltip-element {
+                z-index: 1000;
+            }
+        </style>
+    </head>
+    <body>
+        <main id="page">
+            <h1>Chart chrome P0–P1</h1>
+            <section class="scene" data-scene="labels">
+                <h2>1. Value labels</h2>
+                <div id="labels" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="overlay-line">
+                <h2>2. Second measure as a line</h2>
+                <div id="overlay-line" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="overlay-dual">
+                <h2>3. Combo on a second axis (2Y)</h2>
+                <div id="overlay-dual" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="tooltip-encoded">
+                <h2>4a. Tooltip: encoded fields</h2>
+                <div id="tooltip-encoded" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="tooltip-all">
+                <h2>4b. Tooltip: all view fields</h2>
+                <div id="tooltip-all" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="reference-mean">
+                <h2>5. Mean reference line</h2>
+                <div id="reference-mean" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="reference-median">
+                <h2>6. Median reference line</h2>
+                <div id="reference-median" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="donut">
+                <h2>7. Donut</h2>
+                <div id="donut" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="trend">
+                <h2>8. OLS trend</h2>
+                <div id="trend" class="chart"></div>
+            </section>
+            <section class="scene" data-scene="legend">
+                <h2>9. Legend click highlight</h2>
+                <div id="legend" class="chart"></div>
+            </section>
+        </main>
+        <script type="module" src="./chart-chrome.fixture.tsx"></script>
+    </body>
+</html>

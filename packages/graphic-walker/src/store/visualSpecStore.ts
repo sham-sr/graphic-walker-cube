@@ -47,7 +47,9 @@ import { COUNT_FIELD_ID, DATE_TIME_DRILL_LEVELS, DATE_TIME_FEATURE_LEVELS, PAINT
 
 import { toWorkflow } from '../utils/workflow';
 import { KVTuple, uniqueId } from '../models/utils';
-import { INestNode } from '../components/pivotTable/interface';
+import { INestNode, type IPivotTablePath } from '../components/pivotTable/interface';
+import { filterablePathItems, nextSortMode } from '../components/pivotTable/display';
+import { nextTimeDrillLevel } from '../vis/spec/chartChrome';
 import { getSort, getSortedEncoding } from '../utils';
 import { getSQLItemAnalyticType, parseSQLExpr } from '../lib/sql';
 import { IPaintMapAdapter } from '../lib/paint';
@@ -93,6 +95,7 @@ export class VizSpecStore {
     showAskvizFeedbackIndex: number | undefined = 0;
     lastSpec: string = '';
     editingComputedFieldFid: string | undefined = undefined;
+    computedFieldSeedSql = '';
     defaultConfig: IDefaultConfig | undefined;
     /** fields highlighted in the field list (Tableau-style multi-select feeding Auto Viz); UI state, not part of the undo timeline */
     selectedFieldIds: string[] = [];
@@ -632,6 +635,133 @@ export class VizSpecStore {
         this.visList[this.visIndex] = performers.applySort(this.visList[this.visIndex], sortType);
     }
 
+    cycleFieldSort(fid: string) {
+        const encodings = this.currentEncodings;
+        const target = encodings.rows.find((field) => field.fid === fid) ?? encodings.columns.find((field) => field.fid === fid);
+        if (!target) {
+            return;
+        }
+        const nextMode = nextSortMode(target.sort);
+        const others = [...encodings.rows, ...encodings.columns].filter((field) => field.fid !== fid && field.sort && field.sort !== 'none');
+        let next = this.visList[this.visIndex];
+        for (const field of others) {
+            next = performers.editAllField(next, field.fid, { sort: 'none' } as never);
+        }
+        this.visList[this.visIndex] = performers.editAllField(next, fid, { sort: nextMode } as never);
+    }
+
+    cycleTimeDrill(fid: string): boolean {
+        const encodings = this.currentEncodings;
+        const shelves = ['rows', 'columns'] as const;
+        let channel: (typeof shelves)[number] | undefined;
+        let index = -1;
+        let field: IViewField | undefined;
+        for (const key of shelves) {
+            const found = encodings[key].findIndex((item) => item.fid === fid);
+            if (found >= 0) {
+                channel = key;
+                index = found;
+                field = encodings[key][found];
+                break;
+            }
+        }
+        if (!field || !channel) {
+            return false;
+        }
+        const target = field;
+        const shelf = channel;
+        const isDrill = target.expression?.op === 'dateTimeDrill';
+        if (!isDrill && target.semanticType !== 'temporal') {
+            return false;
+        }
+        const currentLevel = (
+            isDrill ? target.expression?.params.find((param) => param.type === 'value')?.value : target.timeUnit
+        ) as (typeof DATE_TIME_DRILL_LEVELS)[number] | undefined;
+        const nextLevel = nextTimeDrillLevel(currentLevel);
+        if (!nextLevel) {
+            return false;
+        }
+        if (isDrill && target.expression) {
+            const params = target.expression.params.map((param) => (param.type === 'value' ? { ...param, value: nextLevel } : param));
+            const originFid = target.expression.params.find((param) => param.type === 'field')?.value;
+            const origin = this.allFields.find((item) => item.fid === originFid);
+            this.visList[this.visIndex] = performers.editAllField(this.visList[this.visIndex], fid, {
+                timeUnit: nextLevel,
+                name: `${nextLevel} (${origin?.name ?? target.name})`,
+                expression: { ...target.expression, params },
+            });
+            return true;
+        }
+        const origin = this.allFields.find((item) => item.fid === target.fid) ?? target;
+        const originChannel = origin.analyticType === 'dimension' ? 'dimensions' : 'measures';
+        const newVarKey = uniqueId();
+        const newField: IViewField = {
+            fid: newVarKey,
+            name: `${nextLevel} (${origin.name})`,
+            semanticType: 'temporal',
+            analyticType: origin.analyticType,
+            aggName: 'sum',
+            computed: true,
+            timeUnit: nextLevel,
+            offset: target.offset,
+            expression: {
+                op: 'dateTimeDrill',
+                as: newVarKey,
+                params: [
+                    { type: 'field', value: origin.fid },
+                    { type: 'value', value: nextLevel },
+                    ...(target.offset != null ? [{ type: 'offset' as const, value: target.offset }] : []),
+                ],
+            },
+        };
+        this.visList[this.visIndex] = performers.replaceChart(this.visList[this.visIndex], {
+            ...this.currentVis,
+            encodings: {
+                ...encodings,
+                [originChannel]: [...encodings[originChannel], newField],
+                [shelf]: encodings[shelf].map((item, itemIndex) => (itemIndex === index ? { ...newField } : item)),
+            },
+        });
+        return true;
+    }
+
+    keepDimensionValues(path: IPivotTablePath) {
+        const items = filterablePathItems(path);
+        if (items.length === 0) {
+            return;
+        }
+        const encodings = this.currentEncodings;
+        const filters = encodings.filters.map((field) => ({ ...field }));
+        let changed = false;
+        for (const item of items) {
+            if (item.key === MEA_KEY_ID || item.key === MEA_VAL_ID || item.key === COUNT_FIELD_ID || item.key === PAINT_FIELD_ID) {
+                continue;
+            }
+            const source =
+                encodings.rows.find((field) => field.fid === item.key) ??
+                encodings.columns.find((field) => field.fid === item.key) ??
+                encodings.dimensions.find((field) => field.fid === item.key);
+            if (!source || source.aggName === 'expr') {
+                continue;
+            }
+            const nextFilter = { ...source, rule: { type: 'one of' as const, value: [item.value] } };
+            const existing = filters.findIndex((field) => field.fid === item.key);
+            if (existing >= 0) {
+                filters[existing] = { ...filters[existing], ...nextFilter };
+            } else {
+                filters.push(nextFilter);
+            }
+            changed = true;
+        }
+        if (!changed) {
+            return;
+        }
+        this.visList[this.visIndex] = performers.replaceChart(this.visList[this.visIndex], {
+            ...this.currentVis,
+            encodings: { ...encodings, filters },
+        });
+    }
+
     exportCurrentChart() {
         return exportFullRaw(this.visList[this.visIndex]);
     }
@@ -867,8 +997,9 @@ export class VizSpecStore {
         this.lastSpec = spec;
     }
 
-    setComputedFieldFid(fid?: string) {
+    setComputedFieldFid(fid?: string, seedSql = '') {
         this.editingComputedFieldFid = fid;
+        this.computedFieldSeedSql = fid === undefined ? '' : seedSql;
     }
 
     upsertComputedField(fid: string, name: string, sql: string) {

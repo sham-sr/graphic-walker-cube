@@ -7,6 +7,7 @@ import DataTypeIcon from '../../components/dataTypeIcon';
 import ActionMenu from '../../components/actionMenu';
 import { FieldPill } from './fieldPill';
 import { useMenuActions } from './utils';
+import { ComputedFieldMark } from './computedMark';
 import { refMapper } from '../fieldsContext';
 import { getFieldIdentifier } from '@/utils';
 
@@ -41,6 +42,7 @@ const DimFields: React.FC = (props) => {
                                     {...provided.dragHandleProps}
                                 >
                                     <DataTypeIcon dataType={f.semanticType} analyticType={f.analyticType} />
+                                    <ComputedFieldMark field={f} />
                                     <span className="ml-0.5" title={f.name}>
                                         {f.name}
                                     </span>
@@ -56,6 +58,7 @@ const DimFields: React.FC = (props) => {
                                         $isDragging={snapshot.isDragging}
                                     >
                                         <DataTypeIcon dataType={f.semanticType} analyticType={f.analyticType} />
+                                        <ComputedFieldMark field={f} />
                                         <span className="ml-0.5" title={f.name}>
                                             {f.name}
                                         </span>

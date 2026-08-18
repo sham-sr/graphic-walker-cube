@@ -1,10 +1,14 @@
 ﻿import { Resizable } from 're-resizable';
-import React, { forwardRef, useMemo, useContext } from 'react';
+import React, { forwardRef, useMemo, useContext, useState, useCallback, useEffect } from 'react';
 
 import { PivotTableCore } from '../components/pivotTable';
+import type { IPivotTablePath } from '../components/pivotTable/interface';
+import { resolvePivotColorMode, resolvePivotHeaderMode, resolvePivotPercentMode, resolvePivotTotals, type PivotColorMode, type PivotPercentMode, type PivotTotalsMode } from '../components/pivotTable/display';
 import LeafletRenderer, { LEAFLET_DEFAULT_HEIGHT, LEAFLET_DEFAULT_WIDTH } from '../components/leafletRenderer';
 import ReactVega, { IReactVegaHandler } from '../vis/react-vega';
-import { DraggableFieldState, IRow, IThemeKey, IVisualConfigNew, IVisualLayout, VegaGlobalConfig, IChannelScales } from '../interfaces';
+import ReactEcharts from '../vis/react-echarts';
+import { canRenderEcharts } from '../vis/echarts/support';
+import { DraggableFieldState, IRow, IThemeKey, IVisualConfigNew, IVisualLayout, VegaGlobalConfig, IChannelScales, IStackMode } from '../interfaces';
 import { getTheme } from '../utils/useTheme';
 import { GWGlobalConfig } from '../vis/theme';
 import { uiThemeContext, themeContext } from '@/store/theme';
@@ -12,6 +16,9 @@ import { parseColorToHex } from '@/utils/colors';
 import ObservablePlotRenderer from '@/vis/observable-plot-renderer';
 import { useCompututaion } from '@/store';
 import { useAppRootContext } from '@/components/appRoot';
+import { ChartToolbar } from '../components/chartToolbar';
+import { chromeFromLayout, resolveOverlayMeasure, type ChartChrome } from '../vis/spec/chartChrome';
+import { NULL_FIELD } from '../vis/spec/field';
 
 interface SpecRendererProps {
     name?: string;
@@ -31,13 +38,22 @@ interface SpecRendererProps {
         downloadXLSX?: () => void;
         downloadODS?: () => void;
     }>;
+    onPivotColorModeChange?: (mode: PivotColorMode) => void;
+    onPivotPercentModeChange?: (mode: PivotPercentMode) => void;
+    onPivotRowTotalsChange?: (mode: PivotTotalsMode) => void;
+    onPivotColumnTotalsChange?: (mode: PivotTotalsMode) => void;
+    onPivotRepeatLabelsChange?: (repeat: boolean) => void;
+    onPivotHeaderSort?: (fid: string) => void;
+    onPivotKeepPath?: (path: IPivotTablePath) => void;
+    onChartChromeChange?: (patch: Partial<ChartChrome>) => void;
+    onStackChange?: (mode: IStackMode) => void;
 }
 /**
  * Sans-store renderer of GraphicWalker.
  * This is a pure component, which means it will not depend on any global state.
  */
 const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
-    { name, layout, data, draggableFieldState, visualConfig, onGeomClick, onChartResize, locale, onReportSpec, vizThemeConfig, scales, disableCollapse, exportHandlerRef },
+    { name, layout, data, draggableFieldState, visualConfig, onGeomClick, onChartResize, locale, onReportSpec, vizThemeConfig, scales, disableCollapse, exportHandlerRef, onPivotColorModeChange, onPivotPercentModeChange, onPivotRowTotalsChange, onPivotColumnTotalsChange, onPivotRepeatLabelsChange, onPivotHeaderSort, onPivotKeepPath, onChartChromeChange, onStackChange },
     ref
 ) {
     // const { draggableFieldState, visualConfig } = vizStore;
@@ -75,6 +91,52 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
     const format = _format;
 
     const isPivotTable = geoms[0] === 'table';
+    const layoutChrome = chromeFromLayout(layout);
+    const [localChrome, setLocalChrome] = useState<ChartChrome>(layoutChrome);
+    const chrome = onChartChromeChange ? layoutChrome : localChrome;
+    const [localStack, setLocalStack] = useState<IStackMode>(stack);
+    const appliedStack = onStackChange ? stack : localStack;
+    useEffect(() => {
+        setLocalStack(stack);
+    }, [stack]);
+    const handleChromeChange = useCallback(
+        (patch: Partial<ChartChrome>) => {
+            if (onChartChromeChange) {
+                onChartChromeChange(patch);
+                return;
+            }
+            setLocalChrome((current) => ({ ...current, ...patch }));
+        },
+        [onChartChromeChange]
+    );
+    const handleStackChange = useCallback(
+        (mode: IStackMode) => {
+            if (onStackChange) {
+                onStackChange(mode);
+                return;
+            }
+            setLocalStack(mode);
+        },
+        [onStackChange]
+    );
+    const canOverlay = Boolean(
+        resolveOverlayMeasure(
+            rows.filter((field) => field.analyticType === 'measure'),
+            columns.filter((field) => field.analyticType === 'measure'),
+            rows[rows.length - 1] ?? NULL_FIELD,
+            columns[columns.length - 1] ?? NULL_FIELD
+        )
+    );
+    const extraTooltipFields = useMemo(() => {
+        const seen = new Set<string>();
+        return [...rows, ...columns, ...color, ...opacity, ...shape, ...sizeChannel, ...theta, ...radius, ...details, ...text].filter((field) => {
+            if (!field?.fid || seen.has(`${field.fid}:${field.aggName ?? ''}`)) {
+                return false;
+            }
+            seen.add(`${field.fid}:${field.aggName ?? ''}`);
+            return true;
+        });
+    }, [rows, columns, color, opacity, shape, sizeChannel, theta, radius, details, text]);
     const computation = useCompututaion();
     const appRootRef = useAppRootContext();
 
@@ -137,9 +199,22 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                 limit={visualConfig.limit}
                 timezoneDisplayOffset={timezoneDisplayOffset}
                 showTableSummary={layout.showTableSummary}
+                rowTotals={resolvePivotTotals(layout, defaultAggregated).rows}
+                columnTotals={resolvePivotTotals(layout, defaultAggregated).columns}
                 numberFormat={layout.format.numberFormat}
                 disableCollapse={disableCollapse}
                 exportHandlerRef={exportHandlerRef}
+                colorMode={resolvePivotColorMode(layout.pivotColorMode)}
+                percentMode={resolvePivotPercentMode(layout.pivotPercentMode)}
+                onColorModeChange={onPivotColorModeChange}
+                onPercentModeChange={onPivotPercentModeChange}
+                onRowTotalsChange={onPivotRowTotalsChange}
+                onColumnTotalsChange={onPivotColumnTotalsChange}
+                repeatLabels={resolvePivotHeaderMode(layout.pivotRepeatLabels) === 'repeat'}
+                onRepeatLabelsChange={onPivotRepeatLabelsChange}
+                dark={mediaTheme === 'dark'}
+                onHeaderSort={onPivotHeaderSort}
+                onKeepPath={onPivotKeepPath}
                 onRenderStatusChange={(status) => appRootRef.current?.updateRenderStatus(status)}
                 onError={(error) => console.error(error)}
             />
@@ -147,10 +222,28 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
     }
 
     const isSpatial = coordSystem === 'geographic';
+    const showChartToolbar = !isPivotTable && !isSpatial;
+    const chartRenderer = layout.renderer ?? 'echarts';
+    const useEcharts = !isSpatial && chartRenderer === 'echarts' && canRenderEcharts(geoms[0], coordSystem);
 
     return (
+        <div className="flex h-full min-h-0 flex-col">
+            {showChartToolbar && (
+                <ChartToolbar
+                    chrome={chrome}
+                    geomType={geoms[0]}
+                    stack={appliedStack}
+                    canOverlay={canOverlay}
+                    canTrend={['point', 'circle', 'line', 'area', 'trail'].includes(geoms[0])}
+                    canDonut={geoms[0] === 'arc'}
+                    canStack={['bar', 'area'].includes(geoms[0]) && Boolean(color[0]?.fid)}
+                    canDrill={[...rows, ...columns].some((field) => field.semanticType === 'temporal')}
+                    onChange={handleChromeChange}
+                    onStackChange={handleStackChange}
+                />
+            )}
         <Resizable
-            className={enableResize ? 'border-primary border-2 max-h-screen max-w-[100vw]' : 'max-h-screen max-w-[100vw]'}
+            className={enableResize ? 'border-primary border-2 max-h-full max-w-full min-h-0 flex-1' : 'max-h-full max-w-full min-h-0 flex-1'}
             style={{ padding: '12px' }}
             onResizeStop={(e, direction, ref, d) => {
                 onChartResize?.(size.width + d.width, size.height + d.height);
@@ -201,7 +294,30 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                     scale={scale}
                 />
             )}
-            {!isSpatial && (!layout.renderer || layout.renderer === 'vega-lite') && (
+            {!isSpatial && useEcharts && (
+                <ReactEcharts
+                    layoutMode={size.mode}
+                    geomType={geoms[0]}
+                    defaultAggregate={defaultAggregated}
+                    stack={appliedStack}
+                    dataSource={data}
+                    rows={rows}
+                    columns={columns}
+                    color={color[0]}
+                    theta={theta[0]}
+                    details={details}
+                    extraTooltipFields={extraTooltipFields}
+                    chrome={chrome}
+                    vegaConfig={vegaConfig}
+                    width={size.width - 12 * 4}
+                    height={size.height - 12 * 4}
+                    locale={locale}
+                    useSvg={useSvg}
+                    zeroScale={zeroScale}
+                    ref={ref}
+                />
+            )}
+            {!isSpatial && !useEcharts && chartRenderer !== 'observable-plot' && (
                 <ReactVega
                     name={name}
                     vegaConfig={vegaConfig}
@@ -210,7 +326,7 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                     interactiveScale={interactiveScale}
                     geomType={geoms[0]}
                     defaultAggregate={defaultAggregated}
-                    stack={stack}
+                    stack={appliedStack}
                     dataSource={data}
                     rows={rows}
                     columns={columns}
@@ -225,6 +341,8 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                     showActions={showActions}
                     width={size.width - 12 * 4}
                     height={size.height - 12 * 4}
+                    chrome={chrome}
+                    extraTooltipFields={extraTooltipFields}
                     ref={ref}
                     onGeomClick={onGeomClick}
                     locale={locale}
@@ -235,7 +353,7 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                     displayOffset={timezoneDisplayOffset}
                 />
             )}
-            {!isSpatial && layout.renderer === 'observable-plot' && (
+            {!isSpatial && chartRenderer === 'observable-plot' && (
                 <ObservablePlotRenderer
                     name={name}
                     vegaConfig={vegaConfig}
@@ -244,7 +362,7 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                     interactiveScale={interactiveScale}
                     geomType={geoms[0]}
                     defaultAggregate={defaultAggregated}
-                    stack={stack}
+                    stack={appliedStack}
                     dataSource={data}
                     rows={rows}
                     columns={columns}
@@ -270,6 +388,7 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                 />
             )}
         </Resizable>
+        </div>
     );
 });
 

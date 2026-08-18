@@ -6,6 +6,7 @@ import {
     inferRollupMeasures,
     type IPivotRollupMeasure,
 } from '../components/pivotTable/cube';
+import { pivotTotalsFromInput, type PivotTableTotalsArg } from '../components/pivotTable/display';
 import { IViewField, IRow } from '../interfaces';
 
 const getFirstVisibleValuePath = (item: INestNode): INestNode[] => {
@@ -54,7 +55,7 @@ export function buildPivotTable(
     allData: IRow[],
     aggData: IRow[],
     collapsedKeyList: string[],
-    showTableSummary: boolean,
+    showTableSummary: PivotTableTotalsArg = false,
     sort?: {
         fid: string;
         type: 'ascending' | 'descending';
@@ -62,6 +63,7 @@ export function buildPivotTable(
     },
     rollupMeasures?: IPivotRollupMeasure[]
 ): IBuildPivotTableResult {
+    const totals = pivotTotalsFromInput(showTableSummary);
     const dimensionKeys = [...dimsInRow, ...dimsInColumn].map((field) => field.fid);
     const measures = rollupMeasures && rollupMeasures.length > 0 ? rollupMeasures : inferRollupMeasures(allData, dimensionKeys);
     const groupingSets = getAllPivotGroupingSets(dimsInRow, dimsInColumn);
@@ -75,7 +77,7 @@ export function buildPivotTable(
             dimsInColumn.map((d) => d.fid),
             allData,
             collapsedKeyList,
-            showTableSummary
+            totals.columns
         );
         const firstColumnPath = getFirstVisibleValuePath(tt);
         if (dimsInColumn.length > 0 && firstColumnPath.length > 0) {
@@ -86,7 +88,7 @@ export function buildPivotTable(
                 dimsInRow.map((d) => d.fid),
                 mentioned,
                 collapsedKeyList,
-                showTableSummary,
+                totals.rows,
                 sort,
                 rest
             );
@@ -95,7 +97,7 @@ export function buildPivotTable(
                 dimsInRow.map((d) => d.fid),
                 allData,
                 collapsedKeyList,
-                showTableSummary,
+                totals.rows,
                 sort
             );
         }
@@ -104,7 +106,7 @@ export function buildPivotTable(
             dimsInRow.map((d) => d.fid),
             allData,
             collapsedKeyList,
-            showTableSummary
+            totals.rows
         );
         const firstRowPath = getFirstVisibleValuePath(lt);
         if (sort && dimsInRow.length > 0 && firstRowPath.length > 0) {
@@ -115,7 +117,7 @@ export function buildPivotTable(
                 dimsInColumn.map((d) => d.fid),
                 mentioned,
                 collapsedKeyList,
-                showTableSummary,
+                totals.columns,
                 sort,
                 rest
             );
@@ -124,7 +126,7 @@ export function buildPivotTable(
                 dimsInColumn.map((d) => d.fid),
                 allData,
                 collapsedKeyList,
-                showTableSummary,
+                totals.columns,
                 sort
             );
         }

@@ -38,6 +38,7 @@ import KanariesLogo from '../assets/kanaries.png';
 import { ImageWithFallback } from '../components/timeoutImg';
 import LimitSetting from '../components/limitSetting';
 import { omitRedundantSeparator } from './utils';
+import { resolvePivotTotals } from '../components/pivotTable/display';
 import { Button } from '@/components/ui/button';
 import { classNames } from '@/utils';
 
@@ -80,11 +81,15 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
 
     const {
         showTableSummary,
+        pivotRowTotals,
+        pivotColumnTotals,
         stack,
         interactiveScale,
         size: { mode: sizeMode, width, height },
         showActions,
     } = layout;
+    const pivotTotals = resolvePivotTotals({ showTableSummary, pivotRowTotals, pivotColumnTotals });
+    const showTableSummaryFromLayout = pivotTotals.rows !== 'off' || pivotTotals.columns !== 'off';
 
     const downloadPNG = useCallback(
         throttle(() => {
@@ -405,9 +410,13 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
                 key: 'table:summary',
                 label: t('table.summary'),
                 icon: TableCellsIcon,
-                checked: showTableSummary,
+                checked: showTableSummaryFromLayout,
                 onChange: (checked) => {
-                    vizStore.setVisualLayout('showTableSummary', checked);
+                    vizStore.setVisualLayout(
+                        ['showTableSummary', checked],
+                        ['pivotRowTotals', checked ? 'all' : 'off'],
+                        ['pivotColumnTotals', checked ? 'all' : 'off']
+                    );
                 },
             },
             ...(experimentalFeatures?.computedField
@@ -496,7 +505,7 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
                 // })),
                 value: sizeMode,
                 onSelect: (key) => {
-                    vizStore.setVisualLayout('size', { ...layout.size, mode: key as 'fixed' | 'auto' });
+                    vizStore.setVisualLayout('size', { ...layout.size, mode: key as 'fixed' | 'auto' | 'full' });
                 },
                 form: (
                     <ResizeDialog
@@ -728,6 +737,8 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
         exclude,
         limit,
         showTableSummary,
+        pivotRowTotals,
+        pivotColumnTotals,
         experimentalFeatures,
         paintInfo,
     ]);

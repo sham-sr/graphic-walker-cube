@@ -3,8 +3,12 @@ import {
     GW_ARTIFACT_VERSION,
     GW_CONFIG_EXTENSION,
     GW_CONFIG_KIND,
+    GW_DEFAULT_EXPERIMENTAL_FEATURES,
+    GW_DEFAULT_TOOLBAR_EXCLUDE,
     GW_REPORT_EXTENSION,
     GW_REPORT_KIND,
+    GW_TOOLBAR_DEBUG,
+    GW_TOOLBAR_KANARIES,
     detectWalkerArtifact,
     fileExtensionForKind,
     isGraphicWalkerConfig,
@@ -44,5 +48,13 @@ describe('walker contract', () => {
         expect(error.code).toBe('DATASET_LIMIT');
         expect(error.maxDatasets).toBe(2);
         expect(error.datasets).toEqual([{ id: 'a', name: 'A' }]);
+    });
+
+    test('hides Kanaries docs and debug in the embed toolbar by default', () => {
+        expect(GW_DEFAULT_TOOLBAR_EXCLUDE).toEqual([GW_TOOLBAR_KANARIES, GW_TOOLBAR_DEBUG]);
+    });
+
+    test('enables computed fields like the upstream Graphic Walker playground', () => {
+        expect(GW_DEFAULT_EXPERIMENTAL_FEATURES).toEqual({ computedField: true });
     });
 });

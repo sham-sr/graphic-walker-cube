@@ -5,6 +5,7 @@ import { ShadowDom } from '../../shadow-dom';
 import { useCurrentMediaTheme } from '../../utils/media';
 import type { IPivotTablePath } from './interface';
 import { PivotTableCore } from './core';
+import type { PivotColorMode, PivotPercentMode, PivotTotalsMode } from './display';
 
 interface PivotTableBaseProps extends IThemeProps, IErrorHandlerProps {
     /** Complete field catalog used to compile filters, expressions, and aggregations. */
@@ -26,6 +27,8 @@ interface PivotTableBaseProps extends IThemeProps, IErrorHandlerProps {
     timezoneDisplayOffset?: number;
     /** Aggregated-mode subtotals. Ignored when defaultAggregated is false. */
     showTableSummary?: boolean;
+    rowTotals?: PivotTotalsMode;
+    columnTotals?: PivotTotalsMode;
     numberFormat?: string;
     disableCollapse?: boolean;
     collapsedPaths?: readonly IPivotTablePath[];
@@ -38,6 +41,17 @@ interface PivotTableBaseProps extends IThemeProps, IErrorHandlerProps {
     className?: string;
     style?: React.CSSProperties;
     emptyContent?: React.ReactNode;
+    colorMode?: PivotColorMode;
+    percentMode?: PivotPercentMode;
+    onColorModeChange?: (mode: PivotColorMode) => void;
+    onPercentModeChange?: (mode: PivotPercentMode) => void;
+    onRowTotalsChange?: (mode: PivotTotalsMode) => void;
+    onColumnTotalsChange?: (mode: PivotTotalsMode) => void;
+    /** Repeat nested group labels on every leaf. Controlled when `onRepeatLabelsChange` is set. */
+    repeatLabels?: boolean;
+    onRepeatLabelsChange?: (repeat: boolean) => void;
+    onHeaderSort?: (fid: string) => void;
+    onKeepPath?: (path: IPivotTablePath) => void;
 }
 
 export type ILocalPivotTableProps = PivotTableBaseProps & {
@@ -83,6 +97,8 @@ export function PivotTable(props: PivotTableProps) {
         limit,
         timezoneDisplayOffset,
         showTableSummary,
+        rowTotals,
+        columnTotals,
         numberFormat,
         disableCollapse,
         collapsedPaths,
@@ -94,6 +110,16 @@ export function PivotTable(props: PivotTableProps) {
         style,
         emptyContent,
         onError,
+        colorMode,
+        percentMode,
+        onColorModeChange,
+        onPercentModeChange,
+        onRowTotalsChange,
+        onColumnTotalsChange,
+        repeatLabels,
+        onRepeatLabelsChange,
+        onHeaderSort,
+        onKeepPath,
     } = props;
     const appearance = props.appearance ?? props.dark;
     const darkMode = useCurrentMediaTheme(appearance);
@@ -122,6 +148,8 @@ export function PivotTable(props: PivotTableProps) {
                     limit={limit}
                     timezoneDisplayOffset={timezoneDisplayOffset}
                     showTableSummary={showTableSummary}
+                    rowTotals={rowTotals}
+                    columnTotals={columnTotals}
                     numberFormat={numberFormat}
                     disableCollapse={disableCollapse}
                     collapsedPaths={collapsedPaths}
@@ -130,6 +158,17 @@ export function PivotTable(props: PivotTableProps) {
                     onRenderStatusChange={onRenderStatusChange}
                     onError={onError}
                     emptyContent={emptyContent}
+                    colorMode={colorMode}
+                    percentMode={percentMode}
+                    onColorModeChange={onColorModeChange}
+                    onPercentModeChange={onPercentModeChange}
+                    onRowTotalsChange={onRowTotalsChange}
+                    onColumnTotalsChange={onColumnTotalsChange}
+                    repeatLabels={repeatLabels}
+                    onRepeatLabelsChange={onRepeatLabelsChange}
+                    dark={darkMode === 'dark'}
+                    onHeaderSort={onHeaderSort}
+                    onKeepPath={onKeepPath}
                 />
             </div>
         </ShadowDom>

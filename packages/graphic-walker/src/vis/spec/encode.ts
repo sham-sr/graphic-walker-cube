@@ -71,6 +71,11 @@ export function encodeFid(fid: string) {
         .replace(/\r/g, '\\r');
 }
 
+/** Inverse of encodeFid for Vega-Lite transform field names (data keys are unescaped). */
+export function decodeFid(fid: string) {
+    return fid.replace(/\\(.)/g, '$1');
+}
+
 export function channelEncode(props: IEncodeProps) {
     const avcs = availableChannels(props.geomType);
     const encoding: { [key: string]: any } = {};
@@ -112,7 +117,9 @@ export function channelEncode(props: IEncodeProps) {
                 if (field.semanticType === 'temporal') {
                     encoding[c].scale = { type: 'utc' };
                 }
-                if (field.semanticType === 'temporal' && field.timeUnit) {
+                // dateTimeDrill already changes the data grain; a second Vega timeUnit
+                // on Cube fids like `cube.sell_date.month` looks up a missing `.year` column.
+                if (field.semanticType === 'temporal' && field.timeUnit && field.expression?.op !== 'dateTimeDrill') {
                     if (field.timeUnit.startsWith('iso')) {
                         encoding[c].format = isoTimeformat(field.timeUnit);
                     }

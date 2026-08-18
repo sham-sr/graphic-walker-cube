@@ -98,10 +98,41 @@ describe('createHostController', () => {
 
         await expect(host.addDataset(input('B'))).rejects.toBeInstanceOf(DatasetLimitError);
 
-        const replaced = await host.replaceDataset(first.id, input('B'));
+        const replaced = await host.replaceDataset(first.id, input('B', { specsJson: '["kept"]' }));
         expect(replaced.id).not.toBe(first.id);
         expect(await host.listDatasets()).toEqual([{ id: replaced.id, name: 'B' }]);
         expect(await provider.getDataSourceList()).toEqual([{ id: replaced.id, name: 'B' }]);
+        expect((await host.exportConfig()).datasets[0]?.specsJson).toBe('["kept"]');
+    });
+
+    test('replace keeps previous charts when fields still match', async () => {
+        const provider = createFakeProvider();
+        const registry = createDatasetRegistry({ maxDatasets: 2 });
+        const host = createHostController(provider, registry, {});
+        const specsJson = JSON.stringify([
+            { visId: 'c1', encodings: { dimensions: [{ fid: 'Orders.status' }] } },
+        ]);
+        const first = await host.addDataset(input('A', { specsJson }));
+        await provider.saveSpecs(first.id, specsJson);
+
+        const replaced = await host.replaceDataset(first.id, input('B'));
+        expect(replaced.chartsCleared).toBe(false);
+        expect((await host.exportConfig()).datasets[0]?.specsJson).toBe(specsJson);
+    });
+
+    test('replace clears charts when encoding fields disappeared', async () => {
+        const provider = createFakeProvider();
+        const registry = createDatasetRegistry({ maxDatasets: 2 });
+        const host = createHostController(provider, registry, {});
+        const specsJson = JSON.stringify([
+            { visId: 'c1', encodings: { measures: [{ fid: 'Orders.count' }] } },
+        ]);
+        const first = await host.addDataset(input('A', { specsJson }));
+        await provider.saveSpecs(first.id, specsJson);
+
+        const replaced = await host.replaceDataset(first.id, input('B'));
+        expect(replaced.chartsCleared).toBe(true);
+        expect((await host.exportConfig()).datasets[0]?.specsJson).toBe('[]');
     });
 
     test('applyConfig reloads rows by dataset id and keeps provenance', async () => {
@@ -118,13 +149,21 @@ describe('createHostController', () => {
         expect(await provider.getDataSourceList()).toHaveLength(1);
     });
 
-    test('importReport restores snapshot rows', async () => {
-        const source = createHostController(createFakeProvider(), createDatasetRegistry({ maxDatasets: 3 }), {});
-        await source.addDataset(input('Snap'));
+    test('importReport keeps all datasets and selects the saved dataset after provider ids change', async () => {
+        const source = createHostController(createFakeProvider(), createDatasetRegistry({ maxDatasets: 5 }), {});
+        await source.addDataset(input('Tickets A'));
+        await source.addDataset(input('Tickets B'));
+        const goods = await source.addDataset(input('Товары'));
         const snapshot = await source.exportReport();
+        snapshot.selectedDatasetId = goods.id;
 
-        const target = createHostController(createFakeProvider(), createDatasetRegistry({ maxDatasets: 3 }), {});
+        const target = createHostController(createFakeProvider(), createDatasetRegistry({ maxDatasets: 5 }), {});
         await target.importReport(snapshot);
-        expect((await target.exportReport()).datasets[0]?.rows).toEqual([{ 'Orders.status': 'Snap' }]);
+        const restored = await target.exportReport();
+        expect(restored.datasets.map(dataset => dataset.name)).toEqual(['Tickets A', 'Tickets B', 'Товары']);
+        expect(restored.datasets).toHaveLength(3);
+        const selected = restored.datasets.find(dataset => dataset.id === restored.selectedDatasetId);
+        expect(selected?.name).toBe('Товары');
+        expect(await target.listDatasets()).toHaveLength(3);
     });
 });

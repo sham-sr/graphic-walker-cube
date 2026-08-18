@@ -10,6 +10,7 @@ import { getVegaTimeFormatRules } from './temporalFormat';
 import canvasSize from 'canvas-size';
 import { Errors, useReporter } from '../utils/reportError';
 import { toVegaSpec } from '../lib/vega';
+import type { ChartChrome } from './spec/chartChrome';
 import { useResizeDetector } from 'react-resize-detector';
 import { startTask } from '../utils';
 import { themeContext } from '@/store/theme';
@@ -94,6 +95,8 @@ interface ReactVegaProps {
     scale?: IConfigScaleSet;
     onReportSpec?: (spec: string) => void;
     displayOffset?: number;
+    chrome?: Partial<ChartChrome>;
+    extraTooltipFields?: readonly IViewField[];
 }
 
 const click$ = new Subject<ScenegraphEvent>();
@@ -151,6 +154,8 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
         scales: channelScaleRaw,
         scale,
         displayOffset,
+        chrome,
+        extraTooltipFields,
     } = props;
     const [viewPlaceholders, setViewPlaceholders] = useState<React.RefObject<HTMLDivElement>[]>([]);
     const mediaTheme = useContext(themeContext);
@@ -205,18 +210,6 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
     const colRepeatFields = useMemo(() => (colMeas.length === 0 ? colDims.slice(-1) : colMeas), [colDims, colMeas]); //colMeas.slice(0, -1);
     const { reportError: reportGWError } = useReporter();
 
-    const [crossFilterTriggerIdx, setCrossFilterTriggerIdx] = useState(-1);
-
-    useEffect(() => {
-        setCrossFilterTriggerIdx(-1);
-        setViewPlaceholders((views) => {
-            const viewNum = Math.max(1, leastOne(rowRepeatFields.length) * leastOne(colRepeatFields.length));
-            if (viewNum === views.length) return views;
-            const nextViews = new Array(viewNum).fill(null).map((v, i) => views[i] || React.createRef());
-            return nextViews;
-        });
-    }, [rowRepeatFields, colRepeatFields]);
-
     const vegaRefs = useRef<IVegaChartRef[]>([]);
     const renderTaskRefs = useRef<Promise<unknown>[]>([]);
     const { width: areaWidth, height: areaHeight, ref: areaRef } = useResizeDetector();
@@ -267,6 +260,8 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
                 theta,
                 vegaConfig,
                 displayOffset,
+                chrome,
+                extraTooltipFields,
             }),
         [
             guardedCols,
@@ -290,8 +285,21 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
             displayOffset,
             vegaWidth,
             vegaHeight,
+            chrome,
+            extraTooltipFields,
         ]
     );
+
+    const [crossFilterTriggerIdx, setCrossFilterTriggerIdx] = useState(-1);
+
+    useEffect(() => {
+        setCrossFilterTriggerIdx(-1);
+        setViewPlaceholders((views) => {
+            const viewNum = Math.max(1, specs.length);
+            if (viewNum === views.length) return views;
+            return new Array(viewNum).fill(null).map((_, i) => views[i] || React.createRef());
+        });
+    }, [specs.length]);
 
     // Render
     useEffect(() => {
@@ -307,7 +315,7 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
         );
         vegaRefs.current = [];
         renderTaskRefs.current = [];
-        if (rowRepeatFields.length <= 1 && colRepeatFields.length <= 1) {
+        if (specs.length <= 1) {
             if (viewPlaceholders.length > 0 && viewPlaceholders[0].current) {
                 const task = embed(viewPlaceholders[0].current, specs[0], {
                     renderer: useSvg ? 'svg' : 'canvas',
@@ -334,23 +342,23 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
                         }
                     });
                     if (layoutMode !== 'auto') {
-                        if (rect) {
-                            const modifier = {
-                                width: Math.max(rect.width - (areaWidth || width), 0),
-                                height: Math.max(rect.height - (areaHeight || height), 0),
-                            };
-                            if (res.view.width() === 0) {
-                                try {
-                                    res.view.signal('child_width', specs[0].width - modifier.width / Math.round((areaWidth || width) / specs[0].width));
-                                    res.view.signal('child_height', specs[0].height - modifier.height / Math.round((areaHeight || height) / specs[0].height));
-                                } catch (e) {
-                                    // ignore when width is just 0 because of extreamly small size
-                                }
+                        const targetW = Math.max((areaWidth || width) - 8, 120);
+                        const targetH = Math.max((areaHeight || height) - 8, 120);
+                        const layered = Array.isArray((specs[0] as { layer?: unknown }).layer);
+                        try {
+                            if (layered || res.view.width() > 0) {
+                                res.view.width(targetW).height(targetH);
                             } else {
-                                res.view.width(specs[0].width - modifier.width);
-                                res.view.height(specs[0].height - modifier.height);
+                                res.view.signal('child_width', targetW);
+                                res.view.signal('child_height', targetH);
                             }
                             res.view.runAsync();
+                        } catch {
+                            try {
+                                res.view.width(targetW).height(targetH).runAsync();
+                            } catch {
+                                // extremely small view
+                            }
                         }
                     }
                     vegaRefs.current = [
@@ -401,7 +409,7 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
                             ? viewPlaceholders[i * leastOne(colRepeatFields.length) + j].current
                             : null;
                     const ans = specs[index];
-                    if (node) {
+                    if (node && ans) {
                         const id = index;
                         const task = embed(node, ans, {
                             renderer: useSvg ? 'svg' : 'canvas',
@@ -430,28 +438,23 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
                                 }
                             });
                             if (layoutMode !== 'auto') {
-                                if (rect) {
-                                    const modifier = {
-                                        width: Math.max(rect.width - (areaWidth || width) / colRepeatFields.length, 0),
-                                        height: Math.max(rect.height - (areaHeight || height) / rowRepeatFields.length, 0),
-                                    };
-                                    if (res.view.width() === 0) {
-                                        if (res.view.signal('child_width') !== undefined) {
-                                            res.view.signal(
-                                                'child_width',
-                                                specs[0].width - modifier.width / Math.round((areaWidth || width) / colRepeatFields.length / specs[0].width)
-                                            );
-                                            res.view.signal(
-                                                'child_height',
-                                                specs[0].height -
-                                                    modifier.height / Math.round((areaHeight || height) / rowRepeatFields.length / specs[0].height)
-                                            );
-                                        }
-                                    } else {
-                                        res.view.width(specs[0].width - modifier.width);
-                                        res.view.height(specs[0].height - modifier.height);
+                                const targetW = Math.max(((areaWidth || width) / Math.max(colRepeatFields.length, 1)) - 8, 80);
+                                const targetH = Math.max(((areaHeight || height) / Math.max(rowRepeatFields.length, 1)) - 8, 80);
+                                const layered = Array.isArray((ans as { layer?: unknown }).layer);
+                                try {
+                                    if (layered || res.view.width() > 0) {
+                                        res.view.width(targetW).height(targetH);
+                                    } else if (res.view.signal('child_width') !== undefined) {
+                                        res.view.signal('child_width', targetW);
+                                        res.view.signal('child_height', targetH);
                                     }
                                     res.view.runAsync();
+                                } catch {
+                                    try {
+                                        res.view.width(targetW).height(targetH).runAsync();
+                                    } catch {
+                                        // ignore
+                                    }
                                 }
                             }
                             vegaRefs.current[id] = {
@@ -537,6 +540,28 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
         };
     }, [specs, viewPlaceholders, showActions, vegaConfig, useSvg, locale]);
 
+    useEffect(() => {
+        if (layoutMode === 'auto') {
+            return;
+        }
+        const cols = Math.max(colRepeatFields.length, 1);
+        const rowsCount = Math.max(rowRepeatFields.length, 1);
+        const many = vegaRefs.current.length > 1;
+        const targetW = Math.max(((areaWidth || width) / (many ? cols : 1)) - 8, many ? 80 : 120);
+        const targetH = Math.max(((areaHeight || height) / (many ? rowsCount : 1)) - 8, many ? 80 : 120);
+        for (const item of vegaRefs.current) {
+            const view = item?.view;
+            if (!view) continue;
+            try {
+                if (view.width() > 0) {
+                    view.width(targetW).height(targetH).runAsync();
+                }
+            } catch {
+                // view not ready yet
+            }
+        }
+    }, [areaWidth, areaHeight, layoutMode, width, height, colRepeatFields.length, rowRepeatFields.length]);
+
     const containerRef = useRef<HTMLDivElement>(null);
 
     useVegaExportApi(name, vegaRefs, ref, renderTaskRefs, containerRef);
@@ -551,8 +576,8 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
                 style={{
                     ...(layoutMode === 'auto' ? {} : { width: '100%', height: '100%' }),
                 }}
-                $rowSize={Math.max(rowRepeatFields.length, 1)}
-                $colSize={Math.max(colRepeatFields.length, 1)}
+                $rowSize={specs.length > 1 ? Math.max(rowRepeatFields.length, 1) : 1}
+                $colSize={specs.length > 1 ? Math.max(colRepeatFields.length, 1) : 1}
                 ref={containerRef}
             >
                 {/* <div ref={container}></div> */}

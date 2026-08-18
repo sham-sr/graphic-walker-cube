@@ -5,6 +5,7 @@ import type { IActionMenuItem } from '../../components/actionMenu/list';
 import { COUNT_FIELD_ID, DATE_TIME_DRILL_LEVELS, DATE_TIME_FEATURE_LEVELS, MEA_KEY_ID, MEA_VAL_ID, PAINT_FIELD_ID } from '../../constants';
 import { getSample } from '../../computation';
 import { getTimeFormat } from '../../lib/inferMeta';
+import { quoteFieldName } from '../../components/computedField/utils';
 
 const keepTrue = <T extends string | number | object | Function | symbol>(array: (T | 0 | null | false | undefined | void)[]): T[] => {
     return array.filter(Boolean) as T[];
@@ -83,6 +84,13 @@ export const useMenuActions = (channel: 'dimensions' | 'measures'): IActionMenuI
                             },
                         },
                     ],
+                },
+                {
+                    label: t('sql_expr'),
+                    disabled: isInnerField,
+                    onPress() {
+                        vizStore.setComputedFieldFid('', quoteFieldName(f.name || f.fid));
+                    },
                 },
                 {
                     label: t('semantic_type.name'),

@@ -10,6 +10,7 @@ import { FieldPill } from './fieldPill';
 import { MEA_KEY_ID, MEA_VAL_ID } from '../../constants';
 import { refMapper } from '../fieldsContext';
 import { getFieldIdentifier } from '@/utils';
+import { ComputedFieldMark } from './computedMark';
 
 const MeaFields: React.FC = (props) => {
     const vizStore = useVizStore();
@@ -54,6 +55,7 @@ const MeaFields: React.FC = (props) => {
                                         {...provided.dragHandleProps}
                                     >
                                         <DataTypeIcon dataType={f.semanticType} analyticType={f.analyticType} />
+                                        <ComputedFieldMark field={f} />
                                         <span className="ml-0.5" title={f.name}>
                                             {f.name}
                                         </span>
@@ -69,6 +71,7 @@ const MeaFields: React.FC = (props) => {
                                             $isDragging={snapshot.isDragging}
                                         >
                                             <DataTypeIcon dataType={f.semanticType} analyticType={f.analyticType} />
+                                            <ComputedFieldMark field={f} />
                                             <span className="ml-0.5" title={f.name}>
                                                 {f.name}
                                             </span>

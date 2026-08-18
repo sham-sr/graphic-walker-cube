@@ -175,7 +175,8 @@ describe('PivotTableView', () => {
             />
         );
 
-        expect(markup).toContain('root(total)');
+        expect(markup).toContain('Total');
+        expect(markup).not.toContain('root(total)');
         expect(markup).not.toContain('NaN-NaN-NaN');
     });
 
@@ -213,6 +214,38 @@ describe('PivotTableView', () => {
         expect(markup).toContain('aria-label="Collapse West"');
         expect(markup).toContain('scope="col"');
         expect(markup).toContain('2024');
+    });
+
+    test('repeats group labels on every leaf instead of merging rowspan', () => {
+        const region = dimension('region', 'Region');
+        const city = dimension('city', 'City');
+        const year = dimension('year', 'Year');
+        const result = buildPivotTable(
+            [region, city],
+            [year],
+            [
+                { region: 'East', city: 'Boston', year: '2024', sales_sum: 9 },
+                { region: 'East', city: 'NYC', year: '2024', sales_sum: 11 },
+            ],
+            [],
+            [],
+            false
+        );
+        const markup = renderToStaticMarkup(
+            <PivotTableView
+                model={{ leftTree: result.lt, topTree: result.tt, cube: result.cube, isEmpty: false }}
+                rows={[region, city]}
+                columns={[year, measure]}
+                enableCollapse
+                onHeaderCollapse={() => {}}
+                repeatLabels
+            />
+        );
+
+        expect(markup.match(/>East</g)?.length).toBeGreaterThanOrEqual(2);
+        expect(markup).not.toContain('rowSpan="2"');
+        expect(markup).toContain('Boston');
+        expect(markup).toContain('NYC');
     });
 
     test('collapsing a row group hides children and shows the group subtotal', () => {

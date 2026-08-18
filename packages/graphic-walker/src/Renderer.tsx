@@ -54,7 +54,7 @@ export const RendererApp = observer(function VizApp(props: BaseVizProps) {
         darkMode = 'light',
         i18nLang = 'en-US',
         i18nResources,
-        themeKey = 'vega',
+        themeKey = 'cube',
         themeConfig,
         vizThemeConfig,
         geographicData,
