@@ -83,6 +83,8 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
         vlSpec,
         onError,
         hideSegmentNav,
+        hideAskViz,
+        hideChat,
         hideProfiling,
     } = props;
 
@@ -204,7 +206,7 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
                                             <TabsTrigger value={ISegmentKey.vis}>
                                                 <ChartPieIcon className="w-4 mr-2" /> {t('App.segments.vis')}
                                             </TabsTrigger>
-                                            {enhanceAPI?.features?.vlChat && (
+                                            {!hideChat && enhanceAPI?.features?.vlChat && (
                                                 <TabsTrigger value={ISegmentKey.chat}>
                                                     <ChatBubbleLeftRightIcon className="w-4 mr-2" /> {t('App.segments.chat')}
                                                 </TabsTrigger>
@@ -229,7 +231,7 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
                                                 props.hideChartNav ? 'border-t-0 rounded-t-none' : ''
                                             )}
                                         >
-                                            {enhanceAPI?.features?.askviz && (
+                                            {!hideAskViz && enhanceAPI?.features?.askviz && (
                                                 <AskViz
                                                     api={typeof enhanceAPI.features.askviz === 'boolean' ? '' : enhanceAPI.features.askviz}
                                                     feedbackApi={
@@ -306,7 +308,7 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
                                             </div>
                                         </div>
                                     </TabsContent>
-                                    {enhanceAPI?.features?.vlChat && (
+                                    {!hideChat && enhanceAPI?.features?.vlChat && (
                                         <TabsContent value={ISegmentKey.chat}>
                                             <VegaliteChat
                                                 api={typeof enhanceAPI.features.vlChat === 'boolean' ? '' : enhanceAPI.features.vlChat}

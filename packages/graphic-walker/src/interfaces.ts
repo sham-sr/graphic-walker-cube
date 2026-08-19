@@ -1029,6 +1029,10 @@ export interface IVizProps {
     hideChartNav?: boolean;
     /** hide the segment navigation so make user can only edit on the only segment. */
     hideSegmentNav?: boolean;
+    /** Hide the Kanaries AskViz prompt even if `enhanceAPI.features.askviz` is set. */
+    hideAskViz?: boolean;
+    /** Hide the VL chat segment tab and panel even if `enhanceAPI.features.vlChat` is set. */
+    hideChat?: boolean;
     geographicData?: IGeographicData & {
         key: string;
     };

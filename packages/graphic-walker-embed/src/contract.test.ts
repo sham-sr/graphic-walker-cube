@@ -5,6 +5,7 @@ import {
     GW_CONFIG_KIND,
     GW_DEFAULT_EXPERIMENTAL_FEATURES,
     GW_DEFAULT_TOOLBAR_EXCLUDE,
+    GW_EMBED_ENHANCE_API,
     GW_REPORT_EXTENSION,
     GW_REPORT_KIND,
     GW_TOOLBAR_DEBUG,
@@ -52,6 +53,14 @@ describe('walker contract', () => {
 
     test('hides Kanaries docs and debug in the embed toolbar by default', () => {
         expect(GW_DEFAULT_TOOLBAR_EXCLUDE).toEqual([GW_TOOLBAR_KANARIES, GW_TOOLBAR_DEBUG]);
+    });
+
+    test('disables Kanaries AskViz and VL chat so the host never calls api.kanaries.net', () => {
+        expect(GW_EMBED_ENHANCE_API.features).toEqual({
+            askviz: false,
+            feedbackAskviz: false,
+            vlChat: false,
+        });
     });
 
     test('enables computed fields like the upstream Graphic Walker playground', () => {
