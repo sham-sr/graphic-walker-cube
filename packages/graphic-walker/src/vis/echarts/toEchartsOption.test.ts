@@ -92,6 +92,25 @@ describe('toEchartsOption', () => {
         expect(xAxis.nameLocation).toBe('middle');
         expect(yAxis.name).toContain('Платный доход');
         expect(yAxis.nameLocation).toBe('middle');
+        expect(option.title).toBeUndefined();
+    });
+
+    test('line charts keep field titles on axes without an ECharts title block', () => {
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'line',
+            rows: [cash],
+            columns: [dateField],
+            chrome: resolveChartChrome(),
+        });
+        const series = option.series as Array<{ type?: string; data?: Array<[number, number]> }>;
+        expect(series[0]?.type).toBe('line');
+        expect(series[0]?.data?.[0]).toEqual([Date.parse('2025-02-15T00:00:00.000Z'), 48000]);
+        expect(series[0]?.data?.[1]).toEqual([Date.parse('2025-03-15T00:00:00.000Z'), 61000]);
+        expect(option.title).toBeUndefined();
+        expect((option.xAxis as { name?: string; type?: string }).name).toBe(dateField.name);
+        expect((option.xAxis as { type?: string }).type).toBe('time');
+        expect((option.xAxis as { data?: string[] }).data).toBeUndefined();
     });
 
     test('horizontal bar keeps swapped axis titles', () => {
@@ -127,6 +146,7 @@ describe('toEchartsOption', () => {
         const pie = (option.series as Array<{ type?: string; radius?: string[] }>)[0];
         expect(pie.type).toBe('pie');
         expect(pie.radius?.[0]).not.toBe('0%');
+        expect((option.title as { text?: string }).text).toContain('Платный доход');
     });
 
     test('color field splits the primary series', () => {
@@ -302,5 +322,40 @@ describe('toEchartsOption', () => {
         expect(label).toMatch(/2025/);
         expect(label).not.toMatch(/^[0-9.e+-]+$/);
         expect(xAxis.axisLabel?.formatter?.(1739577600000).toLowerCase()).toMatch(/фев/);
+    });
+
+    test('line with month grain stays on a time axis and keeps localized ticks', () => {
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'line',
+            rows: [cash],
+            columns: [dateField],
+            locale: 'ru-RU',
+            chrome: resolveChartChrome(),
+        });
+        const xAxis = option.xAxis as { type?: string; data?: unknown; minInterval?: number; axisLabel?: { formatter?: (value: string | number) => string } };
+        const series = option.series as Array<{ data?: Array<[number, number]> }>;
+        expect(xAxis.type).toBe('time');
+        expect(xAxis.data).toBeUndefined();
+        expect(xAxis.minInterval).toBeGreaterThan(0);
+        expect(series[0]?.data?.[0]?.[0]).toBe(Date.parse('2025-02-15T00:00:00.000Z'));
+        expect(series[0]?.data?.[0]?.[1]).toBe(48000);
+        const label = xAxis.axisLabel?.formatter?.(Date.parse('2025-02-15T00:00:00.000Z')) ?? '';
+        expect(label.toLowerCase()).toMatch(/фев/);
+        expect(label).toMatch(/2025/);
+        expect(label).not.toMatch(/^[0-9.e+-]+$/);
+    });
+
+    test('area with month grain also uses time points, not a category axis', () => {
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'area',
+            rows: [cash],
+            columns: [dateField],
+            locale: 'ru-RU',
+            chrome: resolveChartChrome(),
+        });
+        expect((option.xAxis as { type?: string }).type).toBe('time');
+        expect((option.series as Array<{ data?: Array<[number, number]> }>)[0]?.data?.length).toBe(2);
     });
 });

@@ -17,11 +17,11 @@ export function persistDatasetSpecs(
     provider: Pick<IDataSourceProvider, 'saveSpecs'>,
     datasetId: string,
     store: Pick<SpecStoreLike, 'exportAllCharts'> | null | undefined
-): void {
-    if (!datasetId || !store) return;
+): Promise<void> | undefined {
+    if (!datasetId || !store) return undefined;
     const charts = store.exportAllCharts();
-    if (charts === undefined || charts === null) return;
-    void provider.saveSpecs(datasetId, JSON.stringify(charts));
+    if (charts === undefined || charts === null) return undefined;
+    return provider.saveSpecs(datasetId, JSON.stringify(charts));
 }
 
 export async function syncProviderSpecs(

@@ -15,6 +15,18 @@ export const GW_TOOLBAR_KANARIES = 'kanaries';
 export const GW_TOOLBAR_DEBUG = 'debug';
 export const GW_DEFAULT_TOOLBAR_EXCLUDE = [GW_TOOLBAR_KANARIES, GW_TOOLBAR_DEBUG] as const;
 
+/**
+ * Kanaries AskViz / VL chat stay off in the Cube host.
+ * `true` would fall back to api.kanaries.net; the embed never enables that path.
+ */
+export const GW_EMBED_ENHANCE_API = {
+    features: {
+        askviz: false,
+        feedbackAskviz: false,
+        vlChat: false,
+    },
+} as const;
+
 /** Graphic Walker experimental flags. Computed fields match the upstream playground. */
 export interface GraphicWalkerExperimentalFeatures {
     computedField?: boolean;
@@ -53,6 +65,20 @@ export interface WalkerDatasetInput {
 export interface WalkerDatasetInfo {
     id: string;
     name: string;
+}
+
+/** One Graphic Walker sheet, identified without copying rows or specs. */
+export interface WalkerChartInfo {
+    datasetId: string;
+    datasetName: string;
+    visId: string;
+    name: string;
+    queryFingerprint?: string;
+}
+
+export interface WalkerChartRef {
+    datasetId: string;
+    visId: string;
 }
 
 export interface WalkerConfigDataset {
@@ -131,6 +157,10 @@ export interface GraphicWalkerHost {
     replaceDataset(id: string, input: WalkerDatasetInput): Promise<WalkerReplaceResult>;
     removeDataset(id: string): Promise<void>;
     listDatasets(): Promise<{ id: string; name: string }[]>;
+    /** Charts already built on Graphic Walker sheets (pointers, not data copies). */
+    listCharts(): Promise<WalkerChartInfo[]>;
+    /** Render one sheet into `el` via PureRenderer + the existing DuckDB provider. */
+    createChartView(el: HTMLElement, ref: WalkerChartRef): () => void;
     exportConfig(): Promise<GraphicWalkerConfig>;
     exportReport(): Promise<GraphicWalkerReport>;
     applyConfig(config: GraphicWalkerConfig, rowsById: Record<string, WalkerRow[]>): Promise<void>;

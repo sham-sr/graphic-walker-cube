@@ -4,6 +4,7 @@
  */
 
 import type { WalkerField } from './contract';
+import { chartFromPersistedSpec } from './chartSpecs';
 
 const EMPTY_SPECS = '[]';
 
@@ -29,9 +30,8 @@ function encodingFids(specs: unknown): string[] {
     if (!Array.isArray(specs)) return [];
     const fids = new Set<string>();
     for (const chart of specs) {
-        if (!chart || typeof chart !== 'object') continue;
-        const encodings = (chart as { encodings?: unknown }).encodings;
-        if (encodings) collectFids(encodings, fids);
+        const record = chartFromPersistedSpec(chart);
+        if (record?.encodings) collectFids(record.encodings, fids);
     }
     return [...fids];
 }

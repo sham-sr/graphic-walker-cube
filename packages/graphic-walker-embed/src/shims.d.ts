@@ -36,7 +36,9 @@ declare module '@kanaries/graphic-walker' {
         registerCallback(callback: IDataSourceListener): () => void;
     }
 
+    export function resolveChart(data: string): Record<string, unknown>;
     export const GraphicWalker: (props: Record<string, unknown>) => ReactNode;
+    export const PureRenderer: (props: Record<string, unknown>) => ReactNode;
     export const DataSourceSegmentComponent: (props: {
         provider: IDataSourceProvider;
         hideCreateDataset?: boolean;
@@ -49,7 +51,7 @@ declare module '@kanaries/graphic-walker' {
             storeRef: unknown;
             datasetName: string;
             datasetId: string;
-            syncSpecs: () => void;
+            syncSpecs: () => void | Promise<void>;
         }) => ReactNode;
     }) => ReactNode;
 }
@@ -57,4 +59,5 @@ declare module '@kanaries/graphic-walker' {
 declare module '@kanaries/duckdb-computation' {
     import type { IDataSourceProvider } from '@kanaries/graphic-walker';
     export function getMemoryProvider(): Promise<IDataSourceProvider>;
+    export function init(): Promise<void>;
 }

@@ -17,4 +17,7 @@ module.exports = {
             },
         ],
     },
+    moduleNameMapper: {
+        '^@kanaries/graphic-walker$': '<rootDir>/tests/shims/graphic-walker.cjs',
+    },
 };

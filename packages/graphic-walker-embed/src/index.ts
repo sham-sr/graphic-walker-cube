@@ -6,6 +6,7 @@ export {
     GW_CONFIG_KIND,
     GW_DEFAULT_EXPERIMENTAL_FEATURES,
     GW_DEFAULT_TOOLBAR_EXCLUDE,
+    GW_EMBED_ENHANCE_API,
     GW_REPORT_EXTENSION,
     GW_REPORT_KIND,
     GW_TOOLBAR_DEBUG,
@@ -24,6 +25,8 @@ export type {
     GraphicWalkerHostOptions,
     GraphicWalkerReport,
     WalkerAnalyticType,
+    WalkerChartInfo,
+    WalkerChartRef,
     WalkerConfigDataset,
     WalkerDatasetInfo,
     WalkerDatasetInput,
@@ -36,5 +39,6 @@ export type {
 export { createDatasetRegistry } from './datasetRegistry';
 export type { DatasetRegistry, DatasetRegistryOptions, DatasetRegistryRecord } from './datasetRegistry';
 
-export { createGraphicWalkerHost } from './host';
+export { parseWalkerCharts, listChartsFromRegistry } from './chartSpecs';
+export { createGraphicWalkerHost, warmupGraphicWalker } from './host';
 export type { CreateGraphicWalkerHostDeps } from './host';

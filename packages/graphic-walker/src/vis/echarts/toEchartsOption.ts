@@ -4,7 +4,7 @@ import { getMeaAggKey, getMeaAggName } from '../../utils';
 import { getColor } from '../../utils/useTheme';
 import { resolveChartChrome, resolveOverlayMeasure, type ChartChrome } from '../spec/chartChrome';
 import { NULL_FIELD } from '../spec/field';
-import { formatTemporalLabel, isDiscreteTimeGrain, resolveTimeGrain, timeAxisMinInterval } from './formatTemporal';
+import { formatTemporalLabel, parseTemporal, resolveTimeGrain, timeAxisMinInterval } from './formatTemporal';
 
 const OVERLAY_COLOR = '#ea580c';
 
@@ -98,6 +98,34 @@ function valueAt(rows: readonly IRow[], catKey: string, cat: string, meaKey: str
         if (Number.isFinite(n)) sum += n;
     }
     return sum;
+}
+
+function seriesPairs(
+    rows: readonly IRow[],
+    catKey: string,
+    meaKey: string,
+    catType: 'category' | 'time' | 'value',
+    horizontal: boolean
+): Array<[string | number, string | number]> {
+    const points: Array<[string | number, string | number]> = [];
+    for (const row of rows) {
+        const y = Number(row[meaKey]);
+        if (!Number.isFinite(y)) continue;
+        if (catType === 'time') {
+            const ts = parseTemporal(row[catKey])?.getTime();
+            if (ts === undefined) continue;
+            points.push(horizontal ? [y, ts] : [ts, y]);
+            continue;
+        }
+        const raw = row[catKey];
+        const x = typeof raw === 'number' || typeof raw === 'string' ? raw : String(raw ?? '');
+        points.push(horizontal ? [y, x] : [x, y]);
+    }
+    if (catType === 'time') {
+        const xi = horizontal ? 1 : 0;
+        points.sort((left, right) => Number(left[xi]) - Number(right[xi]));
+    }
+    return points;
 }
 
 function linearFit(points: Array<{ x: number; y: number }>): { minX: number; maxX: number; yAt: (x: number) => number } | undefined {
@@ -251,8 +279,19 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
     const bandAxis = type === 'bar' && Boolean(colorKey);
     const timeGrain = resolveTimeGrain(categoryField);
     const temporalCategory = categoryField.semanticType === 'temporal';
-    const useCategoryTime = temporalCategory && (type === 'bar' || isDiscreteTimeGrain(timeGrain));
+    const useCategoryTime = temporalCategory && type === 'bar';
     const catType = bandAxis || useCategoryTime ? 'category' : axisType(categoryField);
+    const needsExplicitPoints = type === 'line' || isArea || showTrail || type === 'scatter';
+    if (temporalCategory) {
+        categories.sort((a, b) => {
+            const left = parseTemporal(a)?.getTime() ?? Number.NaN;
+            const right = parseTemporal(b)?.getTime() ?? Number.NaN;
+            if (Number.isFinite(left) && Number.isFinite(right) && left !== right) {
+                return left - right;
+            }
+            return a.localeCompare(b);
+        });
+    }
     const locale = args.locale ?? 'en-US';
     const horizontal = chrome.horizontal && type === 'bar';
     const shape = lineShapeProps(chrome.lineShape);
@@ -265,23 +304,25 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
         colorGroups.forEach((group, groupIndex) => {
             const color = palette[(measureIndex * colorGroups.length + groupIndex) % palette.length] ?? primary;
             const name = colorKey ? group || '—' : fieldTitle(measure, args.defaultAggregated);
-            const aligned = bandAxis
-                ? categories.map((cat, index) => {
-                      const raw = valueAt(args.dataSource, catKey, cat, meaKey, colorKey, group);
-                      if (args.stack !== 'normalize') {
-                          return raw;
-                      }
-                      const total = categoryTotals[index] ?? 0;
-                      return total === 0 ? 0 : raw / total;
-                  })
-                : undefined;
+            const aligned =
+                bandAxis || (needsExplicitPoints && catType === 'category')
+                    ? categories.map((cat, index) => {
+                          const raw = valueAt(args.dataSource, catKey, cat, meaKey, colorKey, group);
+                          if (args.stack !== 'normalize') {
+                              return raw;
+                          }
+                          const total = categoryTotals[index] ?? 0;
+                          return total === 0 ? 0 : raw / total;
+                      })
+                    : undefined;
             const filtered = colorKey ? args.dataSource.filter((row) => String(row[colorKey] ?? '') === group) : args.dataSource;
+            const pairData = aligned === undefined && needsExplicitPoints ? seriesPairs(filtered, catKey, meaKey, catType, horizontal) : undefined;
             series.push({
                 type,
                 name,
-                data: aligned ?? (colorKey ? filtered.map((row) => (horizontal ? [row[meaKey], row[catKey]] : [row[catKey], row[meaKey]])) : undefined),
-                encode: aligned || colorKey ? undefined : horizontal ? { x: meaKey, y: catKey } : { x: catKey, y: meaKey },
-                datasetIndex: aligned || colorKey ? undefined : 0,
+                data: aligned ?? pairData ?? (colorKey ? filtered.map((row) => (horizontal ? [row[meaKey], row[catKey]] : [row[catKey], row[meaKey]])) : undefined),
+                encode: aligned || pairData || colorKey ? undefined : horizontal ? { x: meaKey, y: catKey } : { x: catKey, y: meaKey },
+                datasetIndex: aligned || pairData || colorKey ? undefined : 0,
                 showSymbol: showTrail || type === 'scatter',
                 symbolSize: type === 'scatter' ? 8 : 5,
                 itemStyle: { color },
@@ -324,8 +365,7 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
         series.push({
             type: 'line',
             name: fieldTitle(overlayField, args.defaultAggregated),
-            encode: horizontal ? { x: overlayKey, y: catKey } : { x: catKey, y: overlayKey },
-            datasetIndex: 0,
+            data: catType === 'category' ? categories.map((cat) => valueAt(args.dataSource, catKey, cat, overlayKey)) : seriesPairs(args.dataSource, catKey, overlayKey, catType, horizontal),
             yAxisIndex: !horizontal && chrome.overlay === 'dual' ? 1 : 0,
             xAxisIndex: horizontal && chrome.overlay === 'dual' ? 1 : 0,
             itemStyle: { color: OVERLAY_COLOR },
@@ -338,7 +378,7 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
             symbol: 'circle',
             symbolSize: 6,
             z: 3,
-        });
+        } as SeriesOption);
     }
 
     if (chrome.trendline && kind === 'scatter') {
@@ -369,8 +409,9 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
         const points = args.dataSource
             .map((row, index) => {
                 const raw = row[catKey];
-                const x = catType === 'time' ? new Date(String(raw)).getTime() : Number(raw);
-                return { x: Number.isFinite(x) ? x : index, y: Number(row[yKey]) };
+                const parsed = catType === 'time' ? parseTemporal(raw)?.getTime() : Number(raw);
+                const x = typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : index;
+                return { x, y: Number(row[yKey]) };
             })
             .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
         const fit = linearFit(points);

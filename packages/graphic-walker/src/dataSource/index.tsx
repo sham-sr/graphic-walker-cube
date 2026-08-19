@@ -152,7 +152,7 @@ export function DataSourceSegmentComponent(props: {
         storeRef: React.RefObject<VizSpecStore | null>;
         datasetName: string;
         datasetId: string;
-        syncSpecs: () => void;
+        syncSpecs: () => void | Promise<void>;
     }) => React.ReactNode;
 }) {
     const [selectedId, setSelectedId] = useState('');
@@ -209,9 +209,7 @@ export function DataSourceSegmentComponent(props: {
     }, [selectedId, meta, dataset]);
 
     const persistSelectedSpecs = useCallback(
-        (datasetId: string) => {
-            persistDatasetSpecs(props.provider, datasetId, datasetStoresRef.current.get(datasetId) ?? vizSpecStoreRef.current);
-        },
+        (datasetId: string) => persistDatasetSpecs(props.provider, datasetId, datasetStoresRef.current.get(datasetId) ?? vizSpecStoreRef.current),
         [props.provider]
     );
 
@@ -306,9 +304,7 @@ export function DataSourceSegmentComponent(props: {
         }
     }, [selectedId, persistSelectedSpecs, props.provider]);
 
-    const syncSpecs = useCallback(() => {
-        persistSelectedSpecs(selectedId);
-    }, [selectedId, persistSelectedSpecs]);
+    const syncSpecs = useCallback(() => persistSelectedSpecs(selectedId), [selectedId, persistSelectedSpecs]);
 
     const darkMode = useCurrentMediaTheme(props.appearance ?? props.dark);
     const [currentTheme, setCurrentTheme] = useState<IThemeKey | GWGlobalConfig>(
