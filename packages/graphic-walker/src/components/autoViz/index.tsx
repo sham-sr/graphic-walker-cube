@@ -21,6 +21,7 @@ const reasonLabels: Record<IAutoVizDisableReason, string> = {
     too_many_dimensions: 'Too many dimensions for this chart',
     need_measure: 'Needs at least 1 measure',
     need_two_measures: 'Needs at least 2 measures',
+    need_three_measures: 'Needs at least 3 measures',
     need_single_measure: 'Needs exactly 1 measure',
     too_many_measures: 'Too many measures for this chart',
     need_temporal: 'Needs a date/time dimension',

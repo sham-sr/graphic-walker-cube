@@ -358,4 +358,236 @@ describe('toEchartsOption', () => {
         expect((option.xAxis as { type?: string }).type).toBe('time');
         expect((option.series as Array<{ data?: Array<[number, number]> }>)[0]?.data?.length).toBe(2);
     });
+
+    test('circle geom maps a size measure to bubble radius', () => {
+        const passengers: IViewField = {
+            fid: 'pax',
+            name: 'Пассажиры',
+            analyticType: 'measure',
+            semanticType: 'quantitative',
+            aggName: 'sum',
+        };
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'circle',
+            defaultAggregated: true,
+            rows: [cash],
+            columns: [cashAgo],
+            size: passengers,
+            dataSource: [
+                {
+                    [getMeaAggKey(CASH, 'sum')]: 48000,
+                    [getMeaAggKey(CASH_AGO, 'sum')]: 92000,
+                    [getMeaAggKey('pax', 'sum')]: 10,
+                },
+                {
+                    [getMeaAggKey(CASH, 'sum')]: 61000,
+                    [getMeaAggKey(CASH_AGO, 'sum')]: 95000,
+                    [getMeaAggKey('pax', 'sum')]: 90,
+                },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        const series = option.series as Array<{
+            type?: string;
+            data?: Array<{ symbolSize: number; value: [number, number] }>;
+        }>;
+        expect(series).toHaveLength(1);
+        expect(series[0]?.type).toBe('scatter');
+        const sizes = (series[0]?.data ?? []).map((point) => point.symbolSize);
+        expect(sizes).toHaveLength(2);
+        expect(sizes[1]).toBeGreaterThan(sizes[0]!);
+        expect(sizes[0]).toBeGreaterThanOrEqual(10);
+        expect(sizes[1]).toBeLessThanOrEqual(52);
+    });
+
+    test('encoded tooltip still prints details without tooltip=all', () => {
+        const station: IViewField = {
+            fid: 'station',
+            name: 'Станция',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'bar',
+            rows: [cash],
+            columns: [dateField],
+            details: [station],
+            dataSource: [
+                { ...rows[0], station: 'Казань' },
+                { ...rows[1], station: 'Самара' },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        const tooltip = option.tooltip as { formatter?: (params: unknown) => string };
+        const html =
+            tooltip.formatter?.({
+                axisValue: rows[0][DATE],
+                axisValueLabel: rows[0][DATE],
+                name: String(rows[0][DATE]),
+                seriesName: 'sum(Платный доход)',
+                value: 48000,
+                marker: '',
+            }) ?? '';
+        expect(html).toContain('Станция');
+        expect(html).toContain('Казань');
+        expect(html).not.toContain('Самара');
+    });
+
+    test('bar opacity varies per category instead of using a constant', () => {
+        const share: IViewField = {
+            fid: 'share',
+            name: 'Доля',
+            analyticType: 'measure',
+            semanticType: 'quantitative',
+            aggName: 'sum',
+        };
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'bar',
+            rows: [cash],
+            columns: [dateField],
+            opacity: share,
+            dataSource: [
+                { ...rows[0], [getMeaAggKey('share', 'sum')]: 1 },
+                { ...rows[1], [getMeaAggKey('share', 'sum')]: 9 },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        const series = option.series as Array<{
+            data?: Array<{ itemStyle?: { opacity?: number } }>;
+        }>;
+        const opacities = (series[0]?.data ?? []).map((item) => item.itemStyle?.opacity ?? 1);
+        expect(opacities).toHaveLength(2);
+        expect(opacities[1]!).toBeGreaterThan(opacities[0]!);
+    });
+
+    test('line size maps to stroke width', () => {
+        const passengers: IViewField = {
+            fid: 'pax',
+            name: 'Пассажиры',
+            analyticType: 'measure',
+            semanticType: 'quantitative',
+            aggName: 'sum',
+        };
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'line',
+            rows: [cash],
+            columns: [dateField],
+            size: passengers,
+            dataSource: [
+                { ...rows[0], [getMeaAggKey('pax', 'sum')]: 10 },
+                { ...rows[1], [getMeaAggKey('pax', 'sum')]: 90 },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        const line = (option.series as Array<{ lineStyle?: { width?: number } }>)[0];
+        expect(line.lineStyle?.width).toBeGreaterThan(1.5);
+        expect(line.lineStyle?.width).toBeLessThan(7);
+        expect(line.lineStyle?.width).not.toBe(2);
+    });
+
+    test('pie tooltip includes the size measure and varies label font size', () => {
+        const pay: IViewField = {
+            fid: 'pay',
+            name: 'Pay',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const passengers: IViewField = {
+            fid: 'pax',
+            name: 'Пассажиры',
+            analyticType: 'measure',
+            semanticType: 'quantitative',
+            aggName: 'sum',
+        };
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'arc',
+            rows: [],
+            columns: [],
+            color: pay,
+            theta: cash,
+            size: passengers,
+            dataSource: [
+                { pay: 'card', [getMeaAggKey(CASH, 'sum')]: 48000, [getMeaAggKey('pax', 'sum')]: 10 },
+                { pay: 'cash', [getMeaAggKey(CASH, 'sum')]: 61000, [getMeaAggKey('pax', 'sum')]: 90 },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        const pie = (option.series as Array<{
+            roseType?: string;
+            data?: Array<{ name?: string; label?: { fontSize?: number }; row?: Record<string, unknown> }>;
+        }>)[0];
+        expect(pie.roseType).toBeUndefined();
+        const sizes = (pie.data ?? []).map((slice) => slice.label?.fontSize ?? 0);
+        expect(sizes[1]).toBeGreaterThan(sizes[0]!);
+        const tooltip = option.tooltip as { formatter?: (params: unknown) => string };
+        const html =
+            tooltip.formatter?.({
+                name: 'card',
+                marker: '',
+                data: pie.data?.[0],
+                value: 48000,
+            }) ?? '';
+        expect(html).toContain('Пассажиры');
+        expect(html).toContain('10');
+    });
+
+    test('scatter shape field maps to distinct ECharts symbols', () => {
+        const kind: IViewField = {
+            fid: 'kind',
+            name: 'Тип',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'point',
+            defaultAggregated: false,
+            rows: [{ ...cash, aggName: undefined }],
+            columns: [{ ...cashAgo, aggName: undefined }],
+            shape: kind,
+            dataSource: [
+                { [CASH]: 10, [CASH_AGO]: 20, kind: 'bus' },
+                { [CASH]: 30, [CASH_AGO]: 40, kind: 'train' },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        const series = option.series as Array<{ data?: Array<{ symbol?: string }> }>;
+        const symbols = (series[0]?.data ?? []).map((point) => point.symbol);
+        expect(symbols).toHaveLength(2);
+        expect(symbols[0]).toBeTruthy();
+        expect(symbols[1]).toBeTruthy();
+        expect(symbols[0]).not.toBe(symbols[1]);
+    });
+
+    test('text field drives cartesian labels even when value labels are off', () => {
+        const station: IViewField = {
+            fid: 'station',
+            name: 'Станция',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'bar',
+            rows: [cash],
+            columns: [dateField],
+            text: station,
+            dataSource: [
+                { ...rows[0], station: 'Казань' },
+                { ...rows[1], station: 'Самара' },
+            ],
+            chrome: { ...resolveChartChrome(), showLabels: false },
+        });
+        const series = option.series as Array<{
+            label?: { show?: boolean; formatter?: (params: { data?: { row?: Record<string, unknown> } }) => string };
+            data?: Array<{ row?: Record<string, unknown> }>;
+        }>;
+        expect(series[0]?.label?.show).toBe(true);
+        expect(series[0]?.label?.formatter?.({ data: series[0]?.data?.[0] })).toBe('Казань');
+    });
 });

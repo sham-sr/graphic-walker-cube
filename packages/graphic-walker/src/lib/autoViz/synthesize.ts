@@ -69,7 +69,7 @@ export function synthesizeFields(rule: IAutoVizRule, allFields: IViewField[], ge
         if (!pickedMeas.includes(f)) pickedMeas.push(f);
     }
     if (pickedMeas.length < meaTarget) {
-        return { reason: rule.mea[0] >= 2 ? 'need_two_measures' : 'need_measure' };
+        return { reason: rule.mea[0] >= 3 ? 'need_three_measures' : rule.mea[0] >= 2 ? 'need_two_measures' : 'need_measure' };
     }
 
     // a zero-minimum rule with no requirement-derived picks (e.g. table) still

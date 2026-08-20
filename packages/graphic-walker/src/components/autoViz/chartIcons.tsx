@@ -143,6 +143,15 @@ const ScatterIcon: React.FC<IconProps> = ({ className }) => (
     </svg>
 );
 
+const BubbleIcon: React.FC<IconProps> = ({ className }) => (
+    <svg {...svgProps(className)} stroke="none">
+        <circle cx="11" cy="20" r="4.2" fill="currentColor" opacity="0.35" />
+        <circle cx="18" cy="12" r="6.4" fill="currentColor" opacity="0.55" />
+        <circle cx="24.5" cy="21" r="2.8" fill="currentColor" opacity="0.8" />
+        <circle cx="8.5" cy="11" r="2.2" fill="currentColor" opacity="0.45" />
+    </svg>
+);
+
 const CircleViewIcon: React.FC<IconProps> = ({ className }) => (
     <svg {...svgProps(className)} stroke="none">
         {[
@@ -210,6 +219,7 @@ export const chartIcons: Record<IAutoVizChartType, React.FC<IconProps>> = {
     area: AreaIcon,
     histogram: HistogramIcon,
     scatter: ScatterIcon,
+    bubble: BubbleIcon,
     circle_view: CircleViewIcon,
     pie: PieIcon,
     boxplot: BoxplotIcon,
@@ -229,6 +239,7 @@ export const chartTypeLabels: Record<IAutoVizChartType, string> = {
     area: 'Area Chart',
     histogram: 'Histogram',
     scatter: 'Scatter Plot',
+    bubble: 'Bubble Chart',
     circle_view: 'Circle View',
     pie: 'Pie Chart',
     boxplot: 'Box Plot',

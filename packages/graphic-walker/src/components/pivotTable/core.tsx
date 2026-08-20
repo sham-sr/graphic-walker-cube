@@ -74,6 +74,8 @@ export interface PivotTableCoreProps {
     columnTotals?: PivotTotalsMode;
     numberFormat?: string;
     disableCollapse?: boolean;
+    /** Pivot chrome (color, totals, collapse-all). Off on dashboard tiles. */
+    showToolbar?: boolean;
     collapsedPaths?: readonly IPivotTablePath[];
     defaultCollapsedPaths?: readonly IPivotTablePath[];
     onCollapsedPathsChange?: (paths: IPivotTablePath[]) => void;
@@ -123,6 +125,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     columnTotals,
     numberFormat = '',
     disableCollapse = false,
+    showToolbar = true,
     collapsedPaths,
     defaultCollapsedPaths = EMPTY_PATHS,
     onCollapsedPathsChange,
@@ -442,26 +445,28 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     return (
         <div className="relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden" data-testid="pivot-table-core" aria-busy={loading}>
             {loading && <LoadingLayer />}
-            <PivotTableToolbar
-                colorMode={activeColorMode}
-                percentMode={activePercentMode}
-                rowTotals={activeRowTotals}
-                columnTotals={activeColumnTotals}
-                headerMode={activeHeaderMode}
-                dateFormat={activeDateFormat}
-                onColorModeChange={handleColorModeChange}
-                onPercentModeChange={handlePercentModeChange}
-                onRowTotalsChange={handleRowTotalsChange}
-                onColumnTotalsChange={handleColumnTotalsChange}
-                onHeaderModeChange={handleHeaderModeChange}
-                onDateFormatChange={handleDateFormatChange}
-                showKeepHint={Boolean(onKeepPath)}
-                showHeaderMode={showHeaderMode}
-                showDateFormat={showDateFormat}
-                showCollapseAll={showCollapseAll}
-                anyCollapsed={effectiveCollapsedPaths.length > 0}
-                onCollapseAllToggle={handleCollapseAllToggle}
-            />
+            {showToolbar && (
+                <PivotTableToolbar
+                    colorMode={activeColorMode}
+                    percentMode={activePercentMode}
+                    rowTotals={activeRowTotals}
+                    columnTotals={activeColumnTotals}
+                    headerMode={activeHeaderMode}
+                    dateFormat={activeDateFormat}
+                    onColorModeChange={handleColorModeChange}
+                    onPercentModeChange={handlePercentModeChange}
+                    onRowTotalsChange={handleRowTotalsChange}
+                    onColumnTotalsChange={handleColumnTotalsChange}
+                    onHeaderModeChange={handleHeaderModeChange}
+                    onDateFormatChange={handleDateFormatChange}
+                    showKeepHint={Boolean(onKeepPath)}
+                    showHeaderMode={showHeaderMode}
+                    showDateFormat={showDateFormat}
+                    showCollapseAll={showCollapseAll}
+                    anyCollapsed={effectiveCollapsedPaths.length > 0}
+                    onCollapseAllToggle={handleCollapseAllToggle}
+                />
+            )}
             <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
                 {model && shouldRenderPivotTableModel(model) ? (
                     <PivotTableView

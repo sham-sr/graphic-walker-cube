@@ -7,7 +7,8 @@ import TopTree from './topTree';
 import { collectPivotLeafChains, indexPivotLeafAncestors } from './headerWindow';
 import type { INestNode, IPivotTableModel, IPivotTablePath } from './interface';
 import type { PivotColorMode, PivotDateFormat, PivotPercentMode, PivotSummaryLabels } from './display';
-import { PIVOT_ROW_HEIGHT_PX, PIVOT_SCROLLPORT_CLASS, PIVOT_TABLE_CLASS } from './scrollport';
+import { PIVOT_ROW_HEIGHT_PX, PIVOT_TABLE_CLASS } from './scrollport';
+import { PivotScrollViewport } from './scrollArea';
 
 export interface VirtualizedPivotViewProps {
     model: IPivotTableModel;
@@ -132,7 +133,7 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
     );
 
     return (
-        <div ref={parentRef} className={PIVOT_SCROLLPORT_CLASS} data-testid="pivot-table-view" data-virtualized="true">
+        <PivotScrollViewport ref={parentRef} virtualized>
             <table className={PIVOT_TABLE_CLASS}>
                 <TopTree
                     data={model.topTree}
@@ -171,6 +172,6 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     onKeepPath={onKeepPath}
                 />
             </table>
-        </div>
+        </PivotScrollViewport>
     );
 };

@@ -42,6 +42,10 @@ interface ReactEchartsProps {
     stack: IStackMode;
     color?: IViewField;
     theta?: IViewField;
+    size?: IViewField;
+    opacity?: IViewField;
+    shape?: IViewField;
+    text?: IViewField;
     details?: readonly IViewField[];
     extraTooltipFields?: readonly IViewField[];
     chrome?: ChartChrome;
@@ -70,6 +74,10 @@ const ReactEcharts = forwardRef<IReactVegaHandler, ReactEchartsProps>(function R
                 stack: props.stack,
                 color: props.color,
                 theta: props.theta,
+                size: props.size,
+                opacity: props.opacity,
+                shape: props.shape,
+                text: props.text,
                 details: props.details,
                 extraTooltipFields: props.extraTooltipFields,
                 chrome: props.chrome,
@@ -87,6 +95,10 @@ const ReactEcharts = forwardRef<IReactVegaHandler, ReactEchartsProps>(function R
             props.stack,
             props.color,
             props.theta,
+            props.size,
+            props.opacity,
+            props.shape,
+            props.text,
             props.details,
             props.extraTooltipFields,
             props.chrome,

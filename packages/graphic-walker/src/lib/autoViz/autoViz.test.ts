@@ -101,6 +101,13 @@ describe('expressiveness filter', () => {
         expect(item(five, 'scatter').reason).toBe('too_many_measures');
     });
 
+    test('bubble needs 3–4 measures', () => {
+        expect(item(recommend({ fields: [sales, profit], allFields: ALL_FIELDS }), 'bubble').reason).toBe('need_three_measures');
+        const five = recommend({ fields: [sales, profit, discount, quantity, tax], allFields: ALL_FIELDS });
+        expect(item(five, 'bubble').reason).toBe('too_many_measures');
+        expect(item(recommend({ fields: [sales, profit, discount], allFields: ALL_FIELDS }), 'bubble').available).toBe(true);
+    });
+
     test('histogram rejects dimensions, extra measures and the row-count field', () => {
         expect(item(recommend({ fields: [category, sales], allFields: ALL_FIELDS }), 'histogram').reason).toBe('too_many_dimensions');
         expect(item(recommend({ fields: [sales, profit], allFields: ALL_FIELDS }), 'histogram').reason).toBe('need_single_measure');
@@ -127,6 +134,7 @@ describe('effectiveness ranking (default chart)', () => {
         ['category + measure → bar', [category, sales], 'bar'],
         ['temporal + measure → line', [orderDate, sales], 'line'],
         ['two measures → scatter', [sales, profit], 'scatter'],
+        ['three measures + category → bubble', [category, sales, profit, discount], 'bubble'],
         ['single raw measure → histogram', [sales], 'histogram'],
         ['pure dimensions → table', [category, subcategory], 'table'],
         ['lon/lat pair → poi map', [lon, lat], 'poi_map'],
@@ -310,6 +318,7 @@ describe('cold-start reverse matching (empty selection + allFields)', () => {
         expect(matched('histogram')).toEqual([sales.fid]);
         // scatter fills two generic measures, excluding the lon/lat pair
         expect(matched('scatter')).toEqual([sales.fid, profit.fid]);
+        expect(matched('bubble')).toEqual([sales.fid, profit.fid, discount.fid]);
         // poi map picks exactly the lon/lat pair
         expect(matched('poi_map').sort()).toEqual([lat.fid, lon.fid].sort());
         // heatmap needs two dimensions, filled in field-list order

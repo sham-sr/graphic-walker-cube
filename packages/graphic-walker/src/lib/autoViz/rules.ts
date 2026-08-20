@@ -16,6 +16,7 @@ export const AUTO_VIZ_CHART_ORDER: IAutoVizChartType[] = [
     'area',
     'histogram',
     'scatter',
+    'bubble',
     'circle_view',
     'pie',
     'boxplot',
@@ -34,7 +35,8 @@ export const AUTO_VIZ_CHART_ORDER: IAutoVizChartType[] = [
  * Score conventions — the champion of a typical intent scores in the 85–95 band:
  * - pure dimensions → table (90)
  * - single measure → histogram (90)
- * - two+ measures → scatter (93 alone / 84 with dimensions)
+ * - two measures → scatter (93 alone / 84 with dimensions)
+ * - three+ measures → bubble (90 alone / 89 with dimensions so it beats scatter-with-dims)
  * - temporal + measure → line (92)
  * - category + measure → bar (85 for the 1×1 case / 80 otherwise)
  * - geographic fields → maps (poi 95 so it beats scatter on a lon/lat pair, choropleth 86)
@@ -114,6 +116,13 @@ export const AUTO_VIZ_RULES: IAutoVizRule[] = [
         mea: [2, 4],
         score: (f) => (f.nDim === 0 ? 93 : 84),
         build: builders.scatter,
+    },
+    {
+        chartType: 'bubble',
+        dim: [0, INF],
+        mea: [3, 4],
+        score: (f) => (f.nDim === 0 ? 90 : 89),
+        build: builders.bubble,
     },
     {
         chartType: 'circle_view',

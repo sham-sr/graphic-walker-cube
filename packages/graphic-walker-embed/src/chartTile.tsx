@@ -29,6 +29,7 @@ export function ChartTileApp(props: ChartTileAppProps) {
             locale={props.locale}
             name={name}
             disableCollapse
+            showToolbar={false}
         />
     );
 }

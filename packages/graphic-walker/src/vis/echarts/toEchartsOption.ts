@@ -7,6 +7,7 @@ import { NULL_FIELD } from '../spec/field';
 import { formatTemporalLabel, parseTemporal, resolveTimeGrain, timeAxisMinInterval } from './formatTemporal';
 
 const OVERLAY_COLOR = '#ea580c';
+const ECHARTS_SYMBOLS = ['circle', 'rect', 'triangle', 'diamond', 'pin', 'arrow', 'roundRect'] as const;
 
 export interface ToEchartsOptionArgs {
     geomType: string;
@@ -19,6 +20,10 @@ export interface ToEchartsOptionArgs {
     theta?: IViewField;
     details?: readonly IViewField[];
     extraTooltipFields?: readonly IViewField[];
+    size?: IViewField;
+    opacity?: IViewField;
+    shape?: IViewField;
+    text?: IViewField;
     chrome?: Partial<ChartChrome>;
     vegaConfig: VegaGlobalConfig;
     mediaTheme: 'light' | 'dark';
@@ -44,6 +49,55 @@ function fieldTitle(field: IViewField, aggregated: boolean): string {
 
 function isMeasure(field: IViewField | undefined): field is IViewField {
     return Boolean(field && field.fid && field.analyticType === 'measure');
+}
+
+function uniqueFields(fields: Array<IViewField | undefined | null>): IViewField[] {
+    const seen = new Set<string>();
+    const unique: IViewField[] = [];
+    for (const field of fields) {
+        if (!field?.fid || seen.has(field.fid)) {
+            continue;
+        }
+        seen.add(field.fid);
+        unique.push(field);
+    }
+    return unique;
+}
+
+function sameCategory(field: IViewField, left: unknown, right: unknown): boolean {
+    if (field.semanticType === 'temporal') {
+        const a = parseTemporal(left)?.getTime();
+        const b = parseTemporal(right)?.getTime();
+        if (a !== undefined && b !== undefined) {
+            return a === b;
+        }
+    }
+    return String(left ?? '') === String(right ?? '');
+}
+
+function lookupRow(
+    rows: readonly IRow[],
+    categoryField: IViewField,
+    catKey: string,
+    category: unknown,
+    colorKey?: string,
+    group?: string
+): IRow | undefined {
+    for (const row of rows) {
+        if (!sameCategory(categoryField, row[catKey], category)) {
+            continue;
+        }
+        if (colorKey && String(row[colorKey] ?? '') !== String(group ?? '')) {
+            continue;
+        }
+        return row;
+    }
+    return undefined;
+}
+
+function symbolOf(value: string, domain: string[]): string {
+    const index = domain.indexOf(value);
+    return ECHARTS_SYMBOLS[(index < 0 ? 0 : index) % ECHARTS_SYMBOLS.length];
 }
 
 function seriesType(geomType: string): 'bar' | 'line' | 'scatter' | 'pie' {
@@ -124,6 +178,98 @@ function seriesPairs(
     if (catType === 'time') {
         const xi = horizontal ? 1 : 0;
         points.sort((left, right) => Number(left[xi]) - Number(right[xi]));
+    }
+    return points;
+}
+
+function numericExtent(rows: readonly IRow[], key: string): number[] {
+    const values: number[] = [];
+    for (const row of rows) {
+        const n = Number(row[key]);
+        if (Number.isFinite(n)) {
+            values.push(Math.max(0, n));
+        }
+    }
+    return values;
+}
+
+function scaleToRange(extent: number[], value: number, minOut: number, maxOut: number, sqrt: boolean): number {
+    if (extent.length === 0) {
+        return (minOut + maxOut) / 2;
+    }
+    const lo = Math.min(...extent);
+    const hi = Math.max(...extent);
+    if (lo === hi) {
+        return (minOut + maxOut) / 2;
+    }
+    const t = Math.min(1, Math.max(0, (Math.max(0, value) - lo) / (hi - lo)));
+    return minOut + (sqrt ? Math.sqrt(t) : t) * (maxOut - minOut);
+}
+
+function scatterPointData(args: {
+    rows: readonly IRow[];
+    catKey: string;
+    meaKey: string;
+    catType: 'category' | 'time' | 'value';
+    horizontal: boolean;
+    sizeKey?: string;
+    sizeExtent: number[];
+    sizePx: [number, number];
+    opacityKey?: string;
+    opacityExtent: number[];
+    shapeKey?: string;
+    shapeDomain: string[];
+    bubble: boolean;
+}): Array<{
+    value: [string | number, string | number];
+    symbolSize: number;
+    symbol?: string;
+    itemStyle: { opacity: number };
+    row: IRow;
+}> {
+    const points: Array<{
+        value: [string | number, string | number];
+        symbolSize: number;
+        symbol?: string;
+        itemStyle: { opacity: number };
+        row: IRow;
+    }> = [];
+    const defaultSize = args.bubble ? 16 : 8;
+    const defaultOpacity = args.bubble ? 0.68 : 0.92;
+    for (const row of args.rows) {
+        const y = Number(row[args.meaKey]);
+        if (!Number.isFinite(y)) {
+            continue;
+        }
+        let x: string | number;
+        if (args.catType === 'time') {
+            const ts = parseTemporal(row[args.catKey])?.getTime();
+            if (ts === undefined) {
+                continue;
+            }
+            x = ts;
+        } else {
+            const raw = row[args.catKey];
+            x = typeof raw === 'number' || typeof raw === 'string' ? raw : String(raw ?? '');
+        }
+        const symbolSize = args.sizeKey
+            ? scaleToRange(args.sizeExtent, Number(row[args.sizeKey]), args.sizePx[0], args.sizePx[1], true)
+            : defaultSize;
+        const opacity = args.opacityKey
+            ? scaleToRange(args.opacityExtent, Number(row[args.opacityKey]), 0.28, 0.92, false)
+            : defaultOpacity;
+        const symbol = args.shapeKey ? symbolOf(String(row[args.shapeKey] ?? ''), args.shapeDomain) : undefined;
+        points.push({
+            value: args.horizontal ? [y, x] : [x, y],
+            symbolSize,
+            symbol,
+            itemStyle: { opacity },
+            row,
+        });
+    }
+    if (args.catType === 'time') {
+        const xi = args.horizontal ? 1 : 0;
+        points.sort((left, right) => Number(left.value[xi]) - Number(right.value[xi]));
     }
     return points;
 }
@@ -223,6 +369,35 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
         }
         const catKey = fieldKey(category, false);
         const meaKey = fieldKey(measure, args.defaultAggregated);
+        const sizeKey = args.size?.fid ? fieldKey(args.size, args.defaultAggregated && args.size.analyticType === 'measure') : undefined;
+        const opacityKey = args.opacity?.fid ? fieldKey(args.opacity, args.defaultAggregated && args.opacity.analyticType === 'measure') : undefined;
+        const pieTextKey = args.text?.fid ? fieldKey(args.text, false) : undefined;
+        const sizeExtent = sizeKey ? numericExtent(args.dataSource, sizeKey) : [];
+        const opacityExtent = opacityKey ? numericExtent(args.dataSource, opacityKey) : [];
+        const names = uniqueValues(args.dataSource, catKey);
+        const pieData = names.map((name) => {
+            const row = lookupRow(args.dataSource, category, catKey, name);
+            const value = row ? Number(row[meaKey]) : 0;
+            return {
+                name,
+                value: Number.isFinite(value) ? value : 0,
+                itemStyle: opacityKey && row ? { opacity: scaleToRange(opacityExtent, Number(row[opacityKey]), 0.28, 0.95, false) } : undefined,
+                label:
+                    sizeKey && row
+                        ? { fontSize: Math.round(scaleToRange(sizeExtent, Number(row[sizeKey]), 10, 18, false)) }
+                        : undefined,
+                row,
+            };
+        });
+        const pieTooltipFields = uniqueFields([
+            category,
+            measure,
+            args.size,
+            args.opacity,
+            args.text,
+            ...(args.details ?? []),
+            ...(chrome.tooltip === 'all' ? args.extraTooltipFields ?? [] : []),
+        ]);
         return {
             color: palette,
             backgroundColor: 'transparent',
@@ -232,7 +407,29 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
                 top: 0,
                 textStyle: { color: textColor, fontSize: 12, fontWeight: 600 },
             },
-            tooltip: { trigger: 'item' },
+            tooltip: {
+                trigger: 'item',
+                formatter: (params: unknown) => {
+                    const item = (Array.isArray(params) ? params[0] : params) as {
+                        name?: string;
+                        marker?: string;
+                        seriesName?: string;
+                        value?: unknown;
+                        data?: { row?: IRow };
+                    };
+                    const row = item.data?.row ?? lookupRow(args.dataSource, category, catKey, item.name);
+                    const lines = [`<div style="font-weight:600;margin-bottom:4px">${item.name ?? ''}</div>`];
+                    for (const field of pieTooltipFields) {
+                        const key = fieldKey(field, args.defaultAggregated && field.analyticType === 'measure');
+                        const value = row?.[key] ?? (field.fid === measure.fid ? item.value : undefined);
+                        if (value === undefined) {
+                            continue;
+                        }
+                        lines.push(`<div>${item.marker ?? ''} ${fieldTitle(field, args.defaultAggregated && field.analyticType === 'measure')}: <b>${String(value)}</b></div>`);
+                    }
+                    return lines.join('');
+                },
+            },
             legend: verticalLegend(textColor, true),
             series: [
                 {
@@ -242,15 +439,20 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
                     radius: chrome.donut && !chrome.rose ? ['42%', '68%'] : ['0%', '68%'],
                     itemStyle: { borderRadius: 4, borderColor: dark ? '#1a1f29' : '#fff', borderWidth: 1 },
                     label: {
-                        show: chrome.showLabels,
+                        show: chrome.showLabels || Boolean(sizeKey) || Boolean(pieTextKey),
                         color: textColor,
-                        formatter: chrome.labelFormat === 'percent' ? '{d}%' : '{c}',
+                        formatter: pieTextKey
+                            ? (params) => {
+                                  const value = (params as { data?: { row?: IRow } }).data?.row?.[pieTextKey];
+                                  return value === undefined || value === null ? '' : String(value);
+                              }
+                            : chrome.labelFormat === 'percent'
+                              ? '{d}%'
+                              : '{c}',
                     },
-                    encode: { itemName: catKey, value: meaKey },
-                    datasetIndex: 0,
-                },
+                    data: pieData,
+                } as SeriesOption,
             ],
-            dataset: { source: args.dataSource as object[] },
         };
     }
 
@@ -264,17 +466,41 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
     }
 
     const catKey = fieldKey(categoryField, false);
-    const tooltipFields = chrome.tooltip === 'all' && args.extraTooltipFields?.length ? args.extraTooltipFields : [categoryField, ...valueFields, overlayField, args.color].filter(Boolean) as IViewField[];
+    const sizeKey = args.size?.fid ? fieldKey(args.size, args.defaultAggregated && args.size.analyticType === 'measure') : undefined;
+    const opacityKey = args.opacity?.fid ? fieldKey(args.opacity, args.defaultAggregated && args.opacity.analyticType === 'measure') : undefined;
+    const shapeKey = args.shape?.fid ? fieldKey(args.shape, false) : undefined;
+    const textKey = args.text?.fid ? fieldKey(args.text, false) : undefined;
+    const sizeExtent = sizeKey ? numericExtent(args.dataSource, sizeKey) : [];
+    const opacityExtent = opacityKey ? numericExtent(args.dataSource, opacityKey) : [];
+    const shapeDomain = shapeKey ? uniqueValues(args.dataSource, shapeKey) : [];
+    const tooltipFields =
+        chrome.tooltip === 'all' && args.extraTooltipFields?.length
+            ? args.extraTooltipFields
+            : uniqueFields([
+                  categoryField,
+                  ...valueFields,
+                  overlayField,
+                  args.color,
+                  args.size,
+                  args.opacity,
+                  args.shape,
+                  args.text,
+                  ...(args.details ?? []),
+              ]);
 
     const stacked = args.stack === 'stack' || args.stack === 'normalize' || args.stack === 'center' || args.stack === 'zero';
     const series: SeriesOption[] = [];
-    const measuresForSeries = overlayField ? [primaryMeasure] : valueFields;
+    const seriesMeasures = overlayField
+        ? [primaryMeasure]
+        : valueFields.filter((field) => field.fid !== categoryField.fid);
+    const measuresForSeries = seriesMeasures.length > 0 ? seriesMeasures : [primaryMeasure];
     const colorKey = args.color?.fid ? fieldKey(args.color, false) : undefined;
     const colorGroups = colorKey ? uniqueValues(args.dataSource, colorKey) : [''];
     const categories = uniqueValues(args.dataSource, catKey);
     const type = kind === 'scatter' ? 'scatter' : kind;
     const isArea = geom === 'area';
     const showTrail = geom === 'trail';
+    const isBubble = geom === 'circle' || Boolean(args.size?.fid && type === 'scatter');
     const groupedBar = type === 'bar' && Boolean(colorKey) && !stacked;
     const bandAxis = type === 'bar' && Boolean(colorKey);
     const timeGrain = resolveTimeGrain(categoryField);
@@ -294,7 +520,14 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
     }
     const locale = args.locale ?? 'en-US';
     const horizontal = chrome.horizontal && type === 'bar';
-    const shape = lineShapeProps(chrome.lineShape);
+    const lineShape = lineShapeProps(chrome.lineShape);
+    const needsPacked = Boolean(
+        opacityKey ||
+            textKey ||
+            shapeKey ||
+            (args.details && args.details.length > 0) ||
+            (sizeKey && (type === 'line' || showTrail || type === 'bar' || type === 'scatter'))
+    );
 
     measuresForSeries.forEach((measure, measureIndex) => {
         const meaKey = fieldKey(measure, args.defaultAggregated);
@@ -305,7 +538,7 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
             const color = palette[(measureIndex * colorGroups.length + groupIndex) % palette.length] ?? primary;
             const name = colorKey ? group || '—' : fieldTitle(measure, args.defaultAggregated);
             const aligned =
-                bandAxis || (needsExplicitPoints && catType === 'category')
+                type !== 'scatter' && (bandAxis || (type === 'bar' && needsPacked) || (needsExplicitPoints && catType === 'category'))
                     ? categories.map((cat, index) => {
                           const raw = valueAt(args.dataSource, catKey, cat, meaKey, colorKey, group);
                           if (args.stack !== 'normalize') {
@@ -316,30 +549,75 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
                       })
                     : undefined;
             const filtered = colorKey ? args.dataSource.filter((row) => String(row[colorKey] ?? '') === group) : args.dataSource;
-            const pairData = aligned === undefined && needsExplicitPoints ? seriesPairs(filtered, catKey, meaKey, catType, horizontal) : undefined;
+            const groupSize = sizeKey ? median(filtered.map((row) => Number(row[sizeKey])).filter((value) => Number.isFinite(value))) : undefined;
+            const packedPoints =
+                type === 'scatter' || ((type === 'line' || isArea || showTrail) && needsPacked)
+                    ? scatterPointData({
+                          rows: filtered,
+                          catKey,
+                          meaKey,
+                          catType,
+                          horizontal,
+                          sizeKey,
+                          sizeExtent,
+                          sizePx: type === 'scatter' ? (isBubble ? [10, 52] : [8, 8]) : [4, 18],
+                          opacityKey,
+                          opacityExtent,
+                          shapeKey: type === 'scatter' ? shapeKey : undefined,
+                          shapeDomain,
+                          bubble: isBubble && type === 'scatter',
+                      })
+                    : undefined;
+            const packedBars =
+                type === 'bar' && aligned && needsPacked
+                    ? aligned.map((value, index) => {
+                          const row = lookupRow(args.dataSource, categoryField, catKey, categories[index], colorKey, group);
+                          return {
+                              value,
+                              itemStyle: opacityKey && row ? { opacity: scaleToRange(opacityExtent, Number(row[opacityKey]), 0.28, 0.95, false) } : undefined,
+                              row,
+                          };
+                      })
+                    : undefined;
+            const pairData = aligned === undefined && packedPoints === undefined && needsExplicitPoints ? seriesPairs(filtered, catKey, meaKey, catType, horizontal) : undefined;
+            const packed = packedPoints ?? packedBars;
             series.push({
                 type,
                 name,
-                data: aligned ?? pairData ?? (colorKey ? filtered.map((row) => (horizontal ? [row[meaKey], row[catKey]] : [row[catKey], row[meaKey]])) : undefined),
-                encode: aligned || pairData || colorKey ? undefined : horizontal ? { x: meaKey, y: catKey } : { x: catKey, y: meaKey },
-                datasetIndex: aligned || pairData || colorKey ? undefined : 0,
+                data: packed ?? aligned ?? pairData ?? (colorKey ? filtered.map((row) => (horizontal ? [row[meaKey], row[catKey]] : [row[catKey], row[meaKey]])) : undefined),
+                encode: aligned || pairData || packed || colorKey ? undefined : horizontal ? { x: meaKey, y: catKey } : { x: catKey, y: meaKey },
+                datasetIndex: aligned || pairData || packed || colorKey ? undefined : 0,
                 showSymbol: showTrail || type === 'scatter',
-                symbolSize: type === 'scatter' ? 8 : 5,
-                itemStyle: { color },
-                lineStyle: type === 'line' ? { width: 2, color } : undefined,
-                areaStyle: isArea ? { opacity: 0.18, color } : undefined,
-                ...(type === 'line' || isArea ? shape : {}),
+                symbol: type === 'scatter' && !shapeKey ? 'circle' : showTrail ? 'circle' : undefined,
+                symbolSize: type === 'scatter' || showTrail || (type === 'line' && sizeKey) ? undefined : 5,
+                itemStyle: { color, opacity: type === 'scatter' && isBubble && !opacityKey ? 0.68 : undefined },
+                lineStyle:
+                    type === 'line' || isArea
+                        ? {
+                              width: sizeKey && groupSize !== undefined ? scaleToRange(sizeExtent, groupSize, 1.5, 7, false) : 2,
+                              color,
+                          }
+                        : undefined,
+                areaStyle: isArea ? { opacity: opacityKey ? undefined : 0.18, color } : undefined,
+                ...(type === 'line' || isArea ? lineShape : {}),
                 stack: stacked && (type === 'bar' || isArea) && !overlayField ? 'total' : undefined,
                 barGap: groupedBar ? '30%' : undefined,
                 barCategoryGap: type === 'bar' ? '32%' : undefined,
-                label: chrome.showLabels
-                    ? {
-                          show: true,
-                          position: stacked && type === 'bar' ? 'inside' : horizontal ? 'right' : 'top',
-                          color: stacked && type === 'bar' ? '#fff' : textColor,
-                          fontSize: 11,
-                      }
-                    : undefined,
+                label:
+                    chrome.showLabels || textKey
+                        ? {
+                              show: true,
+                              position: stacked && type === 'bar' ? 'inside' : horizontal ? 'right' : 'top',
+                              color: stacked && type === 'bar' ? '#fff' : textColor,
+                              fontSize: 11,
+                              formatter: textKey
+                                  ? (params: { data?: { row?: IRow } }) => {
+                                        const value = params.data?.row?.[textKey];
+                                        return value === undefined || value === null ? '' : String(value);
+                                    }
+                                  : undefined,
+                          }
+                        : undefined,
                 emphasis: { focus: 'series' },
                 markLine:
                     chrome.reference !== 'none' && measure === primaryMeasure && groupIndex === 0
@@ -374,7 +652,7 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
                 color: OVERLAY_COLOR,
                 type: geom === 'line' || geom === 'area' ? 'dashed' : 'solid',
             },
-            ...shape,
+            ...lineShape,
             symbol: 'circle',
             symbolSize: 6,
             z: 3,
@@ -497,11 +775,30 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
             textStyle: { color: textColor },
             formatter: (params: unknown) => {
                 const items = Array.isArray(params) ? params : [params];
-                const first = items[0] as { data?: IRow; name?: string; axisValue?: unknown; axisValueLabel?: string; marker?: string; seriesName?: string; value?: IRow };
-                const row = (first?.data && typeof first.data === 'object' && !Array.isArray(first.data) ? first.data : first?.value) as IRow | undefined;
+                const first = items[0] as {
+                    data?: IRow | { row?: IRow; value?: unknown };
+                    name?: string;
+                    axisValue?: unknown;
+                    axisValueLabel?: string;
+                    marker?: string;
+                    seriesName?: string;
+                    value?: IRow | unknown[];
+                };
+                const packed = first?.data && typeof first.data === 'object' && !Array.isArray(first.data) && 'row' in first.data ? first.data.row : undefined;
                 const rawHead = first?.axisValue ?? first?.name ?? first?.axisValueLabel ?? '';
+                const row =
+                    packed ??
+                    lookupRow(
+                        args.dataSource,
+                        categoryField,
+                        catKey,
+                        first?.axisValue ?? first?.name,
+                        colorKey,
+                        colorKey ? first?.seriesName : undefined
+                    );
                 const head = temporalCategory ? formatTemporalLabel(rawHead, categoryField, locale) : String(first?.axisValueLabel ?? first?.name ?? '');
                 const lines = [`<div style="font-weight:600;margin-bottom:4px">${head}</div>`];
+                const shown = new Set<string>([catKey]);
                 if (chrome.tooltip === 'all' && row) {
                     for (const field of extraKeys) {
                         const value = row[field.key];
@@ -510,16 +807,36 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
                     }
                     return lines.join('');
                 }
-                for (const item of items as Array<{ marker?: string; seriesName?: string; value?: unknown; data?: IRow | unknown[] }>) {
-                    const dataRow = item.data && typeof item.data === 'object' && !Array.isArray(item.data) ? item.data : undefined;
+                for (const item of items as Array<{ marker?: string; seriesName?: string; value?: unknown; data?: IRow | { row?: IRow } | unknown[] }>) {
+                    const packedRow =
+                        item.data && typeof item.data === 'object' && !Array.isArray(item.data) && 'row' in item.data ? item.data.row : undefined;
+                    const dataRow =
+                        packedRow ?? (item.data && typeof item.data === 'object' && !Array.isArray(item.data) ? (item.data as IRow) : undefined);
                     const measure = valueFields.find((field) => item.seriesName?.startsWith(fieldTitle(field, args.defaultAggregated))) ?? overlayField;
-                    const encoded = measure && dataRow ? dataRow[fieldKey(measure, args.defaultAggregated)] : undefined;
+                    const measureKey = measure ? fieldKey(measure, args.defaultAggregated) : undefined;
+                    if (measureKey) {
+                        shown.add(measureKey);
+                    }
+                    const encoded = measure && dataRow ? dataRow[measureKey ?? ''] : undefined;
                     const tupleValue = Array.isArray(item.value)
                         ? item.value[horizontal ? 0 : 1]
                         : typeof item.value === 'number'
                           ? item.value
                           : undefined;
                     lines.push(`<div>${item.marker ?? ''} ${item.seriesName}: <b>${encoded ?? tupleValue ?? ''}</b></div>`);
+                }
+                if (row) {
+                    for (const field of extraKeys) {
+                        if (shown.has(field.key)) {
+                            continue;
+                        }
+                        const value = row[field.key];
+                        if (value === undefined) {
+                            continue;
+                        }
+                        shown.add(field.key);
+                        lines.push(`<div>${field.title}: <b>${String(value)}</b></div>`);
+                    }
                 }
                 return lines.join('');
             },

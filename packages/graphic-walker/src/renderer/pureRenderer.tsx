@@ -51,6 +51,8 @@ type IPureRendererProps = {
     scales?: IChannelScales;
     overrideSize?: IVisualLayout['size'];
     disableCollapse?: boolean;
+    /** Off by default: PureRenderer is a readonly view (dashboard tiles, embeds). */
+    showToolbar?: boolean;
 };
 
 type LocalProps = {
@@ -90,6 +92,7 @@ const PureRenderer = forwardRef<IReactVegaHandler, IPureRendererProps & (LocalPr
         channelScales,
         scales,
         disableCollapse,
+        showToolbar = false,
     } = props;
     const computation = useMemo(() => {
         if (props.type === 'remote') {
@@ -204,6 +207,7 @@ const PureRenderer = forwardRef<IReactVegaHandler, IPureRendererProps & (LocalPr
                             scales={scales ?? channelScales}
                             vizThemeConfig={currentTheme}
                             disableCollapse={disableCollapse}
+                            showToolbar={showToolbar}
                         />
                     )}
                     <div ref={setPortal} />

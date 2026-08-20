@@ -33,6 +33,8 @@ interface SpecRendererProps {
     scales?: IChannelScales;
     onReportSpec?: (spec: string) => void;
     disableCollapse?: boolean;
+    /** Chart/pivot chrome toolbars. Off for dashboard PureRenderer tiles. */
+    showToolbar?: boolean;
     exportHandlerRef?: React.RefObject<{
         download: () => void;
         downloadXLSX?: () => void;
@@ -54,7 +56,7 @@ interface SpecRendererProps {
  * This is a pure component, which means it will not depend on any global state.
  */
 const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
-    { name, layout, data, draggableFieldState, visualConfig, onGeomClick, onChartResize, locale, onReportSpec, vizThemeConfig, scales, disableCollapse, exportHandlerRef, onPivotColorModeChange, onPivotPercentModeChange, onPivotRowTotalsChange, onPivotColumnTotalsChange, onPivotRepeatLabelsChange, onPivotDateFormatChange, onPivotHeaderSort, onPivotKeepPath, onChartChromeChange, onStackChange },
+    { name, layout, data, draggableFieldState, visualConfig, onGeomClick, onChartResize, locale, onReportSpec, vizThemeConfig, scales, disableCollapse, showToolbar = true, exportHandlerRef, onPivotColorModeChange, onPivotPercentModeChange, onPivotRowTotalsChange, onPivotColumnTotalsChange, onPivotRepeatLabelsChange, onPivotDateFormatChange, onPivotHeaderSort, onPivotKeepPath, onChartChromeChange, onStackChange },
     ref
 ) {
     // const { draggableFieldState, visualConfig } = vizStore;
@@ -204,6 +206,7 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                 columnTotals={resolvePivotTotals(layout, defaultAggregated).columns}
                 numberFormat={layout.format.numberFormat}
                 disableCollapse={disableCollapse}
+                showToolbar={showToolbar}
                 exportHandlerRef={exportHandlerRef}
                 colorMode={resolvePivotColorMode(layout.pivotColorMode)}
                 percentMode={resolvePivotPercentMode(layout.pivotPercentMode)}
@@ -225,7 +228,7 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
     }
 
     const isSpatial = coordSystem === 'geographic';
-    const showChartToolbar = !isPivotTable && !isSpatial;
+    const showChartToolbar = showToolbar && !isPivotTable && !isSpatial;
     const chartRenderer = layout.renderer ?? 'echarts';
     const useEcharts = !isSpatial && chartRenderer === 'echarts' && canRenderEcharts(geoms[0], coordSystem);
 
@@ -308,6 +311,10 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                     columns={columns}
                     color={color[0]}
                     theta={theta[0]}
+                    size={sizeChannel[0]}
+                    opacity={opacity[0]}
+                    shape={shape[0]}
+                    text={text[0]}
                     details={details}
                     extraTooltipFields={extraTooltipFields}
                     chrome={chrome}

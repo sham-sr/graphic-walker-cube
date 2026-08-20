@@ -266,6 +266,23 @@ export const builders: Record<IAutoVizChartType, (f: IFieldFeatures, base: IChar
         });
     },
 
+    bubble: (f, base) => {
+        const [xMea, yMea, sizeMea, opacityMea] = f.measures;
+        const [colorDim, ...restDims] = f.dimensions;
+        return composeChart(base, {
+            geom: 'circle',
+            defaultAggregated: f.nDim > 0,
+            channels: {
+                columns: [asMeasure(xMea)],
+                rows: [asMeasure(yMea)],
+                size: sizeMea ? [asMeasure(sizeMea)] : [],
+                opacity: opacityMea ? [asMeasure(opacityMea)] : [],
+                color: colorDim ? [cloneField(colorDim)] : [],
+                details: restDims.map(cloneField),
+            },
+        });
+    },
+
     circle_view: (f, base) => {
         const [xDim, ...facetDims] = f.dimensions;
         return composeChart(base, {

@@ -9,7 +9,8 @@ import { collectVisibleLeaves } from './treeWalk';
 import { createPivotPathKey } from './pathKey';
 import { VirtualizedPivotView } from './virtualizedView';
 import type { PivotColorMode, PivotDateFormat, PivotPercentMode, PivotSummaryLabels } from './display';
-import { PIVOT_SCROLLPORT_CLASS, PIVOT_TABLE_CLASS } from './scrollport';
+import { PIVOT_TABLE_CLASS } from './scrollport';
+import { PivotScrollViewport } from './scrollArea';
 
 /** Below this visible leaf count the classic HTML table is cheaper than a virtualizer. */
 const PIVOT_TABLE_VIRTUALIZE_AFTER = 64;
@@ -125,7 +126,7 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
     }
 
     return (
-        <div className={PIVOT_SCROLLPORT_CLASS} data-testid="pivot-table-view">
+        <PivotScrollViewport>
             <table className={PIVOT_TABLE_CLASS}>
                 <TopTree
                     data={model.topTree}
@@ -161,6 +162,6 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                     onKeepPath={onKeepPath}
                 />
             </table>
-        </div>
+        </PivotScrollViewport>
     );
 };

@@ -25,7 +25,7 @@ function checkExpressiveness(rule: IAutoVizRule, f: IFieldFeatures): IAutoVizDis
         return 'too_many_dimensions';
     }
     if (f.nMea < rule.mea[0]) {
-        return rule.mea[0] >= 2 ? 'need_two_measures' : 'need_measure';
+        return rule.mea[0] >= 3 ? 'need_three_measures' : rule.mea[0] >= 2 ? 'need_two_measures' : 'need_measure';
     }
     if (f.nMea > rule.mea[1]) {
         return rule.mea[1] === 1 ? 'need_single_measure' : 'too_many_measures';
