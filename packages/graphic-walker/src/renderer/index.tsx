@@ -35,6 +35,7 @@ import { exportSpreadsheet } from '../services/spreadsheetExport';
 import { layoutEntriesFromChrome } from '../vis/spec/chartChrome';
 import { encodeFid } from '../vis/spec/encode';
 import { resolvePivotTotals, showTableSummaryFromTotals } from '../components/pivotTable/display';
+import type { KVTuple } from '../models/utils';
 
 interface RendererProps {
     vizThemeConfig: IThemeKey | GWGlobalConfig;
@@ -335,7 +336,7 @@ const Renderer = forwardRef<IReactVegaHandler, RendererProps>(function (props, r
                         if (entries.length === 0) {
                             return;
                         }
-                        vizStore.setVisualLayout(...(entries as [keyof IVisualLayout, IVisualLayout[keyof IVisualLayout]][]));
+                        vizStore.setVisualLayout(...(entries as KVTuple<IVisualLayout>[]));
                     }}
                     onStackChange={(mode) => vizStore.setVisualLayout('stack', mode)}
                 />

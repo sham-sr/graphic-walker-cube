@@ -25,3 +25,7 @@ internal_docs
 # Local agent and browser automation artifacts
 /output/
 /.playwright-cli/
+
+# Nexus credentials (npm/pypi publish)
+scripts/.env
+

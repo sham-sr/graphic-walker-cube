@@ -531,10 +531,10 @@ export const CubeTheme = {
             continuous: { range: ['#1e3a8a', '#93c5fd'] },
         },
     },
-} as const;
+} as GWGlobalConfig;
 
 export const builtInThemes: { [themeKey: string]: { light: VegaGlobalConfig; dark: VegaGlobalConfig } } = {
-    cube: CubeTheme as unknown as GWGlobalConfig,
+    cube: CubeTheme,
     vega: VegaTheme,
     g2: AntVTheme,
     streamlit: StreamlitTheme as unknown as GWGlobalConfig,

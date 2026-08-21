@@ -28,7 +28,7 @@ function HostApp(props: HostAppProps) {
             hideCreateDataset
             hideDatasetToolbar
             appearance={props.appearance}
-            preferredDatasetId={props.preferredDatasetId}
+            {...{ preferredDatasetId: props.preferredDatasetId }}
         >
             {(slot) => {
                 props.flushSpecsRef.current = slot.syncSpecs;
@@ -96,7 +96,7 @@ export async function createGraphicWalkerHost(
     const flushSpecsRef = { current: (): void | Promise<void> => {} };
     const tileViews = new Map<HTMLElement, { datasetId: string; visId: string; root: Root }>();
 
-    const renderTile = (target: HTMLElement, datasetId: string, visId: string, tileRoot: Root) => {
+    const renderTile = (_target: HTMLElement, datasetId: string, visId: string, tileRoot: Root) => {
         const parsed = findChartSpec(registry, datasetId, visId);
         if (!parsed) {
             tileRoot.render(null);
