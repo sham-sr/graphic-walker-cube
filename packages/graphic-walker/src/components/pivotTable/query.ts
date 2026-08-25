@@ -252,7 +252,7 @@ export async function queryPivotTable(
         collapsedPaths.map(createPivotPathKey),
         totals,
         getPivotSort(input.rows, input.columns, input.defaultAggregated),
-        toRollupMeasures(viewMeasures, input.defaultAggregated)
+        toRollupMeasures(viewMeasures, input.defaultAggregated, fields)
     );
 
     return {

@@ -19,6 +19,7 @@ import type { VizSpecStore } from '../store/visualSpecStore';
 import { getFilterMeaAggKey, getMeaAggKey, getSort } from '.';
 import { MEA_KEY_ID, MEA_VAL_ID } from '../constants';
 import { parseChart } from '../models/visSpecHistory';
+import { exprComponentAggregates } from '../lib/exprRollup';
 import { replaceFid, walkFid } from '../lib/sql';
 import { replaceAggForFold } from '../lib/op/fold';
 import { viewEncodingKeys } from '@/models/visSpec';
@@ -237,6 +238,7 @@ export const toWorkflow = (
                     measures: deduper(
                         viewMeasures
                             .concat(aggergatedFilter)
+                            .filter((f) => f.aggName !== 'expr')
                             .map((f) => ({
                                 field: f.fid,
                                 agg: f.aggName as any,
@@ -248,6 +250,12 @@ export const toWorkflow = (
                                     agg: 'expr',
                                     asFieldKey: f.key,
                                 }))
+                            )
+                            .concat(
+                                aggergatedComputed.flatMap((f) => {
+                                    const sql = f.expression.params[0]?.value;
+                                    return typeof sql === 'string' ? exprComponentAggregates(sql) : [];
+                                })
                             ),
                         (x) => x.asFieldKey
                     ),

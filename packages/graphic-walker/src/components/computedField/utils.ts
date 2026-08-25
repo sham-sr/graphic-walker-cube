@@ -27,12 +27,99 @@ export function expressionSql(expression?: IExpression): string | undefined {
 
 type FieldRef = Pick<IMutField, 'fid' | 'name' | 'semanticType' | 'analyticType'>;
 
+export type SqlSyntaxCode = 'missing_call_paren' | 'unfinished' | 'generic';
+
 export type ComputedFieldStatus =
     | { kind: 'empty' }
     | { kind: 'select' }
-    | { kind: 'syntax'; detail: string }
+    | { kind: 'syntax'; code: SqlSyntaxCode; column?: number }
     | { kind: 'unknown_field'; name: string }
     | { kind: 'ok'; semanticType: ISemanticType; analyticType: IAnalyticType; aggregated: boolean };
+
+type ShadowSelectionRoot = ShadowRoot & { getSelection: () => Selection | null };
+
+function isShadowSelectionRoot(root: Node): root is ShadowSelectionRoot {
+    return typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot && typeof (root as ShadowRoot & { getSelection?: unknown }).getSelection === 'function';
+}
+
+export function getSelectionFor(node: Node): Selection | null {
+    const root = node.getRootNode();
+    if (isShadowSelectionRoot(root)) {
+        return root.getSelection();
+    }
+    return typeof window !== 'undefined' ? window.getSelection() : null;
+}
+
+export function insertAtOffset(source: string, text: string, offset: number): { next: string; caret: number } {
+    const clamped = Math.max(0, Math.min(offset, source.length));
+    return { next: `${source.slice(0, clamped)}${text}${source.slice(clamped)}`, caret: clamped + text.length };
+}
+
+export function classifySqlSyntaxError(error: unknown): { code: SqlSyntaxCode; column?: number } {
+    const raw = parseErrorMessage(error);
+    const colMatch = raw.match(/\bcol(?:umn)?\s+(\d+)/i);
+    const column = colMatch ? Number(colMatch[1]) : undefined;
+    const unexpectedMatch = raw.match(/Unexpected\s+(\S+)\s+token/i);
+    const unexpected = unexpectedMatch?.[1]?.toLowerCase() ?? '';
+    const expectsParen = /lparen|"\("/i.test(raw);
+    if ((unexpected === 'quoted_word' || unexpected === 'string') && expectsParen) {
+        return { code: 'missing_call_paren', column };
+    }
+    if (/unexpected end|end of input|\beof\b/i.test(raw) || unexpected === 'eof') {
+        return { code: 'unfinished', column };
+    }
+    return { code: 'generic', column };
+}
+
+export function getCaretOffset(el: HTMLElement): number | null {
+    const selection = getSelectionFor(el);
+    if (!selection || selection.rangeCount === 0) {
+        return null;
+    }
+    const range = selection.getRangeAt(0);
+    if (!el.contains(range.startContainer) && range.startContainer !== el) {
+        return null;
+    }
+    const pre = range.cloneRange();
+    pre.selectNodeContents(el);
+    pre.setEnd(range.startContainer, range.startOffset);
+    return pre.toString().length;
+}
+
+export function setCaretOffset(el: HTMLElement, offset: number): void {
+    const selection = getSelectionFor(el) ?? (typeof window !== 'undefined' ? window.getSelection() : null);
+    if (!selection) {
+        return;
+    }
+    const total = el.textContent?.length ?? 0;
+    const clamped = Math.max(0, Math.min(offset, total));
+    const range = document.createRange();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let remaining = clamped;
+    let node = walker.nextNode();
+    let last: Node | null = null;
+    while (node) {
+        last = node;
+        const len = node.textContent?.length ?? 0;
+        if (remaining <= len) {
+            range.setStart(node, remaining);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            return;
+        }
+        remaining -= len;
+        node = walker.nextNode();
+    }
+    if (last) {
+        range.setStart(last, last.textContent?.length ?? 0);
+    } else {
+        range.selectNodeContents(el);
+    }
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
 
 function collectRefNames(node: unknown, names: Set<string>): void {
     if (node === null || typeof node !== 'object') {
@@ -76,25 +163,17 @@ export function inferComputedFieldStatus(sql: string, fields: readonly FieldRef[
         const analyticType: IAnalyticType = semanticType === 'quantitative' ? 'measure' : 'dimension';
         return { kind: 'ok', semanticType, analyticType, aggregated };
     } catch (error) {
-        return { kind: 'syntax', detail: parseErrorMessage(error) };
+        return { kind: 'syntax', ...classifySqlSyntaxError(error) };
     }
 }
 
-export function insertTextAtCaret(el: HTMLElement, text: string): string {
+export function insertTextAtCaret(el: HTMLElement, text: string, fallbackOffset?: number): string {
+    const fromSelection = getCaretOffset(el);
+    const current = el.textContent ?? '';
+    const offset = fromSelection ?? fallbackOffset ?? current.length;
+    const { next, caret } = insertAtOffset(current, text, offset);
     el.focus();
-    const selection = typeof window !== 'undefined' ? window.getSelection() : null;
-    if (!selection || selection.rangeCount === 0 || !el.contains(selection.anchorNode)) {
-        const next = `${el.textContent ?? ''}${text}`;
-        el.textContent = next;
-        return next;
-    }
-    const range = selection.getRangeAt(0);
-    range.deleteContents();
-    const node = document.createTextNode(text);
-    range.insertNode(node);
-    range.setStartAfter(node);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    return el.textContent ?? '';
+    el.textContent = next;
+    setCaretOffset(el, caret);
+    return next;
 }

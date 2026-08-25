@@ -1,5 +1,7 @@
-import type { IAggregator, IRow, IViewField } from '../../interfaces';
+import type { IAggregator, IMutField, IRow, IViewField } from '../../interfaces';
 import type { INestNode, IPivotCube, IPivotTablePath, PivotTableValue } from './interface';
+import { evalExprWithComponents, exprComponentAggKey, planExprRollup, type AdditiveAgg } from '../../lib/exprRollup';
+import { replaceFid } from '../../lib/sql';
 import { createCubeCellKey } from './pathKey';
 import { collectVisibleLeaves } from './treeWalk';
 
@@ -12,6 +14,7 @@ export interface IPivotRollupMeasure {
     field: string;
     agg: IAggregator;
     asFieldKey: string;
+    exprSql?: string;
 }
 
 /** Cuboid rollup: count of groups becomes a sum of already-counted leaves. */
@@ -20,15 +23,61 @@ export function cuboidRollupAggregator(agg: IAggregator | undefined): IAggregato
     return agg ?? 'sum';
 }
 
-export function toRollupMeasures(measures: readonly IViewField[], defaultAggregated: boolean): IPivotRollupMeasure[] {
-    return measures.map((measure) => {
-        const asFieldKey = defaultAggregated ? meaAggKey(measure.fid, measure.aggName) : measure.fid;
-        return {
+export function toRollupMeasures(
+    measures: readonly IViewField[],
+    defaultAggregated: boolean,
+    catalog: readonly IViewField[] = measures
+): IPivotRollupMeasure[] {
+    if (!defaultAggregated) {
+        return measures.map((measure) => ({
+            field: measure.fid,
+            agg: (measure.aggName as IAggregator) ?? 'sum',
+            asFieldKey: measure.fid,
+        }));
+    }
+    const result: IPivotRollupMeasure[] = [];
+    const seen = new Set<string>();
+    const push = (item: IPivotRollupMeasure) => {
+        if (seen.has(item.asFieldKey)) {
+            return;
+        }
+        seen.add(item.asFieldKey);
+        result.push(item);
+    };
+    for (const measure of measures) {
+        if (measure.aggName === 'expr') {
+            const sql = measure.expression?.params.find((param) => param.type === 'sql' && typeof param.value === 'string')?.value;
+            let processed: string | undefined;
+            if (typeof sql === 'string') {
+                try {
+                    processed = replaceFid(sql, catalog as IMutField[]);
+                } catch {
+                    processed = undefined;
+                }
+            }
+            const plan = processed ? planExprRollup(processed) : { kind: 'none' as const };
+            if (plan.kind !== 'recompute') {
+                continue;
+            }
+            for (const component of plan.components) {
+                const asFieldKey = exprComponentAggKey(component.field, component.agg);
+                push({
+                    field: asFieldKey,
+                    agg: cuboidRollupAggregator(component.agg),
+                    asFieldKey,
+                });
+            }
+            push({ field: measure.fid, agg: 'expr', asFieldKey: measure.fid, exprSql: plan.sql });
+            continue;
+        }
+        const asFieldKey = meaAggKey(measure.fid, measure.aggName);
+        push({
             field: asFieldKey,
-            agg: defaultAggregated ? cuboidRollupAggregator(measure.aggName as IAggregator | undefined) : (measure.aggName as IAggregator) ?? 'sum',
+            agg: cuboidRollupAggregator(measure.aggName as IAggregator | undefined),
             asFieldKey,
-        };
-    });
+        });
+    }
+    return result;
 }
 
 export function inferRollupMeasures(rows: readonly IRow[], dimensionIds: readonly string[]): IPivotRollupMeasure[] {
@@ -96,8 +145,23 @@ function aggregateCuboid(leafRows: readonly IRow[], groupBy: readonly string[], 
             aggRow[key] = subGroup[0][key];
         }
         for (const measure of measures) {
+            if (measure.agg === 'expr') {
+                continue;
+            }
             const values = subGroup.map((row) => row[measure.field]);
             aggRow[measure.asFieldKey] = reduceMeasure(values, measure.agg);
+        }
+        for (const measure of measures) {
+            if (measure.agg !== 'expr' || !measure.exprSql) {
+                continue;
+            }
+            const value = evalExprWithComponents(measure.exprSql, (agg: AdditiveAgg, field) => {
+                const n = Number(aggRow[exprComponentAggKey(field, agg)]);
+                return Number.isFinite(n) ? n : undefined;
+            });
+            if (value != null) {
+                aggRow[measure.asFieldKey] = value;
+            }
         }
         result.push(aggRow);
     }
@@ -137,6 +201,7 @@ function reduceMeasure(values: unknown[], agg: IAggregator): number {
         case 'distinctCount':
             return new Set(values).size;
         case 'sum':
+            return nums.reduce((sum, value) => sum + value, 0);
         default:
             return nums.reduce((sum, value) => sum + value, 0);
     }

@@ -10,7 +10,15 @@ import { unstable_batchedUpdates } from 'react-dom';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { inferComputedFieldStatus, insertTextAtCaret, nextComputedFieldName, quoteFieldName, type ComputedFieldStatus } from './utils';
+import {
+    getCaretOffset,
+    inferComputedFieldStatus,
+    insertAtOffset,
+    insertTextAtCaret,
+    nextComputedFieldName,
+    quoteFieldName,
+    type ComputedFieldStatus,
+} from './utils';
 
 const INNER_FIELD_IDS = new Set([COUNT_FIELD_ID, MEA_KEY_ID, MEA_VAL_ID, PAINT_FIELD_ID]);
 
@@ -30,6 +38,7 @@ const ComputedFieldDialog: React.FC = observer(() => {
     const [error, setError] = useState<string>('');
     const [fieldQuery, setFieldQuery] = useState('');
     const ref = useRef<HTMLDivElement>(null);
+    const caretOffsetRef = useRef(0);
 
     const insertableFields = useMemo(
         () => vizStore.allFields.filter((field) => !INNER_FIELD_IDS.has(field.fid)),
@@ -81,6 +90,7 @@ const ComputedFieldDialog: React.FC = observer(() => {
                 if (ref.current) {
                     ref.current.textContent = computedFieldSeedSql;
                 }
+                caretOffsetRef.current = computedFieldSeedSql.length;
             } else {
                 const f = vizStore.allFields.find((x) => x.fid === editingComputedFieldFid);
                 if (!f || !f.computed || f.expression?.op !== 'expr') {
@@ -101,9 +111,39 @@ const ComputedFieldDialog: React.FC = observer(() => {
                 if (ref.current) {
                     ref.current.textContent = sqlParam.value;
                 }
+                caretOffsetRef.current = sqlParam.value.length;
             }
         }
     }, [editingComputedFieldFid, computedFieldSeedSql, vizStore, t]);
+
+    const rememberCaret = useCallback(() => {
+        const el = ref.current;
+        if (!el) {
+            return;
+        }
+        const offset = getCaretOffset(el);
+        if (offset != null) {
+            caretOffsetRef.current = offset;
+        }
+    }, []);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el || !isNotEmpty(editingComputedFieldFid)) {
+            return;
+        }
+        const onSelectionChange = () => rememberCaret();
+        el.addEventListener('keyup', rememberCaret);
+        el.addEventListener('mouseup', rememberCaret);
+        el.addEventListener('input', rememberCaret);
+        document.addEventListener('selectionchange', onSelectionChange);
+        return () => {
+            el.removeEventListener('keyup', rememberCaret);
+            el.removeEventListener('mouseup', rememberCaret);
+            el.removeEventListener('input', rememberCaret);
+            document.removeEventListener('selectionchange', onSelectionChange);
+        };
+    }, [editingComputedFieldFid, rememberCaret]);
 
     const close = useCallback(() => {
         vizStore.setComputedFieldFid();
@@ -113,26 +153,32 @@ const ComputedFieldDialog: React.FC = observer(() => {
         if (!sql.trim() || !name.trim()) {
             return;
         }
+        if (status.kind !== 'ok') {
+            return;
+        }
         try {
             vizStore.upsertComputedField(editingComputedFieldFid!, name, sql);
             vizStore.setComputedFieldFid();
         } catch (e) {
             setError(parseErrorMessage(e));
         }
-    }, [editingComputedFieldFid, name, sql, vizStore]);
+    }, [editingComputedFieldFid, name, sql, status, vizStore]);
 
     const insertField = useCallback(
         (fieldName: string) => {
             const snippet = quoteFieldName(fieldName);
             const el = ref.current;
             if (!el) {
-                setSql((prev) => `${prev}${snippet}`);
+                const { next, caret } = insertAtOffset(sql, snippet, caretOffsetRef.current);
+                caretOffsetRef.current = caret;
+                setSql(next);
                 return;
             }
-            const next = insertTextAtCaret(el, snippet);
+            const next = insertTextAtCaret(el, snippet, caretOffsetRef.current);
+            caretOffsetRef.current = getCaretOffset(el) ?? next.length;
             setSql(next);
         },
-        []
+        [sql]
     );
 
     if (!isNotEmpty(editingComputedFieldFid)) return null;
@@ -171,13 +217,13 @@ const ComputedFieldDialog: React.FC = observer(() => {
                             }}
                         />
                         <label className="text-xs font-medium">{t('computed_field.sql')}</label>
-                        <div className="grid min-h-[10rem] grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_11rem]">
+                        <div className="grid min-h-[10rem] min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_11rem]">
                             <SQLField
                                 ref={ref}
                                 value={sql}
                                 onChange={setSql}
                                 placeholder={t('computed_field.sql_placeholder')}
-                                className="min-h-[10rem] font-mono text-xs"
+                                className="min-h-[10rem] min-w-0 overflow-y-auto font-mono text-xs"
                             />
                             <div className="flex min-h-[10rem] flex-col overflow-hidden rounded-md border border-input">
                                 <div className="border-b border-input px-2 py-1 text-[11px] font-medium text-muted-foreground">
@@ -213,7 +259,7 @@ const ComputedFieldDialog: React.FC = observer(() => {
                     <StatusLine status={status} error={error} />
                     <div className="flex items-center justify-end gap-2">
                         <span className="mr-auto text-[11px] text-muted-foreground">{t('computed_field.shortcut_apply')}</span>
-                        <Button disabled={!sql.trim() || !name.trim()} onClick={apply}>
+                        <Button disabled={!sql.trim() || !name.trim() || status.kind !== 'ok'} onClick={apply}>
                             {editingComputedFieldFid === '' ? t('computed_field.add') : t('computed_field.edit')}
                         </Button>
                         <Button variant="outline" onClick={close}>
@@ -236,8 +282,17 @@ function StatusLine({ status, error }: { status: ComputedFieldStatus; error: str
             return null;
         case 'select':
             return <div className="text-xs text-amber-700 dark:text-amber-500">{t('computed_field.error_select')}</div>;
-        case 'syntax':
-            return <div className="text-xs text-red-500">{status.detail}</div>;
+        case 'syntax': {
+            const key =
+                status.code === 'missing_call_paren'
+                    ? 'computed_field.error_syntax_missing_call_paren'
+                    : status.code === 'unfinished'
+                      ? 'computed_field.error_syntax_unfinished'
+                      : status.column != null
+                        ? 'computed_field.error_syntax_generic_at'
+                        : 'computed_field.error_syntax_generic';
+            return <div className="text-xs text-red-500">{t(key, { column: status.column })}</div>;
+        }
         case 'unknown_field':
             return (
                 <div className="text-xs text-amber-700 dark:text-amber-500">

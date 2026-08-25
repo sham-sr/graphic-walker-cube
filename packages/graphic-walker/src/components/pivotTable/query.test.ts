@@ -3,6 +3,7 @@ import { getComputation } from '../../computation/clientComputation';
 import { buildPivotTable } from '../../workers/buildPivotTable';
 import { MEA_KEY_ID, MEA_VAL_ID } from '../../constants';
 import { getPivotGroupByCombinations, getPivotSort, queryPivotTable, type PivotTableModelBuilder } from './query';
+import { getCubeCell } from './cube';
 import { materializeMetricMatrix } from './utils';
 
 jest.mock('../../services', () => {
@@ -140,6 +141,43 @@ describe('pivot table query orchestration', () => {
 
         expect(calls.map(groupByOf)).toEqual([]);
         expect(metricOf(result).map((row) => row[0]?.sales_sum)).toEqual([9, 30]);
+    });
+
+    test('recomputes additive expr grand totals from leaf components', async () => {
+        const yoy: IViewField = {
+            fid: 'yoy',
+            name: 'yoy',
+            semanticType: 'quantitative',
+            analyticType: 'measure',
+            aggName: 'expr',
+            computed: true,
+            expression: {
+                op: 'expr',
+                as: 'yoy',
+                params: [{ type: 'sql', value: '(sum("sales") - sum("prev")) / nullif(sum("prev"), 0)' }],
+            },
+        };
+        const prev = field('prev', 'measure', 'sum');
+        const result = await queryPivotTable(
+            {
+                computation: async () => [],
+                fields: [region, sales, prev, yoy],
+                rows: [region],
+                columns: [yoy],
+                defaultAggregated: true,
+                limit: -1,
+                showTableSummary: true,
+                collapsedPaths: [],
+                viewData: [
+                    { region: 'East', sales_sum: 210, prev_sum: 100, yoy: 1.1 },
+                    { region: 'West', sales_sum: 200, prev_sum: 100, yoy: 1.0 },
+                ],
+            },
+            buildModel
+        );
+
+        expect(getCubeCell(result.cube, [], [])?.yoy).toBeCloseTo(1.05);
+        expect(getCubeCell(result.cube, [{ key: 'region', value: 'East' }], [])?.yoy).toBeCloseTo(1.1);
     });
 
     test('propagates computation failures to the component boundary', async () => {
