@@ -47,6 +47,7 @@ import Painter from './components/painter';
 import { classNames, cn, parseErrorMessage } from './utils';
 import { VizEmbedMenu } from './components/embedMenu';
 import DataBoard from './components/dataBoard';
+import DatasetStatsDialog from './components/datasetStatsDialog';
 import SideResize from './components/side-resize';
 import { VegaliteMapper } from './lib/vl2gw';
 import { newChart } from './models/visSpecHistory';
@@ -86,6 +87,7 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
         hideAskViz,
         hideChat,
         hideProfiling,
+        datasetStatsToolbar,
     } = props;
 
     const { t, i18n } = useTranslation();
@@ -248,11 +250,13 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
                                                     experimentalFeatures={props.experimentalFeatures}
                                                     exclude={toolbar?.exclude}
                                                     extra={toolbar?.extra}
+                                                    datasetStatsToolbar={datasetStatsToolbar}
                                                 />
                                             </div>
                                             <CodeExport />
                                             <ExplainData themeKey={appliedThemeKey} />
                                             {vizStore.showDataBoard && <DataBoard hideProfiling={hideProfiling} />}
+                                            {datasetStatsToolbar && <DatasetStatsDialog hideProfiling={hideProfiling} />}
                                             <VisualConfig />
                                             <LogPanel />
                                             <BinPanel />

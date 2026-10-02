@@ -73,6 +73,7 @@ export class VizSpecStore {
     segmentKey: ISegmentKey = ISegmentKey.vis;
     showInsightBoard: boolean = false;
     showDataBoard: boolean = false;
+    showDatasetStatsBoard: boolean = false;
     // the Auto Viz dock on the right of the workspace starts expanded; the toolbar toggle collapses it
     showAutoVizPanel: boolean = true;
     vizEmbededMenu: { show: boolean; position: [number, number] } = { show: false, position: [0, 0] };
@@ -837,6 +838,9 @@ export class VizSpecStore {
     }
     setShowDataBoard(show: boolean) {
         this.showDataBoard = show;
+    }
+    setShowDatasetStatsBoard(show: boolean) {
+        this.showDatasetStatsBoard = show;
     }
     setShowAutoVizPanel(show: boolean) {
         this.showAutoVizPanel = show;

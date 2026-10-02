@@ -242,7 +242,8 @@
     "App": {
         "labels": {
             "data_interpretation": "数据解读",
-            "data_view": "查看数据"
+            "data_view": "查看数据",
+            "dataset_statistics": "数据集统计"
         },
         "segments": {
             "vis": "可视化",

@@ -242,7 +242,8 @@
     "App": {
         "labels": {
             "data_interpretation": "Interpret Data",
-            "data_view": "View Data"
+            "data_view": "View Data",
+            "dataset_statistics": "Dataset statistics"
         },
         "segments": {
             "vis": "Visualization",

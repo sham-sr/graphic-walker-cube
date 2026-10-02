@@ -77,6 +77,7 @@ interface IVisualSettings {
     exclude?: string[];
     extra?: ToolbarItemProps[];
     experimentalFeatures?: IExperimentalFeatures;
+    datasetStatsToolbar?: boolean;
 }
 
 const KanariesIcon = (props: { className?: string; style?: React.CSSProperties }) => (
@@ -91,7 +92,14 @@ const KanariesIcon = (props: { className?: string; style?: React.CSSProperties }
     />
 );
 
-const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler, extra = [], exclude = [], experimentalFeatures }) => {
+const VisualSettings: React.FC<IVisualSettings> = ({
+    rendererHandler,
+    csvHandler,
+    extra = [],
+    exclude = [],
+    experimentalFeatures,
+    datasetStatsToolbar,
+}) => {
     const vizStore = useVizStore();
     const { config, layout, canUndo, canRedo, limit, paintInfo } = vizStore;
     const { t: tGlobal } = useTranslation();
@@ -225,6 +233,13 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
                 icon: SparklesIcon,
                 checked: vizStore.showAutoVizPanel,
                 onChange: (checked: boolean) => vizStore.setShowAutoVizPanel(checked),
+            },
+            datasetStatsToolbar && {
+                key: 'dataset_stats',
+                label: tGlobal('App.labels.dataset_statistics'),
+                icon: TableSummaryIcon,
+                checked: vizStore.showDatasetStatsBoard,
+                onChange: (checked: boolean) => vizStore.setShowDatasetStatsBoard(checked),
             },
             {
                 key: 'stack_mode',
@@ -514,6 +529,7 @@ const VisualSettings: React.FC<IVisualSettings> = ({ rendererHandler, csvHandler
         pivotColumnTotals,
         experimentalFeatures,
         paintInfo,
+        datasetStatsToolbar,
     ]);
 
     return <Toolbar items={items} />;

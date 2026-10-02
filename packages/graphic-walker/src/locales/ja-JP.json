@@ -236,7 +236,8 @@
     "App": {
         "labels": {
             "data_interpretation": "データ解釈",
-            "data_view": "データ一覧"
+            "data_view": "データ一覧",
+            "dataset_statistics": "データセット統計"
         },
         "segments": {
             "vis": "可視化",

@@ -50,6 +50,7 @@ function HostApp(props: HostAppProps) {
                         hideAskViz
                         hideChat
                         hideSegmentNav
+                        datasetStatsToolbar
                         defaultTab={props.defaultTab}
                         style={{ width: '100%', height: '100%', minHeight: 0, flex: 1 }}
                     />
