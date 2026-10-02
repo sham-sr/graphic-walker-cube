@@ -397,7 +397,7 @@ function VizAppWithDuckDB(props: {
 }
 
 export function VizAppWithContext(props: IVizAppProps & IComputationProps) {
-    const { computation, onMetaChange, fieldKeyGuard, keepAlive, storeRef, defaultConfig, defaultRenderer, ...rest } = props;
+    const { computation, onMetaChange, fieldKeyGuard, keepAlive, storeRef, defaultConfig, defaultTab, defaultRenderer, ...rest } = props;
     // @TODO remove deprecated props
     const appearance = props.appearance ?? props.dark;
     const data = props.data ?? props.dataSource;
@@ -443,6 +443,7 @@ export function VizAppWithContext(props: IVizAppProps & IComputationProps) {
             keepAlive={keepAlive}
             storeRef={storeRef}
             defaultConfig={defaultConfig}
+            defaultTab={defaultTab}
             defaultRenderer={defaultRenderer}
         >
             <VizApp darkMode={darkMode} computation={safeComputation} {...rest} />

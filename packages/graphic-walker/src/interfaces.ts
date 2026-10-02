@@ -529,6 +529,11 @@ export interface IVegaChartRef {
 export interface IChartExportResult<T extends 'svg' | 'data-url' = 'svg' | 'data-url'> {
     mode: T;
     title: string;
+    /**
+     * The complete chart, with repeated Vega views composed into one image.
+     * Individual view exports remain available in `charts`.
+     */
+    combinedData?: string;
     nCols: number;
     nRows: number;
     charts: {
@@ -1033,6 +1038,8 @@ export interface IVizProps {
     hideAskViz?: boolean;
     /** Hide the VL chat segment tab and panel even if `enhanceAPI.features.vlChat` is set. */
     hideChat?: boolean;
+    /** The tab to show when GraphicWalker is first opened. Defaults to 'visualization'. */
+    defaultTab?: 'data' | 'visualization';
     geographicData?: IGeographicData & {
         key: string;
     };
