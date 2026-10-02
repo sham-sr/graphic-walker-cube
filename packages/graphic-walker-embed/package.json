@@ -1,6 +1,6 @@
 {
     "name": "@cube/graphic-walker-embed",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Framework-agnostic Graphic Walker host API for Cube Front (Vue) and other embeddings",
     "type": "module",
     "license": "Apache-2.0",
@@ -34,8 +34,8 @@
         "react-dom": ">=19.0.0"
     },
     "dependencies": {
-        "@kanaries/duckdb-computation": "0.0.1",
-        "@kanaries/graphic-walker": "0.5.2"
+        "@kanaries/duckdb-computation": "0.0.2",
+        "@kanaries/graphic-walker": "0.5.3"
     },
     "devDependencies": {
         "@types/jest": "^29.5.3",

@@ -265,9 +265,126 @@
                     "type": "string",
                     "enum": [
                         "vega-lite",
-                        "observable-plot"
+                        "observable-plot",
+                        "echarts"
                     ],
-                    "default": "vega-lite"
+                    "default": "echarts"
+                },
+                "pivotColorMode": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "heatmap",
+                        "bar"
+                    ],
+                    "description": "Pivot table cell coloring. Omitted charts use heatmap."
+                },
+                "pivotPercentMode": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "row",
+                        "column",
+                        "grand"
+                    ],
+                    "description": "Pivot table share-of-total display. Omitted charts use absolute values."
+                },
+                "pivotRowTotals": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "grand",
+                        "all"
+                    ],
+                    "description": "Row-axis pivot totals. Omitted charts inherit `showTableSummary` (`true` → `'all'`, `false` → `'off'`). `'off'` hides row totals even when the legacy flag is true."
+                },
+                "pivotColumnTotals": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "grand",
+                        "all"
+                    ],
+                    "description": "Column-axis pivot totals. Same inheritance as `pivotRowTotals`."
+                },
+                "pivotRepeatLabels": {
+                    "type": "boolean",
+                    "description": "Repeat nested group labels on every leaf (flat table for Excel pivot). Omitted charts keep merged nested headers."
+                },
+                "pivotDateFormat": {
+                    "type": "string",
+                    "enum": [
+                        "human",
+                        "technical"
+                    ],
+                    "description": "Pivot date headers: localized by grain (`human`, default) or truncated ISO (`technical`)."
+                },
+                "chartShowLabels": {
+                    "type": "boolean",
+                    "description": "Show value labels on marks."
+                },
+                "chartOverlay": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "line",
+                        "dual"
+                    ],
+                    "description": "Overlay a second measure as a line, optionally on an independent axis."
+                },
+                "chartReference": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "mean",
+                        "median"
+                    ],
+                    "description": "Rule at the mean or median of the primary measure."
+                },
+                "chartDonut": {
+                    "type": "boolean",
+                    "description": "Inner radius for pie (arc) charts."
+                },
+                "chartRose": {
+                    "type": "boolean",
+                    "description": "Nightingale / rose pie: radius encodes the measure."
+                },
+                "chartTrendline": {
+                    "type": "boolean",
+                    "description": "OLS trend line on quantitative scatter / line."
+                },
+                "chartTooltip": {
+                    "type": "string",
+                    "enum": [
+                        "encoded",
+                        "all"
+                    ],
+                    "description": "Tooltip fields: encoded channels, or every view field."
+                },
+                "chartTimeDrill": {
+                    "type": "boolean",
+                    "description": "Click a temporal mark to refine its time unit."
+                },
+                "chartLineShape": {
+                    "type": "string",
+                    "enum": [
+                        "linear",
+                        "smooth",
+                        "step"
+                    ],
+                    "description": "Line / area interpolation."
+                },
+                "chartLabelFormat": {
+                    "type": "string",
+                    "enum": [
+                        "value",
+                        "percent"
+                    ],
+                    "description": "Value-label content when labels are on."
+                },
+                "chartHorizontal": {
+                    "type": "boolean",
+                    "description": "Draw bar charts with the category on Y (ranking)."
                 }
             },
             "additionalProperties": false

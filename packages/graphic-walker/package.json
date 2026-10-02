@@ -6,7 +6,7 @@
     "dev": "npm run dev:front_end",
     "sync:datasets": "node ../../scripts/demo-datasets.mjs ./public/datasets",
     "gen-schema": "node scripts/create-json-schema.js",
-    "build": "vite build && tspc --build && yarn gen-schema",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build && tspc --build && yarn gen-schema",
     "build:app": "vite build --config vite-app.config.ts",
     "serve": "vite preview",
     "type": "tsc src/lib.ts --declaration --emitDeclarationOnly --jsx react --esModuleInterop --outDir dist",
@@ -125,7 +125,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "optionalDependencies": {
-    "@kanaries/duckdb-computation": "0.0.1"
+    "@kanaries/duckdb-computation": "0.0.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

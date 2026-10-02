@@ -19,14 +19,19 @@ export const MEA_KEY_ID = 'gw_mea_key_fid';
 export const MEA_VAL_ID = 'gw_mea_val_fid';
 export const PAINT_FIELD_ID = 'gw_paint_fid';
 
+/** Vite injects env at bundle time; loose cast keeps `tspc` happy without vite/client in the declaration build. */
+function buildEnv(): Record<string, string | undefined> {
+    return (import.meta as unknown as { env: Record<string, string | undefined> }).env;
+}
+
 const PIVOT_TABLE_DEFAULT_LIMIT_ENV = Number(
-    import.meta.env.VITE_PIVOT_TABLE_DEFAULT_LIMIT ?? import.meta.env.PIVOT_TABLE_DEFAULT_LIMIT
+    buildEnv().VITE_PIVOT_TABLE_DEFAULT_LIMIT ?? buildEnv().PIVOT_TABLE_DEFAULT_LIMIT
 );
 const PIVOT_TABLE_COLUMN_LIMIT_ENV = Number(
-    import.meta.env.VITE_PIVOT_TABLE_COLUMN_LIMIT ?? import.meta.env.PIVOT_TABLE_COLUMN_LIMIT
+    buildEnv().VITE_PIVOT_TABLE_COLUMN_LIMIT ?? buildEnv().PIVOT_TABLE_COLUMN_LIMIT
 );
 const PIVOT_TABLE_ROW_LIMIT_ENV = Number(
-    import.meta.env.VITE_PIVOT_TABLE_ROW_LIMIT ?? import.meta.env.PIVOT_TABLE_ROW_LIMIT
+    buildEnv().VITE_PIVOT_TABLE_ROW_LIMIT ?? buildEnv().PIVOT_TABLE_ROW_LIMIT
 );
 
 /** Default row limit for pivot table source data (-1 means unset) */
@@ -39,8 +44,7 @@ export const PIVOT_TABLE_COLUMN_LIMIT = PIVOT_TABLE_COLUMN_LIMIT_ENV > 0 ? PIVOT
 export const PIVOT_TABLE_ROW_LIMIT = PIVOT_TABLE_ROW_LIMIT_ENV > 0 ? PIVOT_TABLE_ROW_LIMIT_ENV : 10000;
 
 /** Enable pivot table debug logging */
-const PIVOT_TABLE_DEBUG_ENV = 
-    import.meta.env.VITE_PIVOT_TABLE_DEBUG ?? import.meta.env.PIVOT_TABLE_DEBUG;
+const PIVOT_TABLE_DEBUG_ENV = buildEnv().VITE_PIVOT_TABLE_DEBUG ?? buildEnv().PIVOT_TABLE_DEBUG;
 
 export const PIVOT_TABLE_DEBUG: boolean = 
     PIVOT_TABLE_DEBUG_ENV === 'true' || PIVOT_TABLE_DEBUG_ENV === '1';
@@ -52,8 +56,7 @@ export const PIVOT_TABLE_DEBUG: boolean =
  * 
  * Enable via: VITE_USE_DUCKDB=true in .env.local
  */
-const USE_DUCKDB_ENV = 
-    import.meta.env.VITE_USE_DUCKDB ?? import.meta.env.USE_DUCKDB;
+const USE_DUCKDB_ENV = buildEnv().VITE_USE_DUCKDB ?? buildEnv().USE_DUCKDB;
 
 export const USE_DUCKDB: boolean = 
     USE_DUCKDB_ENV === 'true' || USE_DUCKDB_ENV === '1';
@@ -64,8 +67,7 @@ export const USE_DUCKDB: boolean =
  * 
  * Enable via: VITE_DUCKDB_DEBUG=true in .env.local
  */
-const DUCKDB_DEBUG_ENV = 
-    import.meta.env.VITE_DUCKDB_DEBUG ?? import.meta.env.DUCKDB_DEBUG;
+const DUCKDB_DEBUG_ENV = buildEnv().VITE_DUCKDB_DEBUG ?? buildEnv().DUCKDB_DEBUG;
 
 export const DUCKDB_DEBUG: boolean = 
     DUCKDB_DEBUG_ENV === 'true' || DUCKDB_DEBUG_ENV === '1';

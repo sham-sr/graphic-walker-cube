@@ -17,6 +17,7 @@ interface HostAppProps {
     preferredDatasetId?: string;
     toolbarExclude: readonly string[];
     experimentalFeatures: GraphicWalkerExperimentalFeatures;
+    defaultTab: 'data' | 'visualization';
     flushSpecsRef: { current: () => void | Promise<void> };
 }
 
@@ -49,6 +50,7 @@ function HostApp(props: HostAppProps) {
                         hideAskViz
                         hideChat
                         hideSegmentNav
+                        defaultTab={props.defaultTab}
                         style={{ width: '100%', height: '100%', minHeight: 0, flex: 1 }}
                     />
                     </div>
@@ -92,6 +94,7 @@ export async function createGraphicWalkerHost(
     let preferredDatasetId: string | undefined;
     const toolbarExclude = options.toolbarExclude ?? GW_DEFAULT_TOOLBAR_EXCLUDE;
     const experimentalFeatures = options.experimentalFeatures ?? GW_DEFAULT_EXPERIMENTAL_FEATURES;
+    const defaultTab = options.defaultTab ?? 'visualization';
     let root: Root | null = createRoot(el);
     const flushSpecsRef = { current: (): void | Promise<void> => {} };
     const tileViews = new Map<HTMLElement, { datasetId: string; visId: string; root: Root }>();
@@ -129,6 +132,7 @@ export async function createGraphicWalkerHost(
                 preferredDatasetId={preferredDatasetId}
                 toolbarExclude={toolbarExclude}
                 experimentalFeatures={experimentalFeatures}
+                defaultTab={defaultTab}
                 flushSpecsRef={flushSpecsRef}
             />
         );

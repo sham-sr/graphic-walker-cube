@@ -138,6 +138,8 @@ export interface GraphicWalkerHostOptions {
     maxRows?: number;
     i18nLang?: string;
     appearance?: 'light' | 'dark';
+    /** Initial Graphic Walker segment. Default: visualization (charts). */
+    defaultTab?: 'data' | 'visualization';
     /** Hide toolbar items by Graphic Walker key. Default: Kanaries docs and debug. */
     toolbarExclude?: readonly string[];
     /** Graphic Walker experimental flags. Default: computed fields enabled. */
