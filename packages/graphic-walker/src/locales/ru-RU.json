@@ -73,21 +73,21 @@
         "scale_desc": "Настройте домены и диапазоны шкал по каналам.",
         "customize_scales": "Настроить шкалы",
         "scale_empty": "Шкалы не выбраны. Нажмите «Настроить шкалы», чтобы добавить.",
-        "scale_column_desc": "The horizontal position scale (columns / x-axis).",
-        "scale_row_desc": "The vertical position scale (rows / y-axis).",
-        "scale_color_desc": "The scale mapping data values to the color gradient.",
-        "scale_theta_desc": "The angle scale used by arc and pie charts.",
-        "scale_radius_desc": "The radius scale used by arc and pie charts.",
-        "scale_opacity_desc": "The scale mapping data values to mark transparency.",
-        "scale_size_desc": "The scale mapping data values to mark size.",
+        "scale_column_desc": "Шкала горизонтального положения (столбцы / ось X).",
+        "scale_row_desc": "Шкала вертикального положения (строки / ось Y).",
+        "scale_color_desc": "Шкала, сопоставляющая значения данных градиенту цвета.",
+        "scale_theta_desc": "Угловая шкала для дуг и круговых диаграмм.",
+        "scale_radius_desc": "Шкала радиуса для дуг и круговых диаграмм.",
+        "scale_opacity_desc": "Шкала, сопоставляющая значения данных прозрачности меток.",
+        "scale_size_desc": "Шкала, сопоставляющая значения данных размеру меток.",
         "scale_type_desc": "Тип шкалы (linear, log, sqrt и т.д.).",
         "min_domain_desc": "Минимальное значение домена шкалы.",
         "max_domain_desc": "Максимальное значение домена шкалы.",
         "range_desc": "Ограничить визуальный диапазон (мин/макс).",
         "format_desc": "Форматирование чисел и дат (шаблоны d3-format). Пустое поле — формат по умолчанию.",
-        "numberFormat_desc": "Applied to measure values. Example: ',.2f' displays 1234.5 as 1,234.50.",
-        "timeFormat_desc": "Applied to date and time values. Example: '%Y-%m-%d' displays dates as 2024-01-30.",
-        "normalizedNumberFormat_desc": "Applied to percentages when the stack mode is 'normalized'. Example: '.0%' displays 0.25 as 25%.",
+        "numberFormat_desc": "Для значений мер. Пример: ',.2f' отображает 1234.5 как 1,234.50.",
+        "timeFormat_desc": "Для дат и времени. Пример: '%Y-%m-%d' отображает дату как 2024-01-30.",
+        "normalizedNumberFormat_desc": "Для процентов при режиме стека «нормировать». Пример: '.0%' отображает 0.25 как 25%.",
         "independence_desc": "При разбиении на подвиды шкалы общие. Включите канал, чтобы каждый подвид считал шкалу отдельно.",
         "independent_channel_desc": "Каждый подвид использует свою шкалу {{channel}}."
     },
@@ -246,15 +246,15 @@
                 "meta": "Описание",
                 "fetch_error": "Не удалось загрузить демо-данные",
                 "datasets": {
-                    "CARS": "Classic dataset of 400+ car models: MPG, horsepower, weight, and origin.",
-                    "STUDENTS": "Exam scores of 1,000 students with gender, parental education, and test prep.",
-                    "BIKE_SHARING": "Hourly bike rentals with weather, season, and holiday context.",
-                    "EARTHQUAKE": "23,000+ earthquakes worldwide with location and magnitude.",
-                    "CAR_SALES": "Sales, prices, and engine specs for 157 vehicle models.",
-                    "COLLAGE": "US colleges compared by admission rate, SAT scores, and cost.",
-                    "KELPER": "NASA Kepler exoplanet candidates with orbital measurements.",
-                    "BTC_GOLD": "Daily Bitcoin and gold prices for comparing trading strategies.",
-                    "TITANIC": "Titanic passengers: survival, class, age, and fare."
+                    "CARS": "Классический набор: более 400 моделей автомобилей — расход, мощность, вес и страна происхождения.",
+                    "STUDENTS": "Оценки за экзамены 1000 учеников: пол, образование родителей и подготовка к тестам.",
+                    "BIKE_SHARING": "Почасовая аренда велосипедов с погодой, сезоном и праздниками.",
+                    "EARTHQUAKE": "Более 23 000 землетрясений по всему миру с координатами и магнитудой.",
+                    "CAR_SALES": "Продажи, цены и характеристики двигателя для 157 моделей автомобилей.",
+                    "COLLAGE": "Колледжи США: процент поступления, баллы SAT и стоимость обучения.",
+                    "KELPER": "Кандидаты в экзопланеты миссии NASA Kepler с орбитальными параметрами.",
+                    "BTC_GOLD": "Дневные цены Bitcoin и золота для сравнения торговых стратегий.",
+                    "TITANIC": "Пассажиры «Титаника»: выживание, класс, возраст и стоимость билета."
                 }
             },
             "or_demo": "или выберите демо-набор",
@@ -404,40 +404,40 @@
             "skippedNote": "Пропущено анализов: {{count}}"
         },
         "type": {
-            "extremeValue": "Extreme values",
-            "contributingDimension": "Contributing dimensions",
-            "contributingMeasure": "Contributing measures",
-            "uniqueMark": "What's unique about this mark"
+            "extremeValue": "Экстремальные значения",
+            "contributingDimension": "Влияющие измерения",
+            "contributingMeasure": "Влияющие меры",
+            "uniqueMark": "Чем эта метка отличается"
         },
         "strength": {
-            "strong": "Strong",
-            "moderate": "Moderate",
-            "weak": "Weak"
+            "strong": "Сильная",
+            "moderate": "Умеренная",
+            "weak": "Слабая"
         },
         "skip": {
-            "noMark": "Select a mark before running Explain Data.",
-            "temporalMark": "Temporal marks are not analyzed for extreme values yet.",
-            "noSensitiveAgg": "The selected measure aggregation is not sensitive to extreme values.",
-            "noCandidates": "No eligible fields were available for comparison.",
-            "noDerivableTarget": "The view measure's aggregation cannot be modeled; only sum, mean, and count are supported."
+            "noMark": "Выберите метку перед запуском «Объяснить данные».",
+            "temporalMark": "Временные метки пока не анализируются на экстремальные значения.",
+            "noSensitiveAgg": "Выбранная агрегация меры нечувствительна к экстремальным значениям.",
+            "noCandidates": "Нет подходящих полей для сравнения.",
+            "noDerivableTarget": "Агрегацию меры вида нельзя смоделировать; поддерживаются только sum, mean и count."
         },
         "extremeValue": {
-            "desc": "{{outlierCount}} of {{rowCount}} records are extreme values; removing them changes {{agg}} of {{measure}} from {{before}} to {{after}} ({{changePercent}}%).",
-            "truncated": "{{measure}} has a large mark with mean and median values that differ; scan the {{rowCount}} rows before interpreting the aggregate."
+            "desc": "{{outlierCount}} из {{rowCount}} записей — экстремальные значения; без них {{agg}} для {{measure}} меняется с {{before}} на {{after}} ({{changePercent}}%).",
+            "truncated": "Метка {{measure}} включает {{rowCount}} строк с разными средним и медианой; просмотрите строки перед интерпретацией агрегата."
         },
         "uniqueMark": {
-            "countDesc": "This mark's composition over {{dimension}} differs from other marks: {{markShare}}% falls in \"{{topCategory}}\" vs {{siblingShare}}% elsewhere.",
-            "measureDesc": "This mark's {{measure}} mass is distributed differently over {{dimension}} than other marks (heuristic)."
+            "countDesc": "Состав этой метки по {{dimension}} отличается от других: {{markShare}}% приходится на «{{topCategory}}», у остальных — {{siblingShare}}%.",
+            "measureDesc": "Масса {{measure}} у этой метки распределена по {{dimension}} иначе, чем у других (эвристика)."
         },
         "contributingDimension": {
-            "desc": "The composition of {{dimension}} helps predict {{target}} across marks (cross-validated fit +{{cvGainPercent}}%); the share of \"{{topCategory}}\" is most associated."
+            "desc": "Состав {{dimension}} помогает предсказать {{target}} по меткам (прирост при кросс-валидации +{{cvGainPercent}}%); сильнее всего связана доля «{{topCategory}}»."
         },
         "contributingMeasure": {
-            "desc": "{{candidate}} (aggregated per mark) helps predict {{target}} (cross-validated fit +{{cvGainPercent}}%). Association, not causation."
+            "desc": "{{candidate}} (агрегат по метке) помогает предсказать {{target}} (прирост при кросс-валидации +{{cvGainPercent}}%). Это связь, а не причинность."
         },
         "truncation": {
-            "notice": "Показана только часть результатов",
-            "more": "Ещё {{count}}"
+            "notice": "Просканировано {{scanned}} из {{total}} полей-кандидатов.",
+            "more": "Анализировать больше полей"
         }
     },
     "error_panel": {
@@ -611,7 +611,7 @@
         "collapse": "Свернуть",
         "expand": "Развернуть",
         "charts": {
-            "table": "Своданя таблица",
+            "table": "Сводная таблица",
             "highlight_table": "Таблица с подсветкой",
             "heatmap": "Тепловая карта",
             "bar": "Столбчатая диаграмма",
