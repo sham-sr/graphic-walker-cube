@@ -39,8 +39,9 @@ export async function clearProvider(provider: IDataSourceProvider): Promise<void
 
 export async function syncSpecsFromProvider(provider: IDataSourceProvider, registry: DatasetRegistry): Promise<void> {
     for (const dataset of registry.list()) {
+        const record = registry.get(dataset.id);
         try {
-            const specsJson = await provider.getSpecs(dataset.id);
+            const specsJson = await provider.getSpecs(record.providerId);
             registry.updateSpecs(dataset.id, specsJson);
         } catch {
             // Dataset may not exist in the provider yet.
@@ -55,9 +56,9 @@ export async function pushRegistryToProvider(provider: IDataSourceProvider, regi
     registry.clear();
     let selectedNext: string | undefined;
     for (const record of snapshot) {
-        const id = await provider.addDataSource(toRows(record.rows), toMutFields(record.fields), record.name);
+        const providerId = await provider.addDataSource(toRows(record.rows), toMutFields(record.fields), record.name);
         if (record.specsJson && record.specsJson !== '[]') {
-            await provider.saveSpecs(id, record.specsJson);
+            await provider.saveSpecs(providerId, record.specsJson);
         }
         registry.add(
             {
@@ -67,10 +68,11 @@ export async function pushRegistryToProvider(provider: IDataSourceProvider, regi
                 provenance: record.provenance,
                 specsJson: record.specsJson,
             },
-            id
+            record.id,
+            providerId
         );
         if (record.id === previousSelected) {
-            selectedNext = id;
+            selectedNext = record.id;
         }
     }
     if (selectedNext) {
@@ -94,19 +96,20 @@ export function createHostController(
     registry: DatasetRegistry,
     options: { maxRows?: number }
 ): HostController {
-    const addToProvider = async (input: WalkerDatasetInput): Promise<string> => {
+    const addToProvider = async (input: WalkerDatasetInput, externalId?: string): Promise<string> => {
         if (registry.size >= registry.maxDatasets) {
             throw new DatasetLimitError(registry.maxDatasets, registry.list());
         }
         if (options.maxRows !== undefined && options.maxRows > 0 && input.rows.length > options.maxRows) {
             throw new DatasetRowsLimitError(options.maxRows, input.rows.length);
         }
-        const id = await provider.addDataSource(toRows(input.rows), toMutFields(input.fields), input.name);
+        const providerId = await provider.addDataSource(toRows(input.rows), toMutFields(input.fields), input.name);
         if (input.specsJson && input.specsJson !== '[]') {
-            await provider.saveSpecs(id, input.specsJson);
+            await provider.saveSpecs(providerId, input.specsJson);
         }
-        registry.add(input, id);
-        return id;
+        const resolvedExternalId = externalId ?? input.id ?? providerId;
+        registry.add(input, resolvedExternalId, providerId);
+        return resolvedExternalId;
     };
 
     return {
@@ -117,17 +120,21 @@ export function createHostController(
         async replaceDataset(id, input) {
             await syncSpecsFromProvider(provider, registry);
             let previousSpecs: string | undefined;
+            let previousProviderId: string | undefined;
+            const previousSelected = registry.selectedDatasetId;
             if (registry.list().some((dataset) => dataset.id === id)) {
-                previousSpecs = registry.get(id).specsJson;
+                const record = registry.get(id);
+                previousSpecs = record.specsJson;
+                previousProviderId = record.providerId;
             }
             const { specsJson, chartsCleared } = resolveReplaceSpecs(
                 input.specsJson,
                 previousSpecs,
                 input.fields
             );
-            if (provider.removeDataSource) {
+            if (previousProviderId && provider.removeDataSource) {
                 try {
-                    await provider.removeDataSource(id);
+                    await provider.removeDataSource(previousProviderId);
                 } catch {
                     // Dataset may only exist in the pending registry.
                 }
@@ -135,13 +142,28 @@ export function createHostController(
             if (registry.list().some((dataset) => dataset.id === id)) {
                 registry.remove(id);
             }
-            const nextId = await addToProvider({ ...input, specsJson });
-            return { id: nextId, chartsCleared };
+            const providerId = await provider.addDataSource(
+                toRows(input.rows),
+                toMutFields(input.fields),
+                input.name
+            );
+            if (specsJson && specsJson !== '[]') {
+                await provider.saveSpecs(providerId, specsJson);
+            }
+            registry.add({ ...input, specsJson }, id, providerId);
+            if (previousSelected && previousSelected !== id) {
+                registry.setSelectedDatasetId(previousSelected);
+            }
+            return { id, chartsCleared };
         },
         async removeDataset(id) {
-            if (provider.removeDataSource) {
+            let providerId: string | undefined;
+            if (registry.list().some((dataset) => dataset.id === id)) {
+                providerId = registry.get(id).providerId;
+            }
+            if (providerId && provider.removeDataSource) {
                 try {
-                    await provider.removeDataSource(id);
+                    await provider.removeDataSource(providerId);
                 } catch {
                     // Ignore missing provider entries.
                 }

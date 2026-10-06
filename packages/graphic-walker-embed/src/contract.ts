@@ -60,6 +60,8 @@ export interface WalkerDatasetInput {
     provenance?: DatasetProvenance;
     /** Serialized chart specs JSON (stringified string[]). */
     specsJson?: string;
+    /** Stable external id (e.g. host slot id). When omitted, the provider id is used. */
+    id?: string;
 }
 
 export interface WalkerDatasetInfo {
@@ -167,7 +169,9 @@ export interface GraphicWalkerHost {
     exportReport(): Promise<GraphicWalkerReport>;
     applyConfig(config: GraphicWalkerConfig, rowsById: Record<string, WalkerRow[]>): Promise<void>;
     importReport(report: GraphicWalkerReport): Promise<void>;
-    selectDataset(id: string): void;
+    /** Persist in-memory chart specs for the current dataset before switching or exporting. */
+    flushSpecs(): Promise<void>;
+    selectDataset(id: string): Promise<void>;
     destroy(): void;
 }
 

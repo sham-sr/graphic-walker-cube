@@ -6,11 +6,12 @@ import type { GraphicWalkerExperimentalFeatures, GraphicWalkerHost, GraphicWalke
 import { GW_DEFAULT_EXPERIMENTAL_FEATURES, GW_DEFAULT_TOOLBAR_EXCLUDE, GW_EMBED_ENHANCE_API } from './contract';
 import { ChartTileApp } from './chartTile';
 import { findChartSpec, listChartsFromRegistry } from './chartSpecs';
-import { createDatasetRegistry } from './datasetRegistry';
+import { createDatasetRegistry, type DatasetRegistry } from './datasetRegistry';
 import { createHostController, syncSpecsFromProvider } from './hostController';
 
 interface HostAppProps {
     provider: IDataSourceProvider;
+    registry: DatasetRegistry;
     i18nLang: string;
     appearance: 'light' | 'dark';
     listVersion: number;
@@ -19,6 +20,10 @@ interface HostAppProps {
     experimentalFeatures: GraphicWalkerExperimentalFeatures;
     defaultTab: 'data' | 'visualization';
     flushSpecsRef: { current: () => void | Promise<void> };
+}
+
+function externalIdForProvider(registry: DatasetRegistry, providerId: string): string {
+    return registry.findExternalIdByProviderId(providerId) ?? providerId;
 }
 
 function HostApp(props: HostAppProps) {
@@ -33,6 +38,9 @@ function HostApp(props: HostAppProps) {
         >
             {(slot) => {
                 props.flushSpecsRef.current = slot.syncSpecs;
+                const keepAliveExternal = slot.datasetId
+                    ? externalIdForProvider(props.registry, slot.datasetId)
+                    : false;
                 return (
                     <div style={{ height: '100%', minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <GraphicWalker
@@ -43,7 +51,7 @@ function HostApp(props: HostAppProps) {
                         rawFields={slot.meta}
                         onMetaChange={slot.onMetaChange}
                         storeRef={slot.storeRef}
-                        keepAlive={slot.datasetId || false}
+                        keepAlive={keepAliveExternal || false}
                         toolbar={{ exclude: [...props.toolbarExclude] }}
                         experimentalFeatures={props.experimentalFeatures}
                         enhanceAPI={GW_EMBED_ENHANCE_API}
@@ -83,8 +91,9 @@ export async function createGraphicWalkerHost(
     if (originalRemove) {
         provider.removeDataSource = async (id: string) => {
             await originalRemove(id);
-            if (registry.list().some((dataset) => dataset.id === id)) {
-                registry.remove(id);
+            const externalId = registry.findExternalIdByProviderId(id);
+            if (externalId) {
+                registry.remove(externalId);
             }
         };
     }
@@ -100,8 +109,15 @@ export async function createGraphicWalkerHost(
     const flushSpecsRef = { current: (): void | Promise<void> => {} };
     const tileViews = new Map<HTMLElement, { datasetId: string; visId: string; root: Root }>();
 
-    const renderTile = (_target: HTMLElement, datasetId: string, visId: string, tileRoot: Root) => {
-        const parsed = findChartSpec(registry, datasetId, visId);
+    const flushSpecs = async (): Promise<void> => {
+        await Promise.resolve(flushSpecsRef.current());
+        await syncSpecsFromProvider(provider, registry);
+    };
+
+    const providerIdForExternal = (externalId: string): string => registry.get(externalId).providerId;
+
+    const renderTile = (_target: HTMLElement, externalDatasetId: string, visId: string, tileRoot: Root) => {
+        const parsed = findChartSpec(registry, externalDatasetId, visId);
         if (!parsed) {
             tileRoot.render(null);
             return;
@@ -109,7 +125,7 @@ export async function createGraphicWalkerHost(
         tileRoot.render(
             <ChartTileApp
                 spec={parsed.spec}
-                datasetId={datasetId}
+                datasetId={providerIdForExternal(externalDatasetId)}
                 provider={provider}
                 appearance={appearance}
                 locale={i18nLang}
@@ -127,6 +143,7 @@ export async function createGraphicWalkerHost(
         root?.render(
             <HostApp
                 provider={provider}
+                registry={registry}
                 i18nLang={i18nLang}
                 appearance={appearance}
                 listVersion={listVersion}
@@ -140,7 +157,7 @@ export async function createGraphicWalkerHost(
     };
 
     const bumpList = () => {
-        flushSpecsRef.current();
+        void flushSpecsRef.current();
         listVersion += 1;
         render();
         renderTiles();
@@ -161,23 +178,32 @@ export async function createGraphicWalkerHost(
         },
         async addDataset(input) {
             const result = await controller.addDataset(input);
+            preferredDatasetId = providerIdForExternal(result.id);
             bumpList();
             return result;
         },
         async replaceDataset(id, input) {
-            await Promise.resolve(flushSpecsRef.current());
+            await flushSpecs();
             const result = await controller.replaceDataset(id, input);
+            if (registry.selectedDatasetId === id) {
+                preferredDatasetId = providerIdForExternal(id);
+            }
             bumpList();
             return result;
         },
         async removeDataset(id) {
+            await flushSpecs();
             await controller.removeDataset(id);
+            if (registry.selectedDatasetId) {
+                preferredDatasetId = providerIdForExternal(registry.selectedDatasetId);
+            } else {
+                preferredDatasetId = undefined;
+            }
             bumpList();
         },
         listDatasets: controller.listDatasets,
         async listCharts() {
-            await Promise.resolve(flushSpecsRef.current());
-            await syncSpecsFromProvider(provider, registry);
+            await flushSpecs();
             return listChartsFromRegistry(registry);
         },
         createChartView(target, ref) {
@@ -198,30 +224,39 @@ export async function createGraphicWalkerHost(
             };
         },
         async exportConfig() {
-            await Promise.resolve(flushSpecsRef.current());
+            await flushSpecs();
             return controller.exportConfig();
         },
         async exportReport() {
-            await Promise.resolve(flushSpecsRef.current());
+            await flushSpecs();
             return controller.exportReport();
         },
         async applyConfig(config, rowsById) {
+            await flushSpecs();
             await controller.applyConfig(config, rowsById);
-            preferredDatasetId = registry.selectedDatasetId ?? config.selectedDatasetId;
+            const selected = registry.selectedDatasetId ?? config.selectedDatasetId;
+            preferredDatasetId = selected ? providerIdForExternal(selected) : undefined;
             bumpList();
         },
         async importReport(report) {
+            await flushSpecs();
             await controller.importReport(report);
-            preferredDatasetId = registry.selectedDatasetId ?? report.selectedDatasetId;
+            const selected = registry.selectedDatasetId ?? report.selectedDatasetId;
+            preferredDatasetId = selected ? providerIdForExternal(selected) : undefined;
             bumpList();
         },
-        selectDataset(id: string) {
-            preferredDatasetId = id;
+        flushSpecs,
+        async selectDataset(id: string) {
+            if (registry.selectedDatasetId === id) {
+                return;
+            }
+            await flushSpecs();
+            preferredDatasetId = providerIdForExternal(id);
             registry.setSelectedDatasetId(id);
             render();
         },
         destroy() {
-            flushSpecsRef.current();
+            void flushSpecsRef.current();
             for (const view of tileViews.values()) {
                 view.root.unmount();
             }

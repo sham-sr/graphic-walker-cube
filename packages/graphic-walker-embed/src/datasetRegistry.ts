@@ -14,7 +14,10 @@ import {
 } from './contract';
 
 export interface DatasetRegistryRecord {
+    /** Caller-facing stable id. */
     id: string;
+    /** Id assigned by the Graphic Walker data provider. */
+    providerId: string;
     name: string;
     fields: WalkerField[];
     rows: WalkerRow[];
@@ -69,20 +72,35 @@ export function createDatasetRegistry(options: DatasetRegistryOptions) {
         }
     }
 
-    function add(input: WalkerDatasetInput, id: string = newId()): string {
+    function add(input: WalkerDatasetInput, id?: string, providerId?: string): string {
         assertCanAdd();
         assertRowsLimit(input.rows);
+        const externalId = id ?? providerId ?? newId();
         const record: DatasetRegistryRecord = {
-            id,
+            id: externalId,
+            providerId: providerId ?? externalId,
             name: input.name,
             fields: clone(input.fields),
             rows: clone(input.rows),
             specsJson: input.specsJson ?? EMPTY_SPECS,
             provenance: input.provenance ? clone(input.provenance) : undefined,
         };
-        datasets.set(id, record);
-        selectedDatasetId = id;
-        return id;
+        datasets.set(externalId, record);
+        selectedDatasetId = externalId;
+        return externalId;
+    }
+
+    function findExternalIdByProviderId(providerId: string): string | undefined {
+        for (const record of datasets.values()) {
+            if (record.providerId === providerId) {
+                return record.id;
+            }
+        }
+        return undefined;
+    }
+
+    function setProviderId(externalId: string, nextProviderId: string): void {
+        get(externalId).providerId = nextProviderId;
     }
 
     function replace(id: string, input: WalkerDatasetInput): string {
@@ -216,6 +234,8 @@ export function createDatasetRegistry(options: DatasetRegistryOptions) {
         exportReport,
         importConfig,
         importReport,
+        findExternalIdByProviderId,
+        setProviderId,
     };
 }
 
