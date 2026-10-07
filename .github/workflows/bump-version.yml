@@ -1,53 +1,42 @@
-name: Bump Version and Sync Dependency in Monorepo
+name: Bump workspace package version
 
 on:
   workflow_dispatch:
     inputs:
-      newVersion:
-        description: 'New version number for graphic-walker'
+      package:
+        description: 'Workspace package directory'
         required: true
-        default: '1.0.1'
+        type: choice
+        default: graphic-walker
+        options:
+          - graphic-walker
+          - duckdb-wasm-computation
+          - graphic-walker-embed
+      newVersion:
+        description: 'New semver version'
+        required: true
 
 jobs:
   bump-version:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '20.x' # Adjust as per your project requirement
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Bump graphic-walker version
-      working-directory: ./packages/graphic-walker
-      run: |
-        yarn version --no-git-tag-version --new-version ${{ github.event.inputs.newVersion }}
+      - name: Bump version and sync workspace refs
+        run: node scripts/bump-workspace-version.mjs ${{ inputs.package }} ${{ inputs.newVersion }}
 
-    - name: Update playground dependency
-      run: |
-        yarn add @kanaries/graphic-walker@${{ github.event.inputs.newVersion }}
-      working-directory: ./packages/playground
-
-    - name: Update Wasm dependecy
-      run: |
-        yarn add -D @kanaries/graphic-walker@${{ github.event.inputs.newVersion }}
-      working-directory: ./packages/duckdb-wasm-computation
-
-    - name: Commit Changes
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add .
-        git commit -m "release: Update graphic-walker to ${{ github.event.inputs.newVersion }}"
-
-    - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v3
-      with:
-        commit-message: Sync graphic-walker and playground versions to ${{ github.event.inputs.newVersion }}
-        title: 'Sync graphic-walker and playground package versions to ${{ github.event.inputs.newVersion }}'
-        body: 'This is an auto-generated PR to update the graphic-walker version and its dependency in playground.'
-        branch: sync-versions-${{ github.event.inputs.newVersion }} # Branch to create the PR
-        labels: version-sync, automated pr
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: chore(release): bump ${{ inputs.package }} to ${{ inputs.newVersion }}
+          title: chore(release): bump ${{ inputs.package }} to ${{ inputs.newVersion }}
+          body: |
+            Automated bump of `${{ inputs.package }}` to `${{ inputs.newVersion }}` and sync of internal workspace dependency pins.
+          branch: bump-${{ inputs.package }}-${{ inputs.newVersion }}

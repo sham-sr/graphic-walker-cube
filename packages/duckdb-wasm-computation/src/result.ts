@@ -1,3 +1,4 @@
+import { Vector } from 'apache-arrow';
 import { bigNumToString } from 'apache-arrow/util/bn';
 
 interface ArrowTypeLike {
@@ -73,6 +74,28 @@ const scaledIntegerToDecimalString = (value: string, scale: number): string => {
     return `${sign}${padded.slice(0, -scale)}.${padded.slice(-scale)}`;
 };
 
+function isArrowVector(value: object): value is Iterable<unknown> {
+    if (value instanceof Vector) {
+        return typeof value[Symbol.iterator] === 'function';
+    }
+    const candidate = value as {
+        toArray?: unknown;
+        get?: unknown;
+        length?: unknown;
+        [Symbol.iterator]?: unknown;
+    };
+    return (
+        typeof candidate.toArray === 'function' &&
+        typeof candidate.get === 'function' &&
+        typeof candidate.length === 'number' &&
+        typeof candidate[Symbol.iterator] === 'function'
+    );
+}
+
+function isArrowBigNum(value: object): boolean {
+    return ArrayBuffer.isView(value) && Symbol.toPrimitive in value;
+}
+
 export const arrowToJSON = (value: any, type?: ArrowTypeLike): any => {
     if (value === null || value === undefined) return value;
     if (value instanceof Date) return value.getTime();
@@ -80,10 +103,10 @@ export const arrowToJSON = (value: any, type?: ArrowTypeLike): any => {
     if (Array.isArray(value)) return value.map((item) => arrowToJSON(item));
 
     if (typeof value === 'object') {
-        if (value.constructor?.name === 'Vector' && typeof value[Symbol.iterator] === 'function') {
-            return Array.from(value as Iterable<unknown>).map((item) => arrowToJSON(item));
+        if (isArrowVector(value)) {
+            return Array.from(value).map((item) => arrowToJSON(item));
         }
-        if (value.constructor?.name?.includes('BigNum')) {
+        if (isArrowBigNum(value)) {
             const integer = bigNumToString(value);
             if (type?.scale) {
                 const decimal = Number(integer) / 10 ** type.scale;

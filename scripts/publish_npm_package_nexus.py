@@ -203,6 +203,11 @@ def main() -> int:
         print("Укажите -p <пакет>, --all или -l", file=sys.stderr)
         return 1
 
+    check_script = PROJECT_ROOT / "scripts" / "check-workspace-versions.mjs"
+    if run_stream(["node", str(check_script)], cwd=PROJECT_ROOT) != 0:
+        print("Проверка версий workspace-пакетов не пройдена.", file=sys.stderr)
+        return 1
+
     for name in names:
         code = publish_one(name, packages, args.no_publish, args.skip_build)
         if code != 0:

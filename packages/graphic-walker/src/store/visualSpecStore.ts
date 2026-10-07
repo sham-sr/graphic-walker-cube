@@ -9,6 +9,7 @@ import {
     importFull,
     importNow,
     newChart,
+    syncChartFieldsWithMeta,
     parseChart,
     performers,
     redo,
@@ -410,6 +411,13 @@ export class VizSpecStore {
             const { name, visId } = pristineInitialChart.now;
             this.visList[0] = create(newChart(meta, name ?? 'Chart 1', visId, this.defaultConfig));
         }
+        this.visList = this.visList.map((h) => {
+            const base = syncChartFieldsWithMeta(h.base, meta);
+            const now = syncChartFieldsWithMeta(h.now, meta);
+            const value = syncChartFieldsWithMeta(h.cache.value, meta);
+            if (base === h.base && now === h.now && value === h.cache.value) return h;
+            return { ...h, base, now, cache: { ...h.cache, value } };
+        });
     }
 
     setOnMetaChange(onMetaChange?: (fid: string, diffMeta: Partial<IMutField>) => void) {

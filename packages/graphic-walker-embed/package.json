@@ -34,7 +34,7 @@
         "react-dom": ">=19.0.0"
     },
     "dependencies": {
-        "@kanaries/duckdb-computation": "0.0.2",
+        "@kanaries/duckdb-computation": "0.0.3",
         "@kanaries/graphic-walker": "0.5.5"
     },
     "devDependencies": {

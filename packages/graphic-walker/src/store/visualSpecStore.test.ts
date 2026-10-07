@@ -94,8 +94,9 @@ describe('VizSpecStore metadata updates', () => {
         store.setMeta(updatedMeta);
 
         expect(store.meta).toEqual(updatedMeta);
-        expect(store.currentVis).toBe(editedChart);
         expect(store.currentEncodings.columns.map((field) => field.fid)).toEqual(['category']);
+        expect(store.currentVis.visId).toBe(editedChart.visId);
+        expect(store.currentEncodings.measures.map((field) => field.fid)).toContain('profit');
     });
 
     test('preserves a chart edited before asynchronous metadata arrives', () => {

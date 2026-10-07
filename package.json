@@ -7,7 +7,9 @@
   "devDependencies": {},
   "scripts": {
     "build": "yarn workspace @kanaries/graphic-walker build",
-    "build:embed": "yarn workspace @kanaries/graphic-walker build && yarn workspace @kanaries/duckdb-computation build && yarn workspace @cube/graphic-walker-embed build",
+    "build:embed": "yarn check:versions && yarn workspace @kanaries/graphic-walker build && yarn workspace @kanaries/duckdb-computation build && yarn workspace @cube/graphic-walker-embed build",
+    "check:versions": "node scripts/check-workspace-versions.mjs",
+    "bump:version": "node scripts/bump-workspace-version.mjs",
     "test:embed": "yarn workspace @cube/graphic-walker-embed test",
     "test:consumer": "node scripts/consumer-smoke-test.mjs",
     "deploy": "yarn workspace playground deploy",

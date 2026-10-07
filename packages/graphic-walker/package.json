@@ -125,7 +125,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "optionalDependencies": {
-    "@kanaries/duckdb-computation": "0.0.2"
+    "@kanaries/duckdb-computation": "0.0.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

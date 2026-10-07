@@ -571,6 +571,65 @@ function emptyChart(visId: string, name: string, defaultConfig?: IDefaultConfig)
         name,
     };
 }
+
+const VIRTUAL_FIELD_IDS = new Set<string>([COUNT_FIELD_ID, MEA_KEY_ID, MEA_VAL_ID, PAINT_FIELD_ID]);
+
+const isRawField = (field: IViewField) => !field.computed && !VIRTUAL_FIELD_IDS.has(field.fid);
+
+function viewFieldFromMeta(f: IMutField): IViewField {
+    const field: IViewField = {
+        fid: f.fid,
+        name: f.name || f.fid,
+        basename: f.basename || f.name || f.fid,
+        semanticType: f.semanticType,
+        analyticType: f.analyticType,
+        offset: f.offset,
+    };
+    return f.analyticType === 'measure' ? { ...field, aggName: 'sum' } : field;
+}
+
+function syncPoolEntry(entry: IViewField, f: IMutField): IViewField {
+    const { name, basename, semanticType, offset } = viewFieldFromMeta(f);
+    if (entry.name === name && entry.basename === basename && entry.semanticType === semanticType && entry.offset === offset) return entry;
+    return { ...entry, name, basename, semanticType, offset };
+}
+
+/** Keeps the dimension/measure pools of a chart in line with the dataset meta; returns the same chart when nothing changed. */
+export function syncChartFieldsWithMeta(chart: IChart, meta: IMutField[]): IChart {
+    const { dimensions, measures } = chart.encodings;
+    if (meta.length === 0 || (dimensions.length === 0 && measures.length === 0)) return chart;
+    const metaByFid = new Map(meta.map((f) => [f.fid, f]));
+    const pooled = new Set([...dimensions, ...measures].map((f) => f.fid));
+    const added = meta.filter((f) => !pooled.has(f.fid)).map(viewFieldFromMeta);
+
+    const syncPool = (pool: IViewField[], analyticType: IViewField['analyticType']) => {
+        const kept = pool.flatMap((entry) => {
+            if (!isRawField(entry)) return [entry];
+            const f = metaByFid.get(entry.fid);
+            return f ? [syncPoolEntry(entry, f)] : [];
+        });
+        let at = kept.length;
+        while (at > 0 && !isRawField(kept[at - 1])) at--;
+        return [...kept.slice(0, at), ...added.filter((f) => f.analyticType === analyticType), ...kept.slice(at)];
+    };
+
+    let changed = false;
+    const encodings = Object.fromEntries(
+        Object.entries(chart.encodings).map(([channel, fields]) => {
+            const next =
+                channel === 'dimensions'
+                    ? syncPool(fields, 'dimension')
+                    : channel === 'measures'
+                    ? syncPool(fields, 'measure')
+                    : fields.filter((f) => !isRawField(f) || metaByFid.has(f.fid));
+            if (next.length === fields.length && next.every((f, i) => f === fields[i])) return [channel, fields];
+            changed = true;
+            return [channel, next];
+        })
+    ) as DraggableFieldState;
+    return changed ? { ...chart, encodings } : chart;
+}
+
 export function newChart(fields: IMutField[], name: string, visId?: string, defaultConfig?: IDefaultConfig): IChart {
     if (fields.length === 0) return emptyChart(visId || uniqueId(), name, defaultConfig);
     const extraFields = [createCountField(), ...createVirtualFields()];
@@ -578,33 +637,8 @@ export function newChart(fields: IMutField[], name: string, visId?: string, defa
     const extraMeasures = extraFields.filter((x) => x.analyticType === 'measure');
     return mutPath(emptyChart(visId || uniqueId(), name, defaultConfig), 'encodings', (e) => ({
         ...e,
-        dimensions: fields
-            .filter((f) => f.analyticType === 'dimension')
-            .map(
-                (f): IViewField => ({
-                    fid: f.fid,
-                    name: f.name || f.fid,
-                    basename: f.basename || f.name || f.fid,
-                    semanticType: f.semanticType,
-                    analyticType: f.analyticType,
-                    offset: f.offset,
-                })
-            )
-            .concat(extraDimensions),
-        measures: fields
-            .filter((f) => f.analyticType === 'measure')
-            .map(
-                (f): IViewField => ({
-                    fid: f.fid,
-                    name: f.name || f.fid,
-                    basename: f.basename || f.name || f.fid,
-                    analyticType: f.analyticType,
-                    semanticType: f.semanticType,
-                    aggName: 'sum',
-                    offset: f.offset,
-                })
-            )
-            .concat(extraMeasures),
+        dimensions: fields.filter((f) => f.analyticType === 'dimension').map(viewFieldFromMeta).concat(extraDimensions),
+        measures: fields.filter((f) => f.analyticType === 'measure').map(viewFieldFromMeta).concat(extraMeasures),
     }));
 }
 export function fillChart(chart: PartialChart): IChart {
