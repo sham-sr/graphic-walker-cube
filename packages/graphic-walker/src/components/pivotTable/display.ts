@@ -1,6 +1,7 @@
 import type { IField } from '../../interfaces';
 import type { INestNode, IPivotCube, IPivotTablePath } from './interface';
 import { formatTemporalValue, resolveTimeGrain } from '@/vis/echarts/formatTemporal';
+import { toFiniteNumber } from '../../utils/coerceNumber';
 import { getCubeCell } from './cube';
 
 export type PivotColorMode = 'none' | 'heatmap' | 'bar';
@@ -150,7 +151,7 @@ export function readNumericCell(
         return undefined;
     }
     const value = cell[measureValueKey(measure, aggregated)];
-    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+    return toFiniteNumber(value);
 }
 
 export function normalize01(value: number, min: number, max: number): number {

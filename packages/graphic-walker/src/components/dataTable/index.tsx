@@ -9,6 +9,7 @@ import { PureFilterEditDialog } from '../../fields/filterField/filterEditDialog'
 import { ComputationContext } from '../../store';
 import { parsedOffsetDate } from '../../lib/op/offset';
 import { _unstable_encodeRuleValue, cn, formatDate } from '../../utils';
+import { toCountNumber } from '../../utils/coerceNumber';
 import { FieldProfiling, formatNumber } from './profiling';
 import { ColumnHeader, type ISortDirection } from './columnHeader';
 import { addFilterForQuery, createFilter } from '../../utils/workflow';
@@ -294,7 +295,7 @@ const DataTable = forwardRef(
                             ],
                         },
                     ],
-                }).then((v) => (v[0]?.count ?? 0) as number);
+                }).then((v) => toCountNumber(v[0]?.count));
             let alive = true;
             countOf(filterRules).then((count) => {
                 if (!alive) return;

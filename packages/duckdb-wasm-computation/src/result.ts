@@ -9,6 +9,63 @@ const numberOrExactString = (value: string): number | string => {
     return Number.isSafeInteger(number) ? number : value;
 };
 
+function toFiniteNumber(value: unknown): number | undefined {
+    if (value === null || value === undefined || value === '') {
+        return undefined;
+    }
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : undefined;
+    }
+    if (typeof value === 'bigint') {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : undefined;
+    }
+    if (typeof value === 'string') {
+        const normalized = value.replace(/\s/g, '').replace(',', '.');
+        if (!normalized) {
+            return undefined;
+        }
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+}
+
+/** Aggregate/measure columns from DuckDB often use these key patterns. */
+function shouldCoerceNumericKey(key: string): boolean {
+    if (key === 'count') {
+        return true;
+    }
+    if (key.startsWith('count_') || key.startsWith('total_distinct_')) {
+        return true;
+    }
+    return /_(sum|min|max|avg|count)$/.test(key);
+}
+
+function isNumericArrowType(type?: ArrowTypeLike): boolean {
+    if (!type) {
+        return false;
+    }
+    const typeId = (type as { typeId?: number }).typeId;
+    if (typeof typeId === 'number') {
+        return typeId >= 2 && typeId <= 11;
+    }
+    const name = String(type);
+    return /Int|UInt|Float|Decimal|Double/i.test(name);
+}
+
+function coerceComputationValue(key: string, value: unknown, numericColumn: boolean): unknown {
+    if (typeof value === 'bigint') {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : value.toString();
+    }
+    if (!numericColumn && !shouldCoerceNumericKey(key)) {
+        return value;
+    }
+    const n = toFiniteNumber(value);
+    return n === undefined ? value : n;
+}
+
 const scaledIntegerToDecimalString = (value: string, scale: number): string => {
     const sign = value.startsWith('-') ? '-' : '';
     const digits = sign ? value.slice(1) : value;
@@ -49,5 +106,13 @@ export const transformData = (table: ArrowTableLike) => {
     const fieldTypes = new Map(table.schema?.fields?.map((field) => [field.name, field.type]) ?? []);
     return table
         .toArray()
-        .map((row) => Object.fromEntries(Object.entries(row.toJSON()).map(([key, value]) => [key, arrowToJSON(value, fieldTypes.get(key))])));
+        .map((row) =>
+            Object.fromEntries(
+                Object.entries(row.toJSON()).map(([key, value]) => {
+                    const fieldType = fieldTypes.get(key);
+                    const decoded = arrowToJSON(value, fieldType);
+                    return [key, coerceComputationValue(key, decoded, isNumericArrowType(fieldType))];
+                })
+            )
+        );
 };

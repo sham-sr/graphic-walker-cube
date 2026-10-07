@@ -17,6 +17,7 @@ import { getTimeFormat } from '../lib/inferMeta';
 import { newOffsetDate } from '../lib/op/offset';
 import { processExpression } from '../utils/workflow';
 import { binarySearchClosest, isNotEmpty, parseKeyword } from '../utils';
+import { toCountNumber, toFiniteNumber } from '../utils/coerceNumber';
 import { COUNT_FIELD_ID } from '../constants';
 import { range } from 'lodash-es';
 
@@ -44,7 +45,7 @@ export const datasetStats = async (service: IComputationFunction): Promise<IData
         ],
     })) as [{ count: number }];
     return {
-        rowCount: res[0]?.count ?? 0,
+        rowCount: toCountNumber(res[0]?.count),
     };
 };
 
@@ -296,14 +297,14 @@ export const fieldStat = async (
     return {
         values: valuesRes.map((row) => ({
             value: row[field.fid],
-            count: row[COUNT_ID],
+            count: toCountNumber(row[COUNT_ID]),
         })),
         valuesMeta: {
-            total: valuesMetaRes.count,
-            distinctTotal: valuesMetaRes[TOTAL_DISTINCT_ID],
+            total: toCountNumber(valuesMetaRes.count),
+            distinctTotal: toCountNumber(valuesMetaRes[TOTAL_DISTINCT_ID]),
         },
-        range: [rangeRes[MIN_ID], rangeRes[MAX_ID]],
-        selectedCount: selectedCountRes.count,
+        range: [toFiniteNumber(rangeRes[MIN_ID]) ?? 0, toFiniteNumber(rangeRes[MAX_ID]) ?? 0],
+        selectedCount: toCountNumber(selectedCountRes.count),
     };
 };
 
@@ -477,8 +478,8 @@ export async function getFieldDistinctMeta(service: IComputationFunction, field:
     ];
     const [valuesMetaRes = { [TOTAL_DISTINCT_ID]: 0, count: 0 }] = await service({ workflow });
     return {
-        total: valuesMetaRes.count as number,
-        distinctTotal: valuesMetaRes[TOTAL_DISTINCT_ID] as number,
+        total: toCountNumber(valuesMetaRes.count),
+        distinctTotal: toCountNumber(valuesMetaRes[TOTAL_DISTINCT_ID]),
     };
 }
 
@@ -527,7 +528,7 @@ export async function getFieldDistinctCounts(
     const valuesRes = await service(valuesQueryPayload);
     return valuesRes.map((row) => ({
         value: row[field] as string,
-        count: row[COUNT_ID] as number,
+        count: toCountNumber(row[COUNT_ID]),
     }));
 }
 
@@ -631,8 +632,8 @@ export async function profileQuantitativeField(service: IComputationFunction, fi
     let total = 0;
     let sum = 0;
     for (const row of values) {
-        total += Number(row[ROW_NUM_FIELD]) || 0;
-        sum += Number(row[SUM_FIELD]) || 0;
+        total += toCountNumber(row[ROW_NUM_FIELD]);
+        sum += toFiniteNumber(row[SUM_FIELD]) ?? 0;
     }
     const min = values[0][BIN_FIELD][0];
     const max = values[values.length - 1][BIN_FIELD][1];
@@ -644,13 +645,13 @@ export async function profileQuantitativeField(service: IComputationFunction, fi
             const binValue = row[BIN_FIELD][0] as number;
             if (Math.abs(binValue - bin) * 2 < step) {
                 // accepted nearest (to ignore float presision)
-                const count = row[ROW_NUM_FIELD] as number;
+                const count = toCountNumber(row[ROW_NUM_FIELD]);
                 return {
                     from: bin,
                     to: bin + step,
                     count,
-                    min: Number(row[MIN_FIELD]),
-                    max: Number(row[MAX_FIELD]),
+                    min: toFiniteNumber(row[MIN_FIELD]) ?? 0,
+                    max: toFiniteNumber(row[MAX_FIELD]) ?? 0,
                 };
             } else {
                 // not found

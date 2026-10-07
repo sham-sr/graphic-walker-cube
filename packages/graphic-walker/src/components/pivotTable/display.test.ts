@@ -34,6 +34,13 @@ describe('pivot display helpers', () => {
         expect(measureValueKey(measure, true)).toBe('sales_sum');
     });
 
+    test('readNumericCell coerces bigint and numeric strings from DuckDB', () => {
+        expect(readNumericCell({ sales_sum: '42' }, measure, true)).toBe(42);
+        expect(readNumericCell({ sales_sum: 42n }, measure, true)).toBe(42);
+        expect(readNumericCell({ sales: '12.5' }, { fid: 'sales', aggName: 'expr' }, false)).toBe(12.5);
+        expect(readNumericCell({ sales_sum: 'n/a' }, measure, true)).toBeUndefined();
+    });
+
     test('normalizes a domain and paints a readable heatmap', () => {
         expect(normalize01(5, 0, 10)).toBe(0.5);
         expect(normalize01(3, 3, 3)).toBe(0.5);
