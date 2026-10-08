@@ -1,0 +1,13 @@
+---
+description: Публичный API Graphic Walker и контракт embed не ломать попутной правкой
+alwaysApply: true
+---
+
+# Библиотека, не приложение
+
+- Публичный вход: `packages/graphic-walker/src/index.tsx` и `exports` в `package.json` пакета.
+- Контракт встройки Cube: `packages/graphic-walker-embed/src/contract.ts`.
+- Эти файлы меняет только задача, которая прямо про API или контракт (`gw-architect`).
+- Внутренний баг чинится без нового экспортa и без смены имён полей, которые уже читает `cube_front`.
+- Тесты пакетов — Jest. E2E графического пакета — Playwright в `packages/graphic-walker/tests/e2e`. Не подменять один другим.
+- `packages/playground` — демо. Продуктовая логика туда не переезжает.
