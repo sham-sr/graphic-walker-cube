@@ -1,5 +1,6 @@
 import { getMeaAggKey } from '../../utils';
 import { resolveChartChrome } from '../spec/chartChrome';
+import { canRenderEcharts } from './support';
 import { toEchartsOption, toEchartsViews } from './toEchartsOption';
 import type { IViewField, VegaGlobalConfig } from '../../interfaces';
 
@@ -589,5 +590,77 @@ describe('toEchartsOption', () => {
         }>;
         expect(series[0]?.label?.show).toBe(true);
         expect(series[0]?.label?.formatter?.({ data: series[0]?.data?.[0] })).toBe('Казань');
+    });
+
+    test('rect with a measure on color is a continuous heatmap', () => {
+        expect(canRenderEcharts('rect')).toBe(true);
+        const region: IViewField = {
+            fid: 'region',
+            name: 'Регион',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const month: IViewField = {
+            fid: 'month',
+            name: 'Месяц',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const option = toEchartsOption({
+            ...base,
+            geomType: 'rect',
+            rows: [region],
+            columns: [month],
+            color: cash,
+            dataSource: [
+                { month: '2025-01', region: 'Самара', [getMeaAggKey(CASH, 'sum')]: 10 },
+                { month: '2025-02', region: 'Самара', [getMeaAggKey(CASH, 'sum')]: 30 },
+                { month: '2025-01', region: 'Казань', [getMeaAggKey(CASH, 'sum')]: 20 },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        const series = option.series as Array<{ type?: string; data?: Array<[number, number, number]> }>;
+        expect(series).toHaveLength(1);
+        expect(series[0]?.type).toBe('heatmap');
+        expect(series[0]?.data).toEqual(expect.arrayContaining([[0, 0, 10], [1, 0, 30], [0, 1, 20]]));
+        const visualMap = option.visualMap as { type?: string; min?: number; max?: number; inRange?: { color?: string[] } };
+        expect(visualMap.type).toBe('continuous');
+        expect(visualMap.min).toBe(10);
+        expect(visualMap.max).toBe(30);
+        expect((visualMap.inRange?.color ?? []).length).toBeGreaterThan(1);
+        const yAxis = option.yAxis as { type?: string; name?: string; data?: string[] };
+        expect(yAxis.type).toBe('category');
+        expect(yAxis.name).toBe('Регион');
+        expect(yAxis.data).toEqual(['Самара', 'Казань']);
+    });
+
+    test('y axis title gap clears long tick labels', () => {
+        const station: IViewField = {
+            fid: 'station',
+            name: 'Станция',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const longName = 'Очень длинное название станции назначения';
+        const wide = toEchartsOption({
+            ...base,
+            geomType: 'bar',
+            rows: [cash],
+            columns: [station],
+            chrome: { ...resolveChartChrome(), horizontal: true },
+            dataSource: [{ station: longName, [getMeaAggKey(CASH, 'sum')]: 48000 }],
+        });
+        const narrow = toEchartsOption({
+            ...base,
+            geomType: 'bar',
+            rows: [cash],
+            columns: [dateField],
+            chrome: resolveChartChrome(),
+        });
+        const wideGap = (wide.yAxis as { nameGap?: number }).nameGap ?? 0;
+        const narrowGap = ((narrow.yAxis as Array<{ nameGap?: number }>)[0]?.nameGap) ?? 0;
+        expect(wideGap).toBeGreaterThan(120);
+        expect(narrowGap).toBeGreaterThan(52);
+        expect(wideGap).toBeGreaterThan(narrowGap);
     });
 });

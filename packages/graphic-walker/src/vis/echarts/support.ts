@@ -1,10 +1,10 @@
-const ECHARTS_GEOMS = new Set(['bar', 'line', 'area', 'trail', 'point', 'circle', 'arc']);
+const ECHARTS_GEOMS = new Set(['bar', 'line', 'area', 'trail', 'point', 'circle', 'arc', 'rect']);
 
 export function canRenderEcharts(geomType: string, coordSystem?: string): boolean {
     if (coordSystem === 'geographic') {
         return false;
     }
-    if (geomType === 'table' || geomType === 'boxplot' || geomType === 'text' || geomType === 'rect' || geomType === 'tick') {
+    if (geomType === 'table' || geomType === 'boxplot' || geomType === 'text' || geomType === 'tick') {
         return false;
     }
     if (geomType === 'auto') {

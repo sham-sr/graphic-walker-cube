@@ -113,12 +113,42 @@ function lineShapeProps(shape: ChartChrome['lineShape']): { smooth?: boolean; st
     return {};
 }
 
-function withAxisTitle<T extends Record<string, unknown>>(axis: T, title: string, along: 'x' | 'y', color: string): T {
+function textWidthPx(text: string, fontSize = 11): number {
+    let width = 0;
+    for (const ch of text) {
+        const code = ch.codePointAt(0) ?? 0;
+        width += code > 0xff ? fontSize : fontSize * 0.62;
+    }
+    return Math.ceil(width);
+}
+
+/** Gap from the axis line so the rotated title sits outside the tick labels. */
+function axisNameGap(along: 'x' | 'y', labels: readonly string[]): number {
+    if (along === 'x') {
+        return 36;
+    }
+    const widest = labels.reduce((max, label) => Math.max(max, textWidthPx(label, 12)), 0);
+    return Math.min(240, Math.max(64, widest + 28));
+}
+
+function valueTickSamples(rows: readonly IRow[], key: string, locale: string): string[] {
+    let maxAbs = 0;
+    for (const row of rows) {
+        const n = Math.abs(Number(row[key]));
+        if (Number.isFinite(n)) {
+            maxAbs = Math.max(maxAbs, n);
+        }
+    }
+    const grouped = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(maxAbs);
+    return [String(Math.round(maxAbs)), grouped];
+}
+
+function withAxisTitle<T extends Record<string, unknown>>(axis: T, title: string, along: 'x' | 'y', color: string, nameGap?: number): T {
     return {
         ...axis,
         name: title,
         nameLocation: 'middle',
-        nameGap: along === 'y' ? 52 : 36,
+        nameGap: nameGap ?? axisNameGap(along, []),
         nameRotate: along === 'y' ? 90 : 0,
         nameTextStyle: {
             color,
@@ -339,6 +369,217 @@ function verticalLegend(textColor: string, show: boolean): EChartsOption['legend
     };
 }
 
+function innermostDimension(fields: readonly IViewField[]): IViewField | undefined {
+    for (let index = fields.length - 1; index >= 0; index -= 1) {
+        const field = fields[index];
+        if (field?.fid && field.analyticType !== 'measure') {
+            return field;
+        }
+    }
+    return undefined;
+}
+
+function orderedAxisValues(rows: readonly IRow[], key: string, field: IViewField): string[] {
+    const values = uniqueValues(rows, key);
+    if (field.semanticType !== 'temporal') {
+        return values;
+    }
+    values.sort((left, right) => {
+        const a = parseTemporal(left)?.getTime() ?? Number.NaN;
+        const b = parseTemporal(right)?.getTime() ?? Number.NaN;
+        if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
+            return a - b;
+        }
+        return left.localeCompare(right);
+    });
+    return values;
+}
+
+function sequentialColors(config: VegaGlobalConfig, fallback: readonly string[]): string[] {
+    const range = (config as { range?: { heatmap?: unknown; ramp?: unknown } }).range;
+    const source = range?.heatmap ?? range?.ramp;
+    if (Array.isArray(source) && source.length > 1 && source.every((item) => typeof item === 'string')) {
+        return source;
+    }
+    return fallback.length > 1 ? [...fallback] : ['#e4f5ff', '#60b4ff', '#004280'];
+}
+
+function rectHeatmapOption(
+    args: ToEchartsOptionArgs,
+    theme: { textColor: string; muted: string; dark: boolean; quantitative: readonly string[]; nominal: readonly string[] }
+): EChartsOption {
+    const chrome = resolveChartChrome(args.chrome);
+    const xField = innermostDimension(args.columns);
+    const yField = innermostDimension(args.rows);
+    const colorField = args.color?.fid ? args.color : undefined;
+    if (!xField || !yField || !colorField) {
+        return { backgroundColor: 'transparent' };
+    }
+
+    const locale = args.locale ?? 'en-US';
+    const xKey = fieldKey(xField, false);
+    const yKey = fieldKey(yField, false);
+    const continuous = colorField.analyticType === 'measure' || colorField.semanticType === 'quantitative';
+    const colorKey = fieldKey(colorField, args.defaultAggregated && colorField.analyticType === 'measure');
+    const xValues = orderedAxisValues(args.dataSource, xKey, xField);
+    const yValues = orderedAxisValues(args.dataSource, yKey, yField);
+    const xIndex = new Map(xValues.map((value, index) => [value, index]));
+    const yIndex = new Map(yValues.map((value, index) => [value, index]));
+    const yLabels = yField.semanticType === 'temporal' ? yValues.map((value) => formatTemporalLabel(value, yField, locale)) : yValues;
+    const cells = new Map<string, { xi: number; yi: number; value: number; nominal: string }>();
+
+    for (const row of args.dataSource) {
+        const xi = xIndex.get(String(row[xKey] ?? ''));
+        const yi = yIndex.get(String(row[yKey] ?? ''));
+        if (xi === undefined || yi === undefined) {
+            continue;
+        }
+        const id = `${xi}:${yi}`;
+        if (!continuous) {
+            cells.set(id, { xi, yi, value: 0, nominal: String(row[colorKey] ?? '') });
+            continue;
+        }
+        const amount = Number(row[colorKey]);
+        if (!Number.isFinite(amount)) {
+            continue;
+        }
+        const prev = cells.get(id);
+        cells.set(id, { xi, yi, value: (prev?.value ?? 0) + amount, nominal: '' });
+    }
+
+    const labelOf = (field: IViewField) => (field.semanticType === 'temporal' ? (value: string) => formatTemporalLabel(value, field, locale) : undefined);
+    const categoryAxis = (values: string[], labels: string[], title: string, along: 'x' | 'y', field: IViewField) =>
+        withAxisTitle(
+            {
+                type: 'category' as const,
+                data: values,
+                splitArea: { show: true },
+                axisLabel: {
+                    color: theme.muted,
+                    hideOverlap: true,
+                    formatter: labelOf(field),
+                },
+                axisLine: { lineStyle: { color: theme.dark ? '#6b7280' : '#9ca3af' } },
+            },
+            title,
+            along,
+            theme.muted,
+            axisNameGap(along, labels)
+        );
+
+    const colorTitle = fieldTitle(colorField, args.defaultAggregated && colorField.analyticType === 'measure');
+    const border = theme.dark ? '#1a1f29' : '#ffffff';
+    const base = {
+        backgroundColor: 'transparent',
+        animationDuration: 280,
+        legend: { show: false } as EChartsOption['legend'],
+        xAxis: categoryAxis(xValues, xField.semanticType === 'temporal' ? xValues.map((value) => formatTemporalLabel(value, xField, locale)) : xValues, fieldTitle(xField, false), 'x', xField),
+        yAxis: categoryAxis(yValues, yLabels, fieldTitle(yField, false), 'y', yField),
+    };
+
+    if (!continuous) {
+        const groups = uniqueValues(args.dataSource, colorKey);
+        return {
+            ...base,
+            grid: { left: 12, right: 136, top: 16, bottom: 28, containLabel: true },
+            visualMap: {
+                type: 'piecewise',
+                orient: 'vertical',
+                right: 0,
+                top: 'middle',
+                itemWidth: 12,
+                itemHeight: 12,
+                textStyle: { color: theme.muted, fontSize: 11 },
+                pieces: groups.map((name, index) => ({
+                    value: index,
+                    label: name || '—',
+                    color: theme.nominal[index % theme.nominal.length] ?? theme.nominal[0],
+                })),
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: (params: unknown) => heatmapTooltip(params, xValues, yValues, xField, yField, colorTitle, locale, groups),
+            },
+            series: [
+                {
+                    type: 'heatmap',
+                    name: colorTitle,
+                    data: [...cells.values()].map((item) => [item.xi, item.yi, Math.max(0, groups.indexOf(item.nominal))]),
+                    label: { show: chrome.showLabels, color: theme.textColor, fontSize: 11 },
+                    itemStyle: { borderColor: border, borderWidth: 1 },
+                },
+            ],
+        };
+    }
+
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    const data: Array<[number, number, number]> = [];
+    for (const item of cells.values()) {
+        min = Math.min(min, item.value);
+        max = Math.max(max, item.value);
+        data.push([item.xi, item.yi, item.value]);
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        min = 0;
+        max = 1;
+    } else if (min === max) {
+        max = min === 0 ? 1 : min + Math.abs(min) * 0.001;
+    }
+
+    return {
+        ...base,
+        grid: { left: 12, right: 88, top: 16, bottom: 28, containLabel: true },
+        visualMap: {
+            type: 'continuous',
+            min,
+            max,
+            calculable: true,
+            orient: 'vertical',
+            right: 0,
+            top: 'middle',
+            itemHeight: 140,
+            textStyle: { color: theme.muted, fontSize: 11 },
+            inRange: { color: sequentialColors(args.vegaConfig, theme.quantitative) },
+        },
+        tooltip: {
+            trigger: 'item',
+            formatter: (params: unknown) => heatmapTooltip(params, xValues, yValues, xField, yField, colorTitle, locale),
+        },
+        series: [
+            {
+                type: 'heatmap',
+                name: colorTitle,
+                data,
+                label: { show: chrome.showLabels, color: theme.textColor, fontSize: 11 },
+                itemStyle: { borderColor: border, borderWidth: 1 },
+                emphasis: { itemStyle: { shadowBlur: 6, shadowColor: 'rgba(0,0,0,0.25)' } },
+            },
+        ],
+    };
+}
+
+function heatmapTooltip(
+    params: unknown,
+    xValues: readonly string[],
+    yValues: readonly string[],
+    xField: IViewField,
+    yField: IViewField,
+    colorTitle: string,
+    locale: string,
+    groups?: readonly string[]
+): string {
+    const item = (Array.isArray(params) ? params[0] : params) as { data?: number[] | { value?: number[] }; marker?: string };
+    const tuple = Array.isArray(item.data) ? item.data : item.data?.value;
+    const xi = tuple?.[0] ?? 0;
+    const yi = tuple?.[1] ?? 0;
+    const raw = tuple?.[2];
+    const xLabel = xField.semanticType === 'temporal' ? formatTemporalLabel(xValues[xi], xField, locale) : xValues[xi] ?? '';
+    const yLabel = yField.semanticType === 'temporal' ? formatTemporalLabel(yValues[yi], yField, locale) : yValues[yi] ?? '';
+    const shown = groups ? groups[raw ?? 0] ?? '' : raw ?? '';
+    return `<div>${fieldTitle(xField, false)}: <b>${xLabel}</b></div><div>${fieldTitle(yField, false)}: <b>${yLabel}</b></div><div>${item.marker ?? ''}${colorTitle}: <b>${shown}</b></div>`;
+}
+
 export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
     const chrome = resolveChartChrome(args.chrome);
     const colors = getColor(args.vegaConfig);
@@ -349,6 +590,16 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
     const muted = dark ? '#9ca3af' : '#6b7280';
     const gridColor = dark ? '#2b3340' : '#e5e7eb';
     const axisLine = dark ? '#6b7280' : '#9ca3af';
+
+    if (args.geomType === 'rect') {
+        return rectHeatmapOption(args, {
+            textColor,
+            muted,
+            dark,
+            quantitative: colors.quantitativePalette,
+            nominal: palette,
+        });
+    }
 
     const yMeasures = args.rows.filter(isMeasure);
     const xMeasures = args.columns.filter(isMeasure);
@@ -752,9 +1003,14 @@ export function toEchartsOption(args: ToEchartsOptionArgs): EChartsOption {
     const meaTitle = fieldTitle(primaryMeasure, args.defaultAggregated);
     const catTitle = fieldTitle(categoryField, false);
     const overlayTitle = overlayField ? fieldTitle(overlayField, args.defaultAggregated) : '';
-    const namedValue = withAxisTitle(valueAxis, meaTitle, horizontal ? 'x' : 'y', muted);
-    const namedCategory = withAxisTitle(categoryAxis, catTitle, horizontal ? 'y' : 'x', muted);
-    const namedDual = dualValueAxis ? withAxisTitle(dualValueAxis, overlayTitle, horizontal ? 'x' : 'y', OVERLAY_COLOR) : undefined;
+    const categoryLabels = temporalCategory ? categories.map((cat) => formatTemporalLabel(cat, categoryField, locale)) : categories;
+    const valueLabels = measuresForSeries.flatMap((measure) => valueTickSamples(args.dataSource, fieldKey(measure, args.defaultAggregated), locale));
+    const yTickLabels = horizontal ? categoryLabels : valueLabels;
+    const xTickLabels = horizontal ? valueLabels : categoryLabels;
+    const namedValue = withAxisTitle(valueAxis, meaTitle, horizontal ? 'x' : 'y', muted, axisNameGap(horizontal ? 'x' : 'y', horizontal ? xTickLabels : yTickLabels));
+    const namedCategory = withAxisTitle(categoryAxis, catTitle, horizontal ? 'y' : 'x', muted, axisNameGap(horizontal ? 'y' : 'x', horizontal ? yTickLabels : xTickLabels));
+    const dualLabels = overlayField ? valueTickSamples(args.dataSource, fieldKey(overlayField, args.defaultAggregated), locale) : [];
+    const namedDual = dualValueAxis ? withAxisTitle(dualValueAxis, overlayTitle, horizontal ? 'x' : 'y', OVERLAY_COLOR, axisNameGap(horizontal ? 'x' : 'y', dualLabels)) : undefined;
 
     return {
         color: palette,
@@ -865,7 +1121,7 @@ export function toEchartsViews(args: ToEchartsOptionArgs): EchartsViewGrid {
     const overlayField = chrome.overlay === 'none' ? undefined : resolveOverlayMeasure(yMeasures, xMeasures, yField ?? NULL_FIELD, xField ?? NULL_FIELD);
     const geom = args.geomType === 'auto' ? (yField?.analyticType === 'measure' && xField?.semanticType === 'temporal' ? 'line' : 'bar') : args.geomType;
 
-    if (seriesType(geom) === 'pie' || overlayField || (yMeasures.length <= 1 && xMeasures.length <= 1)) {
+    if (args.geomType === 'rect' || seriesType(geom) === 'pie' || overlayField || (yMeasures.length <= 1 && xMeasures.length <= 1)) {
         return { options: [toEchartsOption(args)], rows: 1, cols: 1 };
     }
 

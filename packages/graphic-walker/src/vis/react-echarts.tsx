@@ -1,6 +1,6 @@
 import React, { forwardRef, useContext, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
+import { BarChart, HeatmapChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
 import {
     DatasetComponent,
     GridComponent,
@@ -8,6 +8,7 @@ import {
     MarkLineComponent,
     TitleComponent,
     TooltipComponent,
+    VisualMapComponent,
 } from 'echarts/components';
 import { CanvasRenderer, SVGRenderer } from 'echarts/renderers';
 import { useResizeDetector } from 'react-resize-detector';
@@ -19,6 +20,7 @@ import { toEchartsViews } from './echarts/toEchartsOption';
 
 echarts.use([
     BarChart,
+    HeatmapChart,
     LineChart,
     PieChart,
     ScatterChart,
@@ -28,6 +30,7 @@ echarts.use([
     LegendComponent,
     TitleComponent,
     MarkLineComponent,
+    VisualMapComponent,
     CanvasRenderer,
     SVGRenderer,
 ]);
