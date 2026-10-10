@@ -14,6 +14,7 @@ import {
 } from './interfaces';
 import { GWGlobalConfig } from './vis/theme';
 import type { IReactVegaHandler } from './vis/react-vega';
+import type { PivotTableGrid } from './services/pivotExport';
 import VisualSettings from './visualSettings';
 import PosFields from './fields/posFields';
 import AestheticFields from './fields/aestheticFields';
@@ -157,6 +158,7 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
         download: () => void;
         downloadXLSX?: () => void;
         downloadODS?: () => void;
+        readGrid?: () => PivotTableGrid | null;
     }>({ download() {} });
 
     const reportError = useCallback(
@@ -190,6 +192,7 @@ export const VizApp = observer(function VizApp(props: BaseVizProps) {
                     themeContext={darkMode}
                     vegaThemeContext={{ vizThemeConfig: currentTheme, setVizThemeConfig: setCurrentTheme }}
                     portalContainerContext={portal}
+                    CategoryOrderProviderContext={props.categoryOrderProvider ?? null}
                 >
                     <div className={classNames('App font-sans bg-background text-foreground m-0 p-0 w-full h-full min-h-0 flex flex-col flex-1', darkMode === 'dark' ? 'dark' : '')}>
                         <FieldsContextWrapper>

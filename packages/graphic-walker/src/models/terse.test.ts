@@ -261,6 +261,13 @@ describe('projectTerse', () => {
         expect(projected.computed).toBeUndefined();
     });
 
+    test('pivotFontSize is omitted at default 12 and emitted when non-default', () => {
+        const chart = normalize({ x: 'Region', y: 'sum(Sales)' } as TerseSpec, META);
+        expect(projectTerse(chart, silent).layout?.pivotFontSize).toBeUndefined();
+        expect(projectTerse({ ...chart, layout: { ...chart.layout, pivotFontSize: 12 } }, silent).layout?.pivotFontSize).toBeUndefined();
+        expect(projectTerse({ ...chart, layout: { ...chart.layout, pivotFontSize: 16 } }, silent).layout?.pivotFontSize).toBe(16);
+    });
+
     test('projection emits shorthand and knobs, not canonical noise', () => {
         const { projected } = roundtrip({ mark: 'bar', x: 'Region', y: 'sum(Sales)', stack: 'center', limit: 10, aggregate: false });
         expect(projected.y).toBe('sum(Sales)');

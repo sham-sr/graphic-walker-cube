@@ -1,18 +1,21 @@
 import React, { useMemo } from 'react';
-import { format } from 'd3-format';
+import { cn } from '@/utils';
 import type { IField } from '../../interfaces';
 import type { INestNode, IPivotCube, IPivotTablePath } from './interface';
 import { getCubeCell, leafValuePath } from './cube';
 import { PivotMetricCell } from './metricCell';
 import {
     cellDisplayValue,
+    createPivotNumberFormatter,
     collectMeasureExtent,
     filterablePathItems,
     isSummaryLeaf,
     normalize01,
     percentShare,
     readNumericCell,
+    pivotLeafCellPresentation,
     type PivotColorMode,
+    type PivotFontMetrics,
     type PivotPercentMode,
 } from './display';
 
@@ -32,16 +35,11 @@ export interface MetricTableProps {
     percentMode?: PivotPercentMode;
     dark?: boolean;
     onKeepPath?: (path: IPivotTablePath) => void;
+    fontMetrics: PivotFontMetrics;
 }
 
 function useNumberFormatter(numberFormat: string) {
-    return useMemo<(value: number) => string>(() => {
-        try {
-            return numberFormat ? format(numberFormat) : (value: number) => value.toLocaleString();
-        } catch {
-            return (value: number) => value.toLocaleString();
-        }
-    }, [numberFormat]);
+    return useMemo<(value: number) => string>(() => createPivotNumberFormatter(numberFormat), [numberFormat]);
 }
 
 const MetricTable: React.FC<MetricTableProps> = React.memo((props) => {
@@ -61,7 +59,9 @@ const MetricTable: React.FC<MetricTableProps> = React.memo((props) => {
         percentMode = 'none',
         dark = false,
         onKeepPath,
+        fontMetrics,
     } = props;
+    const placeholderLeaf = pivotLeafCellPresentation(fontMetrics);
     const formatNumber = useNumberFormatter(numberFormat);
     const keepEnabled = Boolean(onKeepPath);
     const measures = meaInRows.length ? meaInRows : meaInColumns;
@@ -104,6 +104,7 @@ const MetricTable: React.FC<MetricTableProps> = React.memo((props) => {
                 dark={dark}
                 keepEnabled={keepEnabled && !isSummaryLeaf(left) && !isSummaryLeaf(top)}
                 onKeep={() => onKeepPath?.(filterablePathItems([...leftPath, ...topPath]))}
+                fontMetrics={fontMetrics}
             />
         );
     };
@@ -149,7 +150,11 @@ const MetricTable: React.FC<MetricTableProps> = React.memo((props) => {
                                 );
                             }
                             return (
-                                <td className="h-8 max-h-8 whitespace-nowrap px-2 py-0 text-xs leading-8 text-right" key={`${rIndex}-${cIndex}`}>
+                                <td
+                                    className={cn('whitespace-nowrap px-2 py-0 text-right', placeholderLeaf.className)}
+                                    style={placeholderLeaf.style}
+                                    key={`${rIndex}-${cIndex}`}
+                                >
                                     True
                                 </td>
                             );

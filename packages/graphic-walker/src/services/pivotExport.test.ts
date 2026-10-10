@@ -82,4 +82,45 @@ describe('buildPivotSheet', () => {
         expect(cells).toContain('2021-11');
         expect(cells.some((cell) => cell.includes('00:00:00'))).toBe(false);
     });
+
+    test('reports header bands and the region rowspan merge', () => {
+        const data = [
+            { region: 'East', city: 'Boston', sales_sum: 9 },
+            { region: 'East', city: 'NYC', sales_sum: 11 },
+        ];
+        const leftTree = buildNestTree(['region', 'city'], data, [], false);
+        const topTree = buildNestTree([], data, [], false);
+        const sheet = buildPivotSheet({
+            leftTree,
+            topTree,
+            metricTable: [[{ sales_sum: 9 }], [{ sales_sum: 11 }]],
+            dimsInRow: [region, city],
+            dimsInColumn: [],
+            measInRow: [],
+            measInColumn: [sales],
+        });
+        expect(sheet.headerRows).toBe(1);
+        expect(sheet.headerColumns).toBe(2);
+        expect(sheet.data[0]).toEqual(['Region', 'City', 'sum(Paid)']);
+        expect(sheet.data[1][2]).toBe(9);
+        expect(sheet.data[2][2]).toBe(11);
+        expect(sheet.merges).toEqual([{ s: { r: 1, c: 0 }, e: { r: 2, c: 0 } }]);
+
+        const formatted = buildPivotSheet({
+            leftTree,
+            topTree,
+            metricTable: [[{ sales_sum: 9 }], [{ sales_sum: 11 }]],
+            dimsInRow: [region, city],
+            dimsInColumn: [],
+            measInRow: [],
+            measInColumn: [sales],
+            formatMetric: (ctx) => (ctx.columnLeafIndex === 0 && ctx.rowLeafIndex === 0 ? '9.0' : '11.0'),
+        });
+        expect(formatted.headerRows).toBe(sheet.headerRows);
+        expect(formatted.headerColumns).toBe(sheet.headerColumns);
+        expect(formatted.data[0]).toEqual(sheet.data[0]);
+        expect(formatted.data[1][2]).toBe('9.0');
+        expect(formatted.data[2][2]).toBe('11.0');
+        expect(formatted.merges).toEqual(sheet.merges);
+    });
 });

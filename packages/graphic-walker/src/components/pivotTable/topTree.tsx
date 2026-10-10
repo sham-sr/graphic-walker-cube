@@ -5,10 +5,26 @@ import { MinusCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 import { cn, getMeaAggName } from '@/utils';
 import { collectPivotLeafChains } from './headerWindow';
 import { getLeafSpan, isPivotNodeCollapsed } from './treeWalk';
-import { formatPivotHeaderValue, sortMark, type PivotDateFormat, type PivotSummaryLabels } from './display';
+import {
+    formatPivotHeaderValue,
+    pivotHeaderFontPresentation,
+    sortMark,
+    type PivotDateFormat,
+    type PivotFontMetrics,
+    type PivotSummaryLabels,
+} from './display';
 
-const headerClass = (extra?: string) =>
-    cn('sticky top-0 z-20 bg-secondary text-secondary-foreground align-top whitespace-nowrap p-2 text-xs border font-normal text-left', extra);
+function topHeaderPresentation(metrics: PivotFontMetrics, extra?: string) {
+    const font = pivotHeaderFontPresentation(metrics);
+    return {
+        className: cn(
+            'sticky top-0 z-20 bg-secondary text-secondary-foreground align-top whitespace-nowrap p-2 border font-normal text-left',
+            font.className,
+            extra
+        ),
+        style: font.style,
+    };
+}
 
 function TopHeaderCell({
     node,
@@ -28,6 +44,7 @@ function TopHeaderCell({
     cellKey,
     dateFormat,
     locale,
+    fontMetrics,
 }: {
     node: INestNode;
     field: IField | undefined;
@@ -46,13 +63,16 @@ function TopHeaderCell({
     cellKey: string;
     dateFormat?: PivotDateFormat;
     locale?: string;
+    fontMetrics: PivotFontMetrics;
 }) {
     const label = formatPivotHeaderValue(node, field, dimsInCol, displayOffset, summaryLabels, dateFormat, locale);
+    const header = topHeaderPresentation(fontMetrics, cn(node.kind === 'summary' && 'bg-muted font-medium', onHeaderSort && field && 'cursor-pointer'));
     return (
         <th
             key={cellKey}
             scope="col"
-            className={headerClass(cn(node.kind === 'summary' && 'bg-muted font-medium', onHeaderSort && field && 'cursor-pointer'))}
+            className={header.className}
+            style={header.style}
             colSpan={colSpan}
             rowSpan={rowSpan}
             onClick={() => field && onHeaderSort?.(field.fid)}
@@ -97,6 +117,7 @@ function renderTree(
     meaNumber: number,
     onHeaderCollapse: (node: INestNode) => void,
     enableCollapse: boolean,
+    fontMetrics: PivotFontMetrics,
     displayOffset?: number,
     collapsedKeySet?: ReadonlySet<string>,
     onHeaderSort?: (fid: string) => void,
@@ -131,6 +152,7 @@ function renderTree(
             summaryLabels={summaryLabels}
             dateFormat={dateFormat}
             locale={locale}
+            fontMetrics={fontMetrics}
         />
     );
     if (isCollapsed) return;
@@ -144,6 +166,7 @@ function renderTree(
             meaNumber,
             onHeaderCollapse,
             enableCollapse,
+            fontMetrics,
             displayOffset,
             collapsedKeySet,
             onHeaderSort,
@@ -163,6 +186,7 @@ function renderRepeatedTree(
     collapsedKeySet: ReadonlySet<string> | undefined,
     onHeaderCollapse: (node: INestNode) => void,
     enableCollapse: boolean,
+    fontMetrics: PivotFontMetrics,
     displayOffset: number | undefined,
     onHeaderSort: ((fid: string) => void) | undefined,
     sortedFid: string | undefined,
@@ -206,6 +230,7 @@ function renderRepeatedTree(
                         hideCollapse={!showCollapse}
                         dateFormat={dateFormat}
                         locale={locale}
+                        fontMetrics={fontMetrics}
                     />
                 );
             }
@@ -232,9 +257,10 @@ export interface TreeProps {
     repeatLabels?: boolean;
     dateFormat?: PivotDateFormat;
     locale?: string;
+    fontMetrics: PivotFontMetrics;
 }
 const TopTree: React.FC<TreeProps> = (props) => {
-    const { data, dimsInCol, measInCol, dimsInRow, measInRow, onHeaderCollapse, onHeaderSort, sortedFid, sortedDir, summaryLabels } = props;
+    const { data, dimsInCol, measInCol, dimsInRow, measInRow, onHeaderCollapse, onHeaderSort, sortedFid, sortedDir, summaryLabels, fontMetrics } = props;
     const nodeCells: ReactNode[][] = useMemo(() => {
         const meaNumber = Math.max(measInCol.length, 1);
         let cellRows: ReactNode[][];
@@ -246,6 +272,7 @@ const TopTree: React.FC<TreeProps> = (props) => {
                 props.collapsedKeySet,
                 onHeaderCollapse,
                 props.enableCollapse,
+                fontMetrics,
                 props.displayOffset,
                 onHeaderSort,
                 sortedFid,
@@ -258,17 +285,21 @@ const TopTree: React.FC<TreeProps> = (props) => {
                 const leaves = collectPivotLeafChains(data, props.collapsedKeySet);
                 cellRows.push(
                     leaves.flatMap((leaf, idx) =>
-                        measInCol.map((m) => (
-                            <th
-                                key={`${cellRows.length}-${m.fid}-${m.aggName}-${leaf.node.uniqueKey}-${idx}`}
-                                scope="col"
-                                className={headerClass(onHeaderSort && 'cursor-pointer')}
-                                onClick={() => onHeaderSort?.(m.fid)}
-                            >
-                                {props.defaultAggregated ? getMeaAggName(m.name, m.aggName) : m.name}
-                                {sortMark(m.fid, sortedFid, sortedDir)}
-                            </th>
-                        ))
+                        measInCol.map((m) => {
+                            const header = topHeaderPresentation(fontMetrics, onHeaderSort && 'cursor-pointer');
+                            return (
+                                <th
+                                    key={`${cellRows.length}-${m.fid}-${m.aggName}-${leaf.node.uniqueKey}-${idx}`}
+                                    scope="col"
+                                    className={header.className}
+                                    style={header.style}
+                                    onClick={() => onHeaderSort?.(m.fid)}
+                                >
+                                    {props.defaultAggregated ? getMeaAggName(m.name, m.aggName) : m.name}
+                                    {sortMark(m.fid, sortedFid, sortedDir)}
+                                </th>
+                            );
+                        })
                     )
                 );
             }
@@ -282,6 +313,7 @@ const TopTree: React.FC<TreeProps> = (props) => {
                 meaNumber,
                 onHeaderCollapse,
                 props.enableCollapse,
+                fontMetrics,
                 props.displayOffset,
                 props.collapsedKeySet,
                 onHeaderSort,
@@ -307,30 +339,36 @@ const TopTree: React.FC<TreeProps> = (props) => {
 
             cellRows.push(
                 new Array(totalChildrenSize).fill(0).flatMap((ele, idx) =>
-                    measInCol.map((m) => (
-                        <th
-                            key={`${cellRows.length}-${m.fid}-${m.aggName}-${idx}`}
-                            scope="col"
-                            className={headerClass(onHeaderSort && 'cursor-pointer')}
-                            onClick={() => onHeaderSort?.(m.fid)}
-                        >
-                            {props.defaultAggregated ? getMeaAggName(m.name, m.aggName) : m.name}
-                            {sortMark(m.fid, sortedFid, sortedDir)}
-                        </th>
-                    ))
+                    measInCol.map((m) => {
+                        const header = topHeaderPresentation(fontMetrics, onHeaderSort && 'cursor-pointer');
+                        return (
+                            <th
+                                key={`${cellRows.length}-${m.fid}-${m.aggName}-${idx}`}
+                                scope="col"
+                                className={header.className}
+                                style={header.style}
+                                onClick={() => onHeaderSort?.(m.fid)}
+                            >
+                                {props.defaultAggregated ? getMeaAggName(m.name, m.aggName) : m.name}
+                                {sortMark(m.fid, sortedFid, sortedDir)}
+                            </th>
+                        );
+                    })
                 )
             );
             cellRows.shift();
         }
         const visibleRows = cellRows.filter((row) => row.length > 0);
         if (visibleRows.length === 0) {
+            const header = topHeaderPresentation(fontMetrics);
             visibleRows.push([
-                <th key="value" scope="col" className={headerClass()}>
+                <th key="value" scope="col" className={header.className} style={header.style}>
                     Value
                 </th>,
             ]);
         }
         const rowHeaderColumnCount = dimsInRow.length + (measInRow.length > 0 ? 1 : 0);
+        const cornerFont = pivotHeaderFontPresentation(fontMetrics);
         return visibleRows.map((row, rowIndex) => {
             if (rowHeaderColumnCount === 0) {
                 return row;
@@ -341,32 +379,41 @@ const TopTree: React.FC<TreeProps> = (props) => {
                         key={`corner-${rowIndex}`}
                         aria-hidden="true"
                         colSpan={rowHeaderColumnCount}
-                        className="sticky left-0 top-0 z-30 bg-secondary p-2 text-xs border"
+                        className={cn('sticky left-0 top-0 z-30 bg-secondary p-2 border', cornerFont.className)}
+                        style={cornerFont.style}
                     />,
                     ...row,
                 ];
             }
             return [
-                ...dimsInRow.map((field, fieldIndex) => (
-                    <th
-                        key={`row-field-${field.fid}`}
-                        scope="col"
-                        className={headerClass(cn(fieldIndex === 0 && 'sticky left-0 z-30', onHeaderSort && 'cursor-pointer'))}
-                        onClick={() => onHeaderSort?.(field.fid)}
-                    >
-                        {field.name}
-                        {sortMark(field.fid, sortedFid, sortedDir)}
-                    </th>
-                )),
+                ...dimsInRow.map((field, fieldIndex) => {
+                    const header = topHeaderPresentation(
+                        fontMetrics,
+                        cn(fieldIndex === 0 && 'sticky left-0 z-30', onHeaderSort && 'cursor-pointer')
+                    );
+                    return (
+                        <th
+                            key={`row-field-${field.fid}`}
+                            scope="col"
+                            className={header.className}
+                            style={header.style}
+                            onClick={() => onHeaderSort?.(field.fid)}
+                        >
+                            {field.name}
+                            {sortMark(field.fid, sortedFid, sortedDir)}
+                        </th>
+                    );
+                }),
                 ...(measInRow.length > 0
                     ? [
-                          <th
-                              key="row-measure"
-                              scope="col"
-                              className={headerClass(dimsInRow.length === 0 ? 'sticky left-0 z-30' : undefined)}
-                          >
-                              Measure
-                          </th>,
+                          (() => {
+                              const header = topHeaderPresentation(fontMetrics, dimsInRow.length === 0 ? 'sticky left-0 z-30' : undefined);
+                              return (
+                                  <th key="row-measure" scope="col" className={header.className} style={header.style}>
+                                      Measure
+                                  </th>
+                              );
+                          })(),
                       ]
                     : []),
                 ...row,
@@ -390,6 +437,7 @@ const TopTree: React.FC<TreeProps> = (props) => {
         props.dateFormat,
         props.locale,
         summaryLabels,
+        fontMetrics,
     ]);
 
     return (

@@ -11,11 +11,17 @@ import {
     readNumericCell,
     resolvePivotColorMode,
     resolvePivotDateFormat,
+    resolvePivotFontSize,
     resolvePivotHeaderMode,
     resolvePivotPercentMode,
     resolvePivotTotals,
+    estimatePivotVirtualRowSize,
+    pivotLeafCellPresentation,
+    pivotHeaderFontPresentation,
     pivotTotalsFromInput,
     formatPivotHeaderValue,
+    createPivotNumberFormatter,
+    formatPivotGridMetricCell,
 } from './display';
 
 function cubeWith(path: IPivotTablePath, sales: number): IPivotCube {
@@ -180,5 +186,118 @@ describe('pivot display helpers', () => {
         };
         expect(formatPivotHeaderValue(node, monthField, [monthField], 0, undefined, 'technical')).toBe('2025-02');
         expect(formatPivotHeaderValue(node, monthField, [monthField], 0, undefined, 'human', 'en-US').toLowerCase()).toMatch(/feb/);
+    });
+
+    test('resolvePivotFontSize maps presets and defaults unknown values', () => {
+        expect(resolvePivotFontSize(undefined)).toEqual({ fontPx: 12, rowPx: 32 });
+        expect(resolvePivotFontSize('large')).toEqual({ fontPx: 12, rowPx: 32 });
+        expect(resolvePivotFontSize(12)).toEqual({ fontPx: 12, rowPx: 32 });
+        expect(resolvePivotFontSize(16)).toEqual({ fontPx: 16, rowPx: 40 });
+    });
+
+    test('pivot leaf and header presentation use classes or inline styles', () => {
+        const defaultMetrics = resolvePivotFontSize(12);
+        const largeMetrics = resolvePivotFontSize(16);
+        expect(pivotLeafCellPresentation(defaultMetrics)).toEqual({ className: 'h-8 max-h-8 text-xs leading-8' });
+        expect(pivotLeafCellPresentation(largeMetrics)).toEqual({
+            className: '',
+            style: { fontSize: 16, height: 40, maxHeight: 40, lineHeight: '40px' },
+        });
+        expect(pivotHeaderFontPresentation(defaultMetrics)).toEqual({ className: 'text-xs' });
+        expect(pivotHeaderFontPresentation(largeMetrics)).toEqual({ className: '', style: { fontSize: 16 } });
+    });
+
+    test('estimatePivotVirtualRowSize scales row height by measure count', () => {
+        expect(estimatePivotVirtualRowSize(32, 2)).toBe(64);
+        expect(estimatePivotVirtualRowSize(resolvePivotFontSize(16).rowPx, 3)).toBe(120);
+    });
+
+    test('formats grid metrics the same way the body cell does', () => {
+        const formatNumber = createPivotNumberFormatter(',.1f');
+        expect(
+            formatPivotGridMetricCell({
+                cell: { sales_sum: 1234.5 },
+                rowMeasure: null,
+                columnMeasure: measure,
+                aggregated: true,
+                percentMode: 'none',
+                formatNumber,
+            })
+        ).toBe('1,234.5');
+        expect(
+            formatPivotGridMetricCell({
+                cell: null,
+                rowMeasure: null,
+                columnMeasure: measure,
+                aggregated: true,
+                percentMode: 'none',
+                formatNumber,
+            })
+        ).toBe('—');
+        expect(
+            formatPivotGridMetricCell({
+                cell: { sales_sum: 1, units_sum: 2 },
+                rowMeasure: { fid: 'units', aggName: 'sum' },
+                columnMeasure: measure,
+                aggregated: true,
+                percentMode: 'none',
+                formatNumber,
+            })
+        ).toBe('1.0');
+        expect(
+            formatPivotGridMetricCell({
+                cell: { sales: 9 },
+                rowMeasure: null,
+                columnMeasure: null,
+                aggregated: true,
+                percentMode: 'none',
+                formatNumber,
+            })
+        ).toBe('True');
+
+        const left = {
+            kind: 'value' as const,
+            key: 'region',
+            value: 'East',
+            sort: '',
+            uniqueKey: 'e',
+            fieldKey: 'region',
+            children: [],
+            height: 0,
+            isCollapsed: true,
+            path: east,
+        };
+        const top = {
+            kind: 'root' as const,
+            key: 'root',
+            value: 'root',
+            sort: '',
+            uniqueKey: 'r',
+            fieldKey: 'root',
+            children: [],
+            height: 0,
+            isCollapsed: false,
+            path: [],
+        };
+        const cube: IPivotCube = {
+            cells: {
+                [createCubeCellKey(east)]: { sales_sum: 25 },
+                [createCubeCellKey([])]: { sales_sum: 100 },
+            },
+        };
+        expect(
+            formatPivotGridMetricCell({
+                cell: { sales_sum: 25 },
+                rowMeasure: null,
+                columnMeasure: measure,
+                aggregated: true,
+                percentMode: 'grand',
+                formatNumber,
+                cube,
+                left,
+                top,
+            })
+        ).toBe('25%');
+        expect(createPivotNumberFormatter('not-a-d3-format')(1234)).toBe((1234).toLocaleString());
     });
 });

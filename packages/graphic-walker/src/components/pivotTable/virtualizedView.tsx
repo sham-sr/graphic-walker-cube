@@ -6,8 +6,15 @@ import MetricTable from './metricTable';
 import TopTree from './topTree';
 import { collectPivotLeafChains, indexPivotLeafAncestors } from './headerWindow';
 import type { INestNode, IPivotTableModel, IPivotTablePath } from './interface';
-import type { PivotColorMode, PivotDateFormat, PivotPercentMode, PivotSummaryLabels } from './display';
-import { PIVOT_ROW_HEIGHT_PX, PIVOT_TABLE_CLASS } from './scrollport';
+import {
+    estimatePivotVirtualRowSize,
+    type PivotColorMode,
+    type PivotDateFormat,
+    type PivotFontMetrics,
+    type PivotPercentMode,
+    type PivotSummaryLabels,
+} from './display';
+import { PIVOT_TABLE_CLASS } from './scrollport';
 import { PivotScrollViewport } from './scrollArea';
 
 export interface VirtualizedPivotViewProps {
@@ -35,6 +42,7 @@ export interface VirtualizedPivotViewProps {
     repeatLabels?: boolean;
     dateFormat?: PivotDateFormat;
     locale?: string;
+    fontMetrics: PivotFontMetrics;
 }
 
 export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
@@ -61,6 +69,7 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
     repeatLabels,
     dateFormat,
     locale,
+    fontMetrics,
 }) => {
     const parentRef = useRef<HTMLDivElement>(null);
     const leftChains = useMemo(() => collectPivotLeafChains(model.leftTree, collapsedKeySet), [model.leftTree, collapsedKeySet]);
@@ -72,7 +81,7 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
     const rowVirtualizer = useVirtualizer({
         count: leftChains.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => PIVOT_ROW_HEIGHT_PX * measureCount,
+        estimateSize: () => estimatePivotVirtualRowSize(fontMetrics.rowPx, measureCount),
         overscan: 6,
         getItemKey: (index) => leftChains[index]?.node.uniqueKey ?? index,
     });
@@ -105,6 +114,7 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     repeatLabels,
                     dateFormat,
                     locale,
+                    fontMetrics,
                 },
                 rowStart,
                 rowEnd
@@ -127,6 +137,7 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
             repeatLabels,
             dateFormat,
             locale,
+            fontMetrics,
             rowStart,
             rowEnd,
         ]
@@ -153,6 +164,7 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     repeatLabels={repeatLabels}
                     dateFormat={dateFormat}
                     locale={locale}
+                    fontMetrics={fontMetrics}
                 />
                 <MetricTable
                     cube={model.cube}
@@ -170,6 +182,7 @@ export const VirtualizedPivotView: React.FC<VirtualizedPivotViewProps> = ({
                     percentMode={percentMode}
                     dark={dark}
                     onKeepPath={onKeepPath}
+                    fontMetrics={fontMetrics}
                 />
             </table>
         </PivotScrollViewport>

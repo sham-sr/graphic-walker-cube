@@ -97,6 +97,7 @@ export const emptyVisualLayout: IVisualLayout = {
     pivotPercentMode: 'none',
     pivotRepeatLabels: false,
     pivotDateFormat: 'human',
+    pivotFontSize: 12,
     chartShowLabels: false,
     chartOverlay: 'none',
     chartReference: 'none',

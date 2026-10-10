@@ -8,6 +8,7 @@ import {
     PaintBrushIcon,
     SparklesIcon,
     CodeBracketIcon,
+    Bars3BottomLeftIcon,
 } from '@heroicons/react/24/outline';
 import {
     AggregationIcon,
@@ -62,7 +63,8 @@ import KanariesLogo from '../assets/kanaries.png';
 import { ImageWithFallback } from '../components/timeoutImg';
 import LimitSetting from '../components/limitSetting';
 import { omitRedundantSeparator } from './utils';
-import { resolvePivotTotals } from '../components/pivotTable/display';
+import { resolvePivotFontSize, resolvePivotTotals, type PivotFontSize } from '../components/pivotTable/display';
+import type { PivotTableGrid } from '../services/pivotExport';
 import { Button } from '@/components/ui/button';
 import { classNames } from '@/utils';
 
@@ -73,6 +75,7 @@ interface IVisualSettings {
         download: () => void;
         downloadXLSX?: () => void;
         downloadODS?: () => void;
+        readGrid?: () => PivotTableGrid | null;
     }>;
     exclude?: string[];
     extra?: ToolbarItemProps[];
@@ -91,6 +94,25 @@ const KanariesIcon = (props: { className?: string; style?: React.CSSProperties }
         alt="kanaries documents"
     />
 );
+
+function pivotFontSizeOptionIcon(size: PivotFontSize) {
+    return function PivotFontSizeOptionIcon(props: React.SVGProps<SVGSVGElement>) {
+        return (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width={18} height={18} fill="currentColor" aria-hidden {...props}>
+                <text x="9" y="13" textAnchor="middle" fontSize="11" fontFamily="system-ui, sans-serif" fill="currentColor">
+                    {size}
+                </text>
+            </svg>
+        );
+    };
+}
+
+const PIVOT_FONT_SIZE_OPTION_ICONS: Record<PivotFontSize, ReturnType<typeof pivotFontSizeOptionIcon>> = {
+    10: pivotFontSizeOptionIcon(10),
+    12: pivotFontSizeOptionIcon(12),
+    14: pivotFontSizeOptionIcon(14),
+    16: pivotFontSizeOptionIcon(16),
+};
 
 const VisualSettings: React.FC<IVisualSettings> = ({
     rendererHandler,
@@ -115,6 +137,7 @@ const VisualSettings: React.FC<IVisualSettings> = ({
         showTableSummary,
         pivotRowTotals,
         pivotColumnTotals,
+        pivotFontSize,
         stack,
         interactiveScale,
         size: { mode: sizeMode, width, height },
@@ -290,6 +313,20 @@ const VisualSettings: React.FC<IVisualSettings> = ({
                         ['pivotRowTotals', checked ? 'all' : 'off'],
                         ['pivotColumnTotals', checked ? 'all' : 'off']
                     );
+                },
+            },
+            {
+                key: 'table:font',
+                label: t('table.font'),
+                icon: Bars3BottomLeftIcon,
+                options: ([10, 12, 14, 16] as const).map((size) => ({
+                    key: String(size),
+                    label: String(size),
+                    icon: PIVOT_FONT_SIZE_OPTION_ICONS[size],
+                })),
+                value: String(resolvePivotFontSize(pivotFontSize).fontPx),
+                onSelect: (key) => {
+                    vizStore.setVisualLayout('pivotFontSize', Number(key) as PivotFontSize);
                 },
             },
             ...(experimentalFeatures?.computedField
@@ -504,7 +541,9 @@ const VisualSettings: React.FC<IVisualSettings> = ({
             case 'table':
                 return items;
             default:
-                return items.filter((item) => typeof item === 'string' || item.key !== 'table:summary');
+                return items.filter(
+                    (item) => typeof item === 'string' || (item.key !== 'table:summary' && item.key !== 'table:font')
+                );
         }
     }, [
         vizStore,
@@ -527,6 +566,7 @@ const VisualSettings: React.FC<IVisualSettings> = ({
         showTableSummary,
         pivotRowTotals,
         pivotColumnTotals,
+        pivotFontSize,
         experimentalFeatures,
         paintInfo,
         datasetStatsToolbar,

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import type { IComputationFunction, IFilterField, IRenderStatus, IRow, IViewField } from '../../interfaces';
 import LoadingLayer from '../loadingLayer';
-import { buildPivotSheet } from '../../services/pivotExport';
+import { buildPivotSheet, type PivotMetricFormatContext, type PivotTableGrid } from '../../services/pivotExport';
 import { buildCsvContent, exportSpreadsheet } from '../../services/spreadsheetExport';
 import { download } from '../../utils/save';
 import type { INestNode, IPivotTableModel, IPivotTablePath } from './interface';
@@ -17,14 +17,17 @@ import {
     resolvePivotPercentMode,
     resolvePivotTotals,
     showTableSummaryFromTotals,
+    createPivotNumberFormatter,
     fieldLooksTemporal,
+    formatPivotGridMetricCell,
     type PivotColorMode,
     type PivotDateFormat,
+    type PivotFontSize,
     type PivotHeaderMode,
     type PivotPercentMode,
     type PivotTotalsMode,
 } from './display';
-import { collectCollapsiblePaths } from './treeWalk';
+import { collectCollapsiblePaths, collectVisibleLeaves } from './treeWalk';
 
 const EMPTY_FILTERS: readonly IFilterField[] = [];
 const EMPTY_PATHS: readonly IPivotTablePath[] = [];
@@ -93,6 +96,7 @@ export interface PivotTableCoreProps {
         download: () => void;
         downloadXLSX?: () => void;
         downloadODS?: () => void;
+        readGrid?: () => PivotTableGrid | null;
     }>;
     colorMode?: PivotColorMode;
     percentMode?: PivotPercentMode;
@@ -105,9 +109,12 @@ export interface PivotTableCoreProps {
     onRepeatLabelsChange?: (repeat: boolean) => void;
     dateFormat?: PivotDateFormat;
     onDateFormatChange?: (mode: PivotDateFormat) => void;
+    pivotFontSize?: PivotFontSize;
     dark?: boolean;
     onHeaderSort?: (fid: string) => void;
     onKeepPath?: (path: IPivotTablePath) => void;
+    /** BCP-47 locale for category order and formatted headers; falls back to i18n when omitted. */
+    locale?: string;
 }
 
 export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
@@ -146,11 +153,14 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     onRepeatLabelsChange,
     dateFormat,
     onDateFormatChange,
+    pivotFontSize,
     dark = false,
     onHeaderSort,
     onKeepPath,
+    locale: localeProp,
 }) => {
     const { t, i18n } = useTranslation();
+    const resolvedLocale = localeProp ?? i18n.language;
     const [model, setModel] = useState<IPivotTableModel | null>(null);
     const [loading, setLoading] = useState(false);
     const [uncontrolledCollapsedPaths, setUncontrolledCollapsedPaths] = useState<IPivotTablePath[]>(() =>
@@ -230,6 +240,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 columnTotals: activeColumnTotals,
                 collapsedPaths: EMPTY_PATHS,
                 viewData,
+                locale: resolvedLocale,
             },
             buildModel
         )
@@ -274,6 +285,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
         activeColumnTotals,
         viewData,
         buildModel,
+        resolvedLocale,
     ]);
 
     useEffect(
@@ -306,7 +318,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
     const activeRepeatLabels = activeHeaderMode === 'repeat';
     const activeDateFormat = onDateFormatChange ? resolvePivotDateFormat(dateFormat) : localDateFormat;
     const showDateFormat = [...rows, ...columns].some((field) => fieldLooksTemporal(field));
-    const locale = i18n.language;
+    const locale = resolvedLocale;
     const collapsiblePaths = useMemo(() => {
         if (!model?.leftTree || !model.topTree) {
             return [];
@@ -394,13 +406,13 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
         onCollapsedPathsChange?.(nextPaths);
     }, [activeCollapsedPaths, aggregationFeaturesEnabled, collapsedPaths, collapsiblePaths, disableCollapse, onCollapsedPathsChange]);
 
-    const downloadPivot = useCallback(
-        (type: 'csv' | 'xlsx' | 'ods') => {
+    const buildSheet = useCallback(
+        (formatMetric?: (ctx: PivotMetricFormatContext) => string | null) => {
             if (!model || !shouldRenderPivotTableModel(model) || !model.leftTree || !model.topTree) {
-                return;
+                return null;
             }
             const metricTable = materializeMetricMatrix(model.leftTree, model.topTree, model.cube).map((row) => row.map((cell) => cell ?? null));
-            const sheet = buildPivotSheet({
+            return buildPivotSheet({
                 leftTree: model.leftTree,
                 topTree: model.topTree,
                 metricTable,
@@ -413,7 +425,18 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 repeatLabels: activeRepeatLabels,
                 dateFormat: activeDateFormat,
                 locale,
+                formatMetric,
             });
+        },
+        [activeDateFormat, activeRepeatLabels, dimsInColumn, dimsInRow, locale, measInColumn, measInRow, model, summaryLabels, timezoneDisplayOffset]
+    );
+
+    const downloadPivot = useCallback(
+        (type: 'csv' | 'xlsx' | 'ods') => {
+            const sheet = buildSheet();
+            if (!sheet) {
+                return;
+            }
             const fileName = `${name || 'pivot-table'}.${type}`;
             if (type === 'csv') {
                 const csvContent = buildCsvContent(sheet.data);
@@ -430,8 +453,40 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                 type
             );
         },
-        [dimsInColumn, dimsInRow, measInColumn, measInRow, model, name, timezoneDisplayOffset, summaryLabels, activeRepeatLabels, activeDateFormat, locale]
+        [buildSheet, name]
     );
+
+    const readGrid = useCallback((): PivotTableGrid | null => {
+        if (!model || !shouldRenderPivotTableModel(model) || !model.leftTree || !model.topTree) {
+            return null;
+        }
+        const current = model;
+        const formatNumber = createPivotNumberFormatter(numberFormat);
+        const leftLeaves = collectVisibleLeaves(current.leftTree);
+        const topLeaves = collectVisibleLeaves(current.topTree);
+        const sheet = buildSheet((ctx) =>
+            formatPivotGridMetricCell({
+                cell: ctx.cell,
+                rowMeasure: ctx.rowMeasure,
+                columnMeasure: ctx.columnMeasure,
+                aggregated: defaultAggregated,
+                percentMode: activePercentMode,
+                formatNumber,
+                cube: current.cube,
+                left: leftLeaves[ctx.rowLeafIndex],
+                top: topLeaves[ctx.columnLeafIndex],
+            })
+        );
+        if (!sheet) {
+            return null;
+        }
+        return {
+            rows: sheet.data.map((row) => row.map((value) => (value == null ? null : String(value)))),
+            headerRows: sheet.headerRows,
+            headerColumns: sheet.headerColumns,
+            merges: sheet.merges,
+        };
+    }, [activePercentMode, buildSheet, defaultAggregated, model, numberFormat]);
 
     useEffect(() => {
         if (!exportHandlerRef) return;
@@ -439,8 +494,9 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
             download: () => downloadPivot('csv'),
             downloadXLSX: () => downloadPivot('xlsx'),
             downloadODS: () => downloadPivot('ods'),
+            readGrid,
         };
-    }, [downloadPivot, exportHandlerRef]);
+    }, [downloadPivot, exportHandlerRef, readGrid]);
 
     return (
         <div className="relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden" data-testid="pivot-table-core" aria-busy={loading}>
@@ -490,6 +546,7 @@ export const PivotTableCore: React.FC<PivotTableCoreProps> = ({
                         repeatLabels={activeRepeatLabels}
                         dateFormat={activeDateFormat}
                         locale={locale}
+                        pivotFontSize={pivotFontSize}
                     />
                 ) : (
                     !loading && emptyContent

@@ -31,6 +31,7 @@ import { viewEncodingKeys } from '@/models/visSpec';
 import LoadingLayer from '@/components/loadingLayer';
 import { getTimeFormat } from '@/lib/inferMeta';
 import { unexceptedUTCParsedPatternFormats } from '@/lib/op/offset';
+import type { PivotTableGrid } from '../services/pivotExport';
 import { exportSpreadsheet } from '../services/spreadsheetExport';
 import { layoutEntriesFromChrome } from '../vis/spec/chartChrome';
 import { encodeFid } from '../vis/spec/encode';
@@ -45,6 +46,7 @@ interface RendererProps {
         download: () => void;
         downloadXLSX?: () => void;
         downloadODS?: () => void;
+        readGrid?: () => PivotTableGrid | null;
     }>;
     overrideSize?: IVisualLayout['size'];
 }

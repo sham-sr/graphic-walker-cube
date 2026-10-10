@@ -330,6 +330,22 @@ function getMeasureValue(cell: IRow | null, measure: IField): SheetCellValue {
     return value as SheetCellValue;
 }
 
+export interface PivotMetricFormatContext {
+    cell: IRow | null;
+    rowMeasure: IField | null;
+    columnMeasure: IField | null;
+    rowLeafIndex: number;
+    columnLeafIndex: number;
+}
+
+/** Text grid read by the embed host. Header cells stay as `buildPivotSheet` wrote them. */
+export interface PivotTableGrid {
+    rows: (string | null)[][];
+    headerRows: number;
+    headerColumns: number;
+    merges: { s: { r: number; c: number }; e: { r: number; c: number } }[];
+}
+
 function formatPivotCell(
     cell: IRow | null,
     rowMeasure: IField | null,
@@ -366,7 +382,9 @@ export function buildPivotSheet(params: {
     repeatLabels?: boolean;
     dateFormat?: PivotDateFormat;
     locale?: string;
-}): { data: SheetCellValue[][]; merges: Range[] } {
+    /** When set, metric cells become display strings. Spreadsheet export omits this and keeps raw values. */
+    formatMetric?: (ctx: PivotMetricFormatContext) => string | null;
+}): { data: SheetCellValue[][]; merges: Range[]; headerRows: number; headerColumns: number } {
     const {
         leftTree,
         topTree,
@@ -380,6 +398,7 @@ export function buildPivotSheet(params: {
         repeatLabels = false,
         dateFormat,
         locale,
+        formatMetric,
     } = params;
 
     const leftBuild = buildLeftHeaderRows(leftTree, dimsInRow, measInRow, displayOffset, summaryLabels, repeatLabels, dateFormat, locale);
@@ -424,12 +443,19 @@ export function buildPivotSheet(params: {
         const dataCells: CellSpan[] = topBuild.columnMeta.map((colMeta) => {
             const columnMeasure = colMeta.measureIndex !== null ? measInColumn[colMeta.measureIndex] : null;
             const cell = leafRow[colMeta.leafIndex] ?? null;
-            return {
-                value: formatPivotCell(cell, rowMeasure, columnMeasure),
-            };
+            const value = formatMetric
+                ? formatMetric({
+                    cell,
+                    rowMeasure,
+                    columnMeasure,
+                    rowLeafIndex: rowMeta.leafIndex,
+                    columnLeafIndex: colMeta.leafIndex,
+                })
+                : formatPivotCell(cell, rowMeasure, columnMeasure);
+            return { value };
         });
         placeCells(grid, occupied, merges, rowIndex, leftCols, dataCells);
     }
 
-    return { data: grid, merges };
+    return { data: grid, merges, headerRows: headerRowsCount, headerColumns: leftCols };
 }

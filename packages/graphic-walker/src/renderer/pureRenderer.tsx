@@ -24,6 +24,7 @@ import { getComputation } from '../computation/clientComputation';
 import { getSort } from '../utils';
 import { GWGlobalConfig } from '../vis/theme';
 import { PIVOT_TABLE_DEFAULT_LIMIT } from '../constants';
+import type { PivotTableGrid } from '../services/pivotExport';
 import { VizAppContext } from '../store/context';
 import { useCurrentMediaTheme } from '../utils/media';
 import LoadingLayer from '@/components/loadingLayer';
@@ -53,6 +54,13 @@ type IPureRendererProps = {
     disableCollapse?: boolean;
     /** Off by default: PureRenderer is a readonly view (dashboard tiles, embeds). */
     showToolbar?: boolean;
+    /** Pivot csv/xlsx/ods. Chart tiles leave this unset; table tiles fill it after the model renders. */
+    exportHandlerRef?: React.RefObject<{
+        download: () => void;
+        downloadXLSX?: () => void;
+        downloadODS?: () => void;
+        readGrid?: () => PivotTableGrid | null;
+    } | null>;
 };
 
 type LocalProps = {
@@ -93,6 +101,7 @@ const PureRenderer = forwardRef<IReactVegaHandler, IPureRendererProps & (LocalPr
         scales,
         disableCollapse,
         showToolbar = false,
+        exportHandlerRef,
     } = props;
     const computation = useMemo(() => {
         if (props.type === 'remote') {
@@ -208,6 +217,14 @@ const PureRenderer = forwardRef<IReactVegaHandler, IPureRendererProps & (LocalPr
                             vizThemeConfig={currentTheme}
                             disableCollapse={disableCollapse}
                             showToolbar={showToolbar}
+                            exportHandlerRef={
+                                exportHandlerRef as React.RefObject<{
+                                    download: () => void;
+                                    downloadXLSX?: () => void;
+                                    downloadODS?: () => void;
+                                    readGrid?: () => PivotTableGrid | null;
+                                }>
+                            }
                         />
                     )}
                     <div ref={setPortal} />

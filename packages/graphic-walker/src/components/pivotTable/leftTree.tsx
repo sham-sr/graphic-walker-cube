@@ -5,7 +5,15 @@ import { MinusCircleIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 import { cn, getMeaAggName } from '@/utils';
 import { collectPivotLeafChains, windowedHeaderCells, type IPivotLeafAncestorIndex, type IPivotLeafChain } from './headerWindow';
 import { isPivotNodeCollapsed } from './treeWalk';
-import { formatPivotHeaderValue, sortMark, type PivotDateFormat, type PivotSummaryLabels } from './display';
+import {
+    formatPivotHeaderValue,
+    pivotHeaderFontPresentation,
+    pivotLeafCellPresentation,
+    sortMark,
+    type PivotDateFormat,
+    type PivotFontMetrics,
+    type PivotSummaryLabels,
+} from './display';
 
 function LeftHeaderCell({
     node,
@@ -25,6 +33,7 @@ function LeftHeaderCell({
     hideCollapse,
     dateFormat,
     locale,
+    fontMetrics,
 }: {
     node: INestNode;
     field: IField | undefined;
@@ -43,20 +52,26 @@ function LeftHeaderCell({
     hideCollapse?: boolean;
     dateFormat?: PivotDateFormat;
     locale?: string;
+    fontMetrics: PivotFontMetrics;
 }) {
     const label = formatPivotHeaderValue(node, field, dimsInRow, displayOffset, summaryLabels, dateFormat, locale);
     const mark = sortMark(field?.fid, sortedFid, sortedDir);
+    const headerFont = pivotHeaderFontPresentation(fontMetrics);
+    const leaf = rowSpan <= 1 ? pivotLeafCellPresentation(fontMetrics) : null;
     return (
         <th
             key={node.uniqueKey}
             scope="row"
             className={cn(
-                'bg-secondary text-secondary-foreground align-top whitespace-nowrap text-xs border font-normal text-left',
-                rowSpan <= 1 ? 'h-8 max-h-8 px-2 py-0 leading-8' : 'px-2 py-1',
+                'bg-secondary text-secondary-foreground align-top whitespace-nowrap border font-normal text-left',
+                headerFont.className,
+                leaf?.className,
+                rowSpan <= 1 ? 'px-2 py-0' : 'px-2 py-1',
                 node.kind === 'summary' && 'bg-muted font-medium',
                 stickyLeft && 'sticky left-0 z-10',
                 onHeaderSort && field && 'cursor-pointer'
             )}
+            style={{ ...headerFont.style, ...leaf?.style }}
             colSpan={colSpan}
             rowSpan={rowSpan}
             onClick={() => field && onHeaderSort?.(field.fid)}
@@ -103,6 +118,7 @@ export interface TreeProps {
     repeatLabels?: boolean;
     dateFormat?: PivotDateFormat;
     locale?: string;
+    fontMetrics: PivotFontMetrics;
 }
 
 export function buildWindowedLeftTreeRows(props: TreeProps, start: number, end: number): ReactNode[][] {
@@ -138,12 +154,14 @@ export function buildWindowedLeftTreeRows(props: TreeProps, start: number, end: 
                     hideCollapse={cell.repeated}
                     dateFormat={props.dateFormat}
                     locale={props.locale}
+                    fontMetrics={props.fontMetrics}
                 />
             );
         })
     );
 
     if (props.measInRow.length > 0) {
+        const measureLeaf = pivotLeafCellPresentation(props.fontMetrics);
         const result: ReactNode[][] = [];
         for (const row of cellRows) {
             for (let index = 0; index < props.measInRow.length; index++) {
@@ -154,9 +172,11 @@ export function buildWindowedLeftTreeRows(props: TreeProps, start: number, end: 
                         key={`${index}-${measure.fid}-${measure.aggName}`}
                         scope="row"
                         className={cn(
-                            'bg-secondary text-secondary-foreground h-8 max-h-8 whitespace-nowrap px-2 py-0 text-xs leading-8 border font-normal text-left',
+                            'bg-secondary text-secondary-foreground whitespace-nowrap px-2 py-0 border font-normal text-left',
+                            measureLeaf.className,
                             props.onHeaderSort && 'cursor-pointer'
                         )}
+                        style={measureLeaf.style}
                         onClick={() => props.onHeaderSort?.(measure.fid)}
                     >
                         {props.defaultAggregated ? getMeaAggName(measure.name, measure.aggName) : measure.name}

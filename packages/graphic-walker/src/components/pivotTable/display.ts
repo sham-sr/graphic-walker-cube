@@ -1,14 +1,45 @@
+import { format } from 'd3-format';
 import type { IField } from '../../interfaces';
 import type { INestNode, IPivotCube, IPivotTablePath } from './interface';
 import { formatTemporalValue, resolveTimeGrain } from '@/vis/echarts/formatTemporal';
 import { toFiniteNumber } from '../../utils/coerceNumber';
-import { getCubeCell } from './cube';
+import { getCubeCell, leafValuePath } from './cube';
 
 export type PivotColorMode = 'none' | 'heatmap' | 'bar';
 export type PivotPercentMode = 'none' | 'row' | 'column' | 'grand';
 export type PivotTotalsMode = 'off' | 'grand' | 'all';
 export type PivotHeaderMode = 'nested' | 'repeat';
 export type PivotDateFormat = 'human' | 'technical';
+export type PivotFontSize = 10 | 12 | 14 | 16;
+
+export interface PivotFontMetrics {
+    fontPx: number;
+    rowPx: number;
+}
+
+const DEFAULT_PIVOT_FONT_METRICS: PivotFontMetrics = { fontPx: 12, rowPx: 32 };
+
+const PIVOT_FONT_PRESETS: Record<PivotFontSize, PivotFontMetrics> = {
+    10: { fontPx: 10, rowPx: 28 },
+    12: DEFAULT_PIVOT_FONT_METRICS,
+    14: { fontPx: 14, rowPx: 36 },
+    16: { fontPx: 16, rowPx: 40 },
+};
+
+export interface PivotLeafCellPresentation {
+    className: string;
+    style?: {
+        fontSize: number;
+        height: number;
+        maxHeight: number;
+        lineHeight: string;
+    };
+}
+
+export interface PivotHeaderFontPresentation {
+    className: string;
+    style?: { fontSize: number };
+}
 
 export interface PivotTotalsConfig {
     rows: PivotTotalsMode;
@@ -51,6 +82,39 @@ export function resolvePivotHeaderMode(mode?: PivotHeaderMode | boolean): PivotH
 
 export function resolvePivotDateFormat(mode?: PivotDateFormat): PivotDateFormat {
     return mode === 'technical' ? 'technical' : DEFAULT_PIVOT_DATE_FORMAT;
+}
+
+export function resolvePivotFontSize(size?: PivotFontSize | unknown): PivotFontMetrics {
+    if (size === 10 || size === 12 || size === 14 || size === 16) {
+        return PIVOT_FONT_PRESETS[size];
+    }
+    return DEFAULT_PIVOT_FONT_METRICS;
+}
+
+export function estimatePivotVirtualRowSize(rowPx: number, measureCount: number): number {
+    return rowPx * measureCount;
+}
+
+export function pivotLeafCellPresentation(metrics: PivotFontMetrics): PivotLeafCellPresentation {
+    if (metrics.fontPx === DEFAULT_PIVOT_FONT_METRICS.fontPx && metrics.rowPx === DEFAULT_PIVOT_FONT_METRICS.rowPx) {
+        return { className: 'h-8 max-h-8 text-xs leading-8' };
+    }
+    return {
+        className: '',
+        style: {
+            fontSize: metrics.fontPx,
+            height: metrics.rowPx,
+            maxHeight: metrics.rowPx,
+            lineHeight: `${metrics.rowPx}px`,
+        },
+    };
+}
+
+export function pivotHeaderFontPresentation(metrics: PivotFontMetrics): PivotHeaderFontPresentation {
+    if (metrics.fontPx === DEFAULT_PIVOT_FONT_METRICS.fontPx) {
+        return { className: 'text-xs' };
+    }
+    return { className: '', style: { fontSize: metrics.fontPx } };
 }
 
 export function fieldLooksTemporal(field: Pick<IField, 'fid' | 'semanticType' | 'timeUnit' | 'expression'>): boolean {
@@ -283,4 +347,49 @@ export function cellDisplayValue(
     }
     const percentText = formatPercent(share);
     return { text: percentText, absText, percentText, missing: false };
+}
+
+/** d3 specifier when set, otherwise the same locale string the pivot body uses. Invalid specifiers fall back. */
+export function createPivotNumberFormatter(numberFormat: string): (value: number) => string {
+    try {
+        return numberFormat ? format(numberFormat) : (value: number) => value.toLocaleString();
+    } catch {
+        return (value: number) => value.toLocaleString();
+    }
+}
+
+/**
+ * Body-cell text for a grid export.
+ * Column measure wins when both axes carry measures, matching the on-screen cell.
+ * No measure renders the literal "True". Missing numbers render an em dash.
+ */
+export function formatPivotGridMetricCell(args: {
+    cell: Record<string, unknown> | null | undefined;
+    rowMeasure: Pick<IField, 'fid' | 'aggName'> | null;
+    columnMeasure: Pick<IField, 'fid' | 'aggName'> | null;
+    aggregated: boolean;
+    percentMode: PivotPercentMode;
+    formatNumber: (value: number) => string;
+    cube?: IPivotCube;
+    left?: INestNode;
+    top?: INestNode;
+}): string {
+    const measure = args.columnMeasure ?? args.rowMeasure;
+    if (!measure) {
+        return 'True';
+    }
+    const value = readNumericCell(args.cell ?? undefined, measure, args.aggregated);
+    let share: number | undefined;
+    if (args.percentMode !== 'none' && value !== undefined && args.cube && args.left && args.top) {
+        share = percentShare(
+            args.cube,
+            leafValuePath(args.left),
+            leafValuePath(args.top),
+            measure,
+            args.aggregated,
+            args.percentMode,
+            value
+        );
+    }
+    return cellDisplayValue(value, share, args.percentMode, args.formatNumber).text;
 }

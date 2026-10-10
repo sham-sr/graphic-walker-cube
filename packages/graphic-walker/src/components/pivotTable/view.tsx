@@ -8,7 +8,7 @@ import { getPivotTableFields } from './query';
 import { collectVisibleLeaves } from './treeWalk';
 import { createPivotPathKey } from './pathKey';
 import { VirtualizedPivotView } from './virtualizedView';
-import type { PivotColorMode, PivotDateFormat, PivotPercentMode, PivotSummaryLabels } from './display';
+import { resolvePivotFontSize, type PivotColorMode, type PivotDateFormat, type PivotFontSize, type PivotPercentMode, type PivotSummaryLabels } from './display';
 import { PIVOT_TABLE_CLASS } from './scrollport';
 import { PivotScrollViewport } from './scrollArea';
 
@@ -36,6 +36,7 @@ export interface PivotTableViewProps {
     repeatLabels?: boolean;
     dateFormat?: PivotDateFormat;
     locale?: string;
+    pivotFontSize?: PivotFontSize;
 }
 
 export const PivotTableView: React.FC<PivotTableViewProps> = ({
@@ -59,7 +60,9 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
     repeatLabels,
     dateFormat,
     locale,
+    pivotFontSize,
 }) => {
+    const fontMetrics = useMemo(() => resolvePivotFontSize(pivotFontSize), [pivotFontSize]);
     const { dimsInRow, dimsInColumn, measInRow, measInColumn } = useMemo(() => getPivotTableFields(rows, columns), [rows, columns]);
     const collapsedKeySet = useMemo(
         () => new Set((collapsedPaths ?? []).map((path) => createPivotPathKey(path as { key: string; value: PivotTableValue }[]))),
@@ -90,8 +93,9 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                       repeatLabels,
                       dateFormat,
                       locale,
+                      fontMetrics,
                   }),
-        [shouldVirtualize, model.leftTree, dimsInRow, measInRow, onHeaderCollapse, enableCollapse, defaultAggregated, timezoneDisplayOffset, collapsedKeySet, onHeaderSort, sortedFid, sortedDir, summaryLabels, repeatLabels, dateFormat, locale]
+        [shouldVirtualize, model.leftTree, dimsInRow, measInRow, onHeaderCollapse, enableCollapse, defaultAggregated, timezoneDisplayOffset, collapsedKeySet, onHeaderSort, sortedFid, sortedDir, summaryLabels, repeatLabels, dateFormat, locale, fontMetrics]
     );
 
     if (shouldVirtualize) {
@@ -121,6 +125,7 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                 repeatLabels={repeatLabels}
                 dateFormat={dateFormat}
                 locale={locale}
+                fontMetrics={fontMetrics}
             />
         );
     }
@@ -146,6 +151,7 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                     repeatLabels={repeatLabels}
                     dateFormat={dateFormat}
                     locale={locale}
+                    fontMetrics={fontMetrics}
                 />
                 <MetricTable
                     cube={model.cube}
@@ -160,6 +166,7 @@ export const PivotTableView: React.FC<PivotTableViewProps> = ({
                     percentMode={percentMode}
                     dark={dark}
                     onKeepPath={onKeepPath}
+                    fontMetrics={fontMetrics}
                 />
             </table>
         </PivotScrollViewport>

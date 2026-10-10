@@ -19,6 +19,7 @@ import { useAppRootContext } from '@/components/appRoot';
 import { ChartToolbar } from '../components/chartToolbar';
 import { chromeFromLayout, resolveOverlayMeasure, type ChartChrome } from '../vis/spec/chartChrome';
 import { NULL_FIELD } from '../vis/spec/field';
+import type { PivotTableGrid } from '../services/pivotExport';
 
 interface SpecRendererProps {
     name?: string;
@@ -39,6 +40,7 @@ interface SpecRendererProps {
         download: () => void;
         downloadXLSX?: () => void;
         downloadODS?: () => void;
+        readGrid?: () => PivotTableGrid | null;
     }>;
     onPivotColorModeChange?: (mode: PivotColorMode) => void;
     onPivotPercentModeChange?: (mode: PivotPercentMode) => void;
@@ -218,9 +220,11 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                 onRepeatLabelsChange={onPivotRepeatLabelsChange}
                 dateFormat={resolvePivotDateFormat(layout.pivotDateFormat)}
                 onDateFormatChange={onPivotDateFormatChange}
+                pivotFontSize={layout.pivotFontSize}
                 dark={mediaTheme === 'dark'}
                 onHeaderSort={onPivotHeaderSort}
                 onKeepPath={onPivotKeepPath}
+                locale={locale}
                 onRenderStatusChange={(status) => appRootRef.current?.updateRenderStatus(status)}
                 onError={(error) => console.error(error)}
             />
@@ -322,6 +326,7 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                     width={size.width - 12 * 4}
                     height={size.height - 12 * 4}
                     locale={locale}
+                    datasetFields={pivotFields}
                     useSvg={useSvg}
                     zeroScale={zeroScale}
                     ref={ref}
@@ -356,6 +361,7 @@ const SpecRenderer = forwardRef<IReactVegaHandler, SpecRendererProps>(function (
                     ref={ref}
                     onGeomClick={onGeomClick}
                     locale={locale}
+                    datasetFields={pivotFields}
                     useSvg={useSvg}
                     scales={scales}
                     scale={scale}
