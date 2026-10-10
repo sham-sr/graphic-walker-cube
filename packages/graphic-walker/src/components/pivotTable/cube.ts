@@ -126,46 +126,110 @@ export function mergeCubes(...cubes: IPivotCube[]): IPivotCube {
     return { cells };
 }
 
-function aggregateCuboid(leafRows: readonly IRow[], groupBy: readonly string[], measures: readonly IPivotRollupMeasure[]): IRow[] {
-    const groups = new Map<string, IRow[]>();
-    for (const row of leafRows) {
-        const gk = groupBy.map((key) => row[key]).join('\0');
-        const group = groups.get(gk);
-        if (group) {
-            group.push(row);
+type MeasureTrack = 'skip' | 'count' | 'sum' | 'mean' | 'min' | 'max' | 'list' | 'distinct';
+
+function measureTrack(agg: IAggregator): MeasureTrack {
+    switch (agg) {
+        case 'expr':
+            return 'skip';
+        case 'count':
+            return 'count';
+        case 'mean':
+            return 'mean';
+        case 'min':
+            return 'min';
+        case 'max':
+            return 'max';
+        case 'median':
+        case 'variance':
+        case 'stdev':
+            return 'list';
+        case 'distinctCount':
+            return 'distinct';
+        case 'sum':
+        default:
+            return 'sum';
+    }
+}
+
+interface GroupState {
+    dims: unknown[];
+    n: number;
+    sum: number[];
+    min: number[];
+    max: number[];
+    lists: Array<number[] | undefined>;
+    distinct: Array<Set<unknown> | undefined>;
+}
+
+function createGroupState(row: IRow, groupBy: readonly string[], tracks: readonly MeasureTrack[]): GroupState {
+    return {
+        dims: groupBy.map((key) => row[key]),
+        n: 0,
+        sum: tracks.map(() => 0),
+        min: tracks.map(() => Infinity),
+        max: tracks.map(() => -Infinity),
+        lists: tracks.map((track) => (track === 'list' ? [] : undefined)),
+        distinct: tracks.map((track) => (track === 'distinct' ? new Set<unknown>() : undefined)),
+    };
+}
+
+function absorbRow(state: GroupState, row: IRow, measures: readonly IPivotRollupMeasure[], tracks: readonly MeasureTrack[]): void {
+    state.n += 1;
+    for (let index = 0; index < measures.length; index += 1) {
+        const track = tracks[index];
+        if (track === 'skip' || track === 'count') continue;
+        const raw: unknown = row[measures[index].field];
+        if (track === 'distinct') {
+            state.distinct[index]?.add(raw);
+            continue;
+        }
+        const num = Number(raw);
+        if (track === 'min') {
+            if (num < state.min[index]) state.min[index] = num;
+        } else if (track === 'max') {
+            if (num > state.max[index]) state.max[index] = num;
+        } else if (track === 'list') {
+            state.lists[index]?.push(num);
         } else {
-            groups.set(gk, [row]);
+            state.sum[index] += num;
         }
     }
-    const result: IRow[] = [];
-    for (const subGroup of groups.values()) {
-        if (subGroup.length === 0) continue;
-        const aggRow: IRow = {};
-        for (const key of groupBy) {
-            aggRow[key] = subGroup[0][key];
-        }
-        for (const measure of measures) {
-            if (measure.agg === 'expr') {
-                continue;
-            }
-            const values = subGroup.map((row) => row[measure.field]);
-            aggRow[measure.asFieldKey] = reduceMeasure(values, measure.agg);
-        }
-        for (const measure of measures) {
-            if (measure.agg !== 'expr' || !measure.exprSql) {
-                continue;
-            }
-            const value = evalExprWithComponents(measure.exprSql, (agg: AdditiveAgg, field) => {
-                const n = Number(aggRow[exprComponentAggKey(field, agg)]);
-                return Number.isFinite(n) ? n : undefined;
-            });
-            if (value != null) {
-                aggRow[measure.asFieldKey] = value;
-            }
-        }
-        result.push(aggRow);
+}
+
+function finishGroup(
+    state: GroupState,
+    groupBy: readonly string[],
+    measures: readonly IPivotRollupMeasure[],
+    tracks: readonly MeasureTrack[]
+): IRow {
+    const aggRow: IRow = {};
+    for (let index = 0; index < groupBy.length; index += 1) {
+        aggRow[groupBy[index]] = state.dims[index];
     }
-    return result;
+    for (let index = 0; index < measures.length; index += 1) {
+        const measure = measures[index];
+        const track = tracks[index];
+        if (track === 'skip') continue;
+        if (track === 'count') aggRow[measure.asFieldKey] = state.n;
+        else if (track === 'mean') aggRow[measure.asFieldKey] = state.sum[index] / state.n;
+        else if (track === 'min') aggRow[measure.asFieldKey] = state.min[index];
+        else if (track === 'max') aggRow[measure.asFieldKey] = state.max[index];
+        else if (track === 'list') aggRow[measure.asFieldKey] = reduceMeasure(state.lists[index] ?? [], measure.agg);
+        else if (track === 'distinct') aggRow[measure.asFieldKey] = state.distinct[index]?.size ?? 0;
+        else aggRow[measure.asFieldKey] = state.sum[index];
+    }
+    for (const measure of measures) {
+        if (measure.agg !== 'expr' || !measure.exprSql) continue;
+        const value = evalExprWithComponents(measure.exprSql, (agg: AdditiveAgg, field) => {
+            const n = Number(aggRow[exprComponentAggKey(field, agg)]);
+            return Number.isFinite(n) ? n : undefined;
+        });
+        if (value != null) {
+            aggRow[measure.asFieldKey] = value;
+        }
+    }
+    return aggRow;
 }
 
 function reduceMeasure(values: unknown[], agg: IAggregator): number {
@@ -211,9 +275,25 @@ export function rollupCuboid(leafRows: readonly IRow[], groupingSets: readonly s
     if (leafRows.length === 0 || measures.length === 0 || groupingSets.length === 0) {
         return [];
     }
+    const tracks = measures.map((measure) => measureTrack(measure.agg));
+    const buckets = groupingSets.map(() => new Map<string, GroupState>());
+    for (const row of leafRows) {
+        for (let index = 0; index < groupingSets.length; index += 1) {
+            const groupBy = groupingSets[index];
+            const gk = groupBy.map((key) => row[key]).join('\0');
+            let state = buckets[index].get(gk);
+            if (!state) {
+                state = createGroupState(row, groupBy, tracks);
+                buckets[index].set(gk, state);
+            }
+            absorbRow(state, row, measures, tracks);
+        }
+    }
     const rolled: IRow[] = [];
-    for (const groupBy of groupingSets) {
-        rolled.push(...aggregateCuboid(leafRows, groupBy, measures));
+    for (let index = 0; index < groupingSets.length; index += 1) {
+        for (const state of buckets[index].values()) {
+            rolled.push(finishGroup(state, groupingSets[index], measures, tracks));
+        }
     }
     return rolled;
 }
