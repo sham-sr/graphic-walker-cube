@@ -2,13 +2,19 @@ import React, { HTMLAttributes, createContext, useEffect, useMemo, useRef, useSt
 import { StyleSheetManager } from 'styled-components';
 import root from 'react-shadow';
 
-import tailwindStyle from 'tailwindcss/tailwind.css?inline';
-import style from './index.css?inline';
+import {
+    applySharedShadowStyles,
+    shadowIndexCss,
+    shadowTailwindCss,
+    supportsConstructableStylesheets,
+} from './shadow-dom-shared-styles';
 import { IUIThemeConfig } from './interfaces';
 import { ColorConfigToCSS, zincTheme } from './utils/colors';
 import { uiThemeContext } from './store/theme';
 
 export const ShadowDomContext = createContext<{ root: ShadowRoot | null }>({ root: null });
+
+const useConstructableShadowStyles = supportsConstructableStylesheets();
 
 interface IShadowDomProps extends HTMLAttributes<HTMLDivElement> {
     uiTheme?: IUIThemeConfig;
@@ -40,6 +46,7 @@ export const ShadowDom: React.FC<IShadowDomProps> = function ShadowDom({
     useEffect(() => {
         if (rootRef.current) {
             const shadowRoot = rootRef.current.shadowRoot!;
+            applySharedShadowStyles(shadowRoot);
             setShadowRoot(shadowRoot);
             onMountRef.current?.(shadowRoot);
             return () => {
@@ -60,8 +67,12 @@ export const ShadowDom: React.FC<IShadowDomProps> = function ShadowDom({
             ref={rootRef}
         >
             <uiThemeContext.Provider value={uiTheme}>
-                <style>{tailwindStyle}</style>
-                <style>{style}</style>
+                {!useConstructableShadowStyles && (
+                    <>
+                        <style>{shadowTailwindCss}</style>
+                        <style>{shadowIndexCss}</style>
+                    </>
+                )}
                 <style>{colorStyle}</style>
                 {/* Leaflet CSS file */}
                 <link
