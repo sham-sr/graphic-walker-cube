@@ -78,13 +78,15 @@ const AppRoot = forwardRef<IGWHandlerInsider, { children: any }>(({ children }, 
 });
 
 export const withAppRoot = <P extends object>(Component: ComponentType<any>) => {
-    return (props: P) => {
+    const Wrapped = forwardRef<unknown, P>((props, ref) => {
         return (
             <AppRoot>
-                <Component {...props} />
+                <Component {...props} ref={ref} />
             </AppRoot>
         );
-    };
+    });
+    Wrapped.displayName = `withAppRoot(${Component.displayName || Component.name || 'Component'})`;
+    return Wrapped;
 };
 
 export default AppRoot;

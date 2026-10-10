@@ -25,8 +25,16 @@ export type {
     GraphicWalkerHostOptions,
     GraphicWalkerReport,
     WalkerAnalyticType,
+    WalkerCategoryOrder,
+    WalkerCategoryOrderRequest,
+    WalkerChartExport,
+    WalkerChartExportFormat,
+    WalkerTableGrid,
+    WalkerChartFilterPatch,
     WalkerChartInfo,
+    WalkerChartKind,
     WalkerChartRef,
+    WalkerFilterRuleType,
     WalkerConfigDataset,
     WalkerDatasetInfo,
     WalkerDatasetInput,
@@ -34,6 +42,7 @@ export type {
     WalkerReportDataset,
     WalkerRow,
     WalkerSemanticType,
+    WalkerSheetFilterPanelOptions,
 } from './contract';
 
 export { createDatasetRegistry } from './datasetRegistry';

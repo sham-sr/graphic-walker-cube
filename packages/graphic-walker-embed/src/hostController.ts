@@ -12,7 +12,7 @@ import {
 import type { DatasetRegistry } from './datasetRegistry';
 import { resolveReplaceSpecs } from './canReuseWalkerSpecs';
 
-function toMutFields(fields: WalkerField[]): IMutField[] {
+export function toMutFields(fields: WalkerField[]): IMutField[] {
     return fields.map((field) => ({
         fid: field.fid,
         name: field.name,
@@ -20,6 +20,7 @@ function toMutFields(fields: WalkerField[]): IMutField[] {
         semanticType: field.semanticType,
         analyticType: field.analyticType,
         offset: field.offset,
+        ...(field.categoryOrder ? { categoryOrder: field.categoryOrder } : {}),
     }));
 }
 

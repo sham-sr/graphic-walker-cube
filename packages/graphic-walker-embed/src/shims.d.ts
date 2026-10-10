@@ -1,5 +1,5 @@
 declare module '@kanaries/graphic-walker' {
-    import type { ReactNode } from 'react';
+    import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 
     export type IRow = Record<string, unknown>;
 
@@ -37,8 +37,29 @@ declare module '@kanaries/graphic-walker' {
     }
 
     export function resolveChart(data: string): Record<string, unknown>;
-    export const GraphicWalker: (props: Record<string, unknown>) => ReactNode;
-    export const PureRenderer: (props: Record<string, unknown>) => ReactNode;
+    export interface GraphicWalkerCategoryOrderRequest {
+        field: { fid: string; name: string; semanticType: string };
+        datasetId?: string;
+    }
+
+    export const GraphicWalker: (
+        props: Record<string, unknown> & {
+            categoryOrderProvider?: (
+                request: GraphicWalkerCategoryOrderRequest
+            ) => Promise<{ by?: string; order?: string[] } | null>;
+        }
+    ) => ReactNode;
+    export const SheetFilterEditor: (props: {
+        meta: IMutField[];
+        specRaw: string;
+        fieldAllowlist: readonly string[];
+        computation: (payload: IDataQueryPayload) => Promise<IRow[]>;
+        appearance: 'light' | 'dark';
+        locale: string;
+        onSpecChange: (raw: string) => void;
+        onClose: () => void;
+    }) => ReactNode;
+    export const PureRenderer: ForwardRefExoticComponent<Record<string, unknown> & RefAttributes<unknown>>;
     export const DataSourceSegmentComponent: (props: {
         provider: IDataSourceProvider;
         hideCreateDataset?: boolean;

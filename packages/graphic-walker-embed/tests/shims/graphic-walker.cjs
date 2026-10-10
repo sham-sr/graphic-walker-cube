@@ -15,4 +15,49 @@ function resolveChart(data) {
     return parsed;
 }
 
-module.exports = { resolveChart };
+function DataSourceSegmentComponent(props) {
+    if (typeof props.children !== 'function') {
+        return null;
+    }
+    return props.children({
+        meta: [],
+        onMetaChange() {},
+        computation: async () => [],
+        storeRef: { current: null },
+        datasetName: '',
+        datasetId: '',
+        syncSpecs() {},
+    });
+}
+
+const graphicWalkerMounts = [];
+
+function GraphicWalker(props) {
+    graphicWalkerMounts.push(props);
+    return null;
+}
+
+function PureRenderer() {
+    return null;
+}
+
+const sheetFilterMounts = [];
+
+function SheetFilterEditor(props) {
+    sheetFilterMounts.push({
+        fieldAllowlist: props.fieldAllowlist,
+        specRaw: props.specRaw,
+        onClose: props.onClose,
+    });
+    return null;
+}
+
+module.exports = {
+    resolveChart,
+    DataSourceSegmentComponent,
+    GraphicWalker,
+    graphicWalkerMounts,
+    PureRenderer,
+    SheetFilterEditor,
+    sheetFilterMounts,
+};

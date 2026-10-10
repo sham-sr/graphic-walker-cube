@@ -214,13 +214,15 @@ const FilterEditDialog: React.FC = observer(() => {
     };
 
     const allFieldOptions = React.useMemo(() => {
+        const allow = vizStore.filterFieldAllowlist;
         return allFields
             .filter((x) => ![COUNT_FIELD_ID, MEA_KEY_ID, MEA_VAL_ID].includes(x.fid))
+            .filter((x) => !allow || allow.includes(x.fid))
             .map((d) => ({
                 label: d.name,
                 value: d.fid,
             }));
-    }, [allFields]);
+    }, [allFields, vizStore.filterFieldAllowlist]);
 
     const handleChangeAgg = (index: number, agg: IAggregator | null) => {
         vizStore.setFilterAggregator(index, agg ?? '');

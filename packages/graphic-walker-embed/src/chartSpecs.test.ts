@@ -70,6 +70,7 @@ describe('listChartsFromRegistry', () => {
                 visId: 'vis_sales',
                 name: 'Sales',
                 queryFingerprint: 'fp-1',
+                kind: 'chart',
             },
             {
                 datasetId: 'ds1',
@@ -77,6 +78,7 @@ describe('listChartsFromRegistry', () => {
                 visId: 'vis_empty_name',
                 name: 'Chart',
                 queryFingerprint: 'fp-1',
+                kind: 'chart',
             },
         ]);
         expect(findChartSpec(registry, 'ds1', 'vis_sales')?.name).toBe('Sales');

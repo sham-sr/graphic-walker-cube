@@ -79,6 +79,15 @@ export function parseWalkerCharts(specsJson: string): ParsedWalkerChart[] {
     return charts;
 }
 
+export function chartKindFromSpec(spec: Record<string, unknown>): 'chart' | 'table' {
+    const config = spec.config;
+    if (!config || typeof config !== 'object') {
+        return 'chart';
+    }
+    const geoms = (config as { geoms?: unknown }).geoms;
+    return Array.isArray(geoms) && geoms[0] === 'table' ? 'table' : 'chart';
+}
+
 export function listChartsFromRegistry(registry: DatasetRegistry): WalkerChartInfo[] {
     const charts: WalkerChartInfo[] = [];
     for (const info of registry.list()) {
@@ -94,6 +103,7 @@ export function listChartsFromRegistry(registry: DatasetRegistry): WalkerChartIn
                 visId: chart.visId,
                 name: chart.name,
                 queryFingerprint,
+                kind: chartKindFromSpec(chart.spec),
             });
         }
     }

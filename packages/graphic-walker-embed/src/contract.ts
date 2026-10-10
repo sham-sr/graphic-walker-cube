@@ -39,6 +39,24 @@ export const GW_DEFAULT_EXPERIMENTAL_FEATURES: GraphicWalkerExperimentalFeatures
 export type WalkerSemanticType = 'quantitative' | 'nominal' | 'ordinal' | 'temporal';
 export type WalkerAnalyticType = 'dimension' | 'measure';
 
+/** Порядок категорий измерения. Необязателен: старые поля без него работают как раньше. */
+export interface WalkerCategoryOrder {
+    by?: string;
+    order?: string[];
+}
+
+/**
+ * Запрос порядка категорий у хоста.
+ * Плоский: cube_front не импортирует типы Graphic Walker.
+ */
+export interface WalkerCategoryOrderRequest {
+    /** Внешний id датасета, который сейчас открыт в редакторе. */
+    datasetId: string;
+    fid: string;
+    name: string;
+    semanticType: string;
+}
+
 export interface WalkerField {
     fid: string;
     name?: string;
@@ -46,6 +64,7 @@ export interface WalkerField {
     semanticType: WalkerSemanticType;
     analyticType: WalkerAnalyticType;
     offset?: number;
+    categoryOrder?: WalkerCategoryOrder;
 }
 
 export type WalkerRow = Record<string, unknown>;
@@ -70,17 +89,66 @@ export interface WalkerDatasetInfo {
 }
 
 /** One Graphic Walker sheet, identified without copying rows or specs. */
+/** `table` is a pivot/crosstab (`geoms[0] === 'table'`). Everything else is a graphic. */
+export type WalkerChartKind = 'chart' | 'table';
+
 export interface WalkerChartInfo {
     datasetId: string;
     datasetName: string;
     visId: string;
     name: string;
     queryFingerprint?: string;
+    /** Omitted by older hosts. `listCharts` always sets it. */
+    kind?: WalkerChartKind;
 }
 
 export interface WalkerChartRef {
     datasetId: string;
     visId: string;
+}
+
+/** Operators already stored on a Graphic Walker filter rule. */
+export type WalkerFilterRuleType = 'one of' | 'not in' | 'range' | 'temporal range' | 'regexp';
+
+/**
+ * Change one existing sheet filter.
+ * `type` and `value` are written into the saved spec.
+ * `enabled` is session-only: `false` keeps the spec rule and omits it from the PureRenderer frame.
+ * An unknown `fid` is ignored. The saved filter list is not extended or shortened.
+ */
+export interface WalkerChartFilterPatch {
+    fid: string;
+    type?: WalkerFilterRuleType;
+    value?: unknown;
+    enabled?: boolean;
+}
+
+export type WalkerChartExportFormat = 'png' | 'svg' | 'csv' | 'xlsx' | 'ods' | 'grid';
+
+/**
+ * Text grid of a pivot tile, with the same cell text as the on-screen table.
+ * `headerRows` / `headerColumns` are the frozen header bands. `merges` uses spreadsheet ranges.
+ */
+export interface WalkerTableGrid {
+    /** Cell text formatted as on screen. */
+    rows: (string | null)[][];
+    /** Number of column-header rows at the top. */
+    headerRows: number;
+    /** Number of row-header columns on the left. */
+    headerColumns: number;
+    merges: { s: { r: number; c: number }; e: { r: number; c: number } }[];
+}
+
+/**
+ * Image from the same renderer API the editor toolbar uses (`getCanvasData` / `getSVGData`).
+ * png `data` is a data URL. svg `data` is SVG markup or a data URL.
+ * `grid` leaves `data` empty and fills `grid` for a table tile.
+ */
+export interface WalkerChartExport {
+    format: WalkerChartExportFormat;
+    data: string;
+    /** Set when `format` is `grid`. */
+    grid?: WalkerTableGrid;
 }
 
 export interface WalkerConfigDataset {
@@ -146,12 +214,31 @@ export interface GraphicWalkerHostOptions {
     toolbarExclude?: readonly string[];
     /** Graphic Walker experimental flags. Default: computed fields enabled. */
     experimentalFeatures?: GraphicWalkerExperimentalFeatures;
+    /**
+     * Провайдер порядка категорий.
+     * Редактор вызывает его для измерения. `null` — у API нет порядка, остаётся автоопределение.
+     * Без этой опции кнопка на пилюле не показывается.
+     */
+    categoryOrderProvider?: (request: WalkerCategoryOrderRequest) => Promise<WalkerCategoryOrder | null>;
 }
 
 export interface WalkerReplaceResult {
     id: string;
     /** True when previous charts could not be applied to the new fields */
     chartsCleared?: boolean;
+}
+
+/**
+ * Параметры диалога «Настройки фильтра» листа.
+ * Метод открывает диалог «Настройки фильтра» GW для листа.
+ * Поля ограничены каналами листа.
+ */
+export interface WalkerSheetFilterPanelOptions {
+    /**
+     * Диалог закрыт подтверждением или отменой.
+     * Хосту следует вызвать release, возвращённый из `mountSheetFilterPanel`.
+     */
+    onClose?: () => void;
 }
 
 export interface GraphicWalkerHost {
@@ -165,6 +252,30 @@ export interface GraphicWalkerHost {
     listCharts(): Promise<WalkerChartInfo[]>;
     /** Render one sheet into `el` via PureRenderer + the existing DuckDB provider. */
     createChartView(el: HTMLElement, ref: WalkerChartRef): () => void;
+    /**
+     * Update values or operators of existing sheet filters and remember which fids are off for this session.
+     * Disabled rules stay in the saved spec and are passed to PureRenderer as `rule: null`.
+     */
+    patchChartFilters(ref: WalkerChartRef, patches: readonly WalkerChartFilterPatch[]): Promise<void>;
+    /**
+     * Export one live tile through the editor toolbar's renderer API, without enabling the PureRenderer toolbar.
+     * png/svg return image data. csv/xlsx/ods download a pivot table through the same handler as the editor toolbar.
+     * `grid` returns `{ format: 'grid', data: '', grid }` for a table tile.
+     * png/svg on a table tile reject with 'Table has no image export'.
+     */
+    exportChart(ref: WalkerChartRef, format: WalkerChartExportFormat): Promise<WalkerChartExport>;
+    /**
+     * Открывает диалог «Настройки фильтра» GW для листа в `el`.
+     * Поля ограничены каналами листа.
+     * Запись уходит в spec датасета и обновляет живые плитки.
+     * `options.onClose` — диалог закрыт; хосту следует вызвать release.
+     */
+    mountSheetFilterPanel(el: HTMLElement, ref: WalkerChartRef, options?: WalkerSheetFilterPanelOptions): () => void;
+    /**
+     * Mount or unmount the Graphic Walker editor.
+     * Unmount flushes specs first. The dataset registry, DuckDB provider, and chart tiles stay alive.
+     */
+    setEditorMounted(mounted: boolean): Promise<void>;
     exportConfig(): Promise<GraphicWalkerConfig>;
     exportReport(): Promise<GraphicWalkerReport>;
     applyConfig(config: GraphicWalkerConfig, rowsById: Record<string, WalkerRow[]>): Promise<void>;

@@ -28,6 +28,10 @@ export interface DatasetRegistryRecord {
 export interface DatasetRegistryOptions {
     maxDatasets: number;
     maxRows?: number;
+    /** Строки датасета записаны или датасет удалён. Аргумент — id провайдера, им же ключуется queryData. */
+    onDatasetDataChanged?: (providerId: string) => void;
+    /** Реестр очищен целиком: import, replace всех слотов, destroy. */
+    onDatasetDataCleared?: () => void;
 }
 
 const EMPTY_SPECS = '[]';
@@ -46,6 +50,14 @@ export function createDatasetRegistry(options: DatasetRegistryOptions) {
 
     const maxDatasets = options.maxDatasets;
     const maxRows = options.maxRows;
+
+    function notifyDataChanged(providerId: string): void {
+        options.onDatasetDataChanged?.(providerId);
+    }
+
+    function notifyDataCleared(): void {
+        options.onDatasetDataCleared?.();
+    }
 
     function list(): WalkerDatasetInfo[] {
         return [...datasets.values()].map((dataset) => ({ id: dataset.id, name: dataset.name }));
@@ -87,6 +99,7 @@ export function createDatasetRegistry(options: DatasetRegistryOptions) {
         };
         datasets.set(externalId, record);
         selectedDatasetId = externalId;
+        notifyDataChanged(record.providerId);
         return externalId;
     }
 
@@ -99,23 +112,24 @@ export function createDatasetRegistry(options: DatasetRegistryOptions) {
         return undefined;
     }
 
-    function setProviderId(externalId: string, nextProviderId: string): void {
-        get(externalId).providerId = nextProviderId;
-    }
-
     function replace(id: string, input: WalkerDatasetInput): string {
-        if (!datasets.has(id)) {
+        const previous = datasets.get(id);
+        if (!previous) {
             throw new Error(`Dataset not found: ${id}`);
         }
         assertRowsLimit(input.rows);
         datasets.delete(id);
+        notifyDataChanged(previous.providerId);
         return add(input);
     }
 
     function remove(id: string): void {
-        if (!datasets.delete(id)) {
+        const previous = datasets.get(id);
+        if (!previous) {
             throw new Error(`Dataset not found: ${id}`);
         }
+        datasets.delete(id);
+        notifyDataChanged(previous.providerId);
         if (selectedDatasetId === id) {
             const remaining = [...datasets.keys()];
             selectedDatasetId = remaining[remaining.length - 1];
@@ -126,18 +140,10 @@ export function createDatasetRegistry(options: DatasetRegistryOptions) {
         get(id).specsJson = specsJson;
     }
 
-    function updateRows(id: string, rows: WalkerRow[], fields?: WalkerField[]): void {
-        assertRowsLimit(rows);
-        const dataset = get(id);
-        dataset.rows = clone(rows);
-        if (fields) {
-            dataset.fields = clone(fields);
-        }
-    }
-
     function clear(): void {
         datasets.clear();
         selectedDatasetId = undefined;
+        notifyDataCleared();
     }
 
     function toConfigDataset(dataset: DatasetRegistryRecord): WalkerConfigDataset {
@@ -228,14 +234,12 @@ export function createDatasetRegistry(options: DatasetRegistryOptions) {
         replace,
         remove,
         updateSpecs,
-        updateRows,
         clear,
         exportConfig,
         exportReport,
         importConfig,
         importReport,
         findExternalIdByProviderId,
-        setProviderId,
     };
 }
 

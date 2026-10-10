@@ -93,6 +93,31 @@ describe('createDatasetRegistry', () => {
         expect(restored.exportReport().datasets[0]?.provenance).toEqual(config.datasets[0]?.provenance);
     });
 
+    test('reports row changes and ignores spec writes', () => {
+        const changed: string[] = [];
+        let cleared = 0;
+        const registry = createDatasetRegistry({
+            maxDatasets: 3,
+            onDatasetDataChanged: (providerId) => {
+                changed.push(providerId);
+            },
+            onDatasetDataCleared: () => {
+                cleared += 1;
+            },
+        });
+        const id = registry.add(input('A'), 'ext', 'prov-a');
+        registry.updateSpecs(id, '["chart"]');
+        const nextRows = [{ 'Orders.status': 'pending', 'Orders.count': 9 }];
+        const replacedId = registry.replace(id, input('A', { rows: nextRows }));
+        const replacedProviderId = registry.get(replacedId).providerId;
+        registry.remove(replacedId);
+        expect(changed).toEqual(['prov-a', 'prov-a', replacedProviderId, replacedProviderId]);
+        registry.add(input('B'));
+        registry.clear();
+        expect(cleared).toBe(1);
+        expect(changed).toHaveLength(5);
+    });
+
     test('remove drops a dataset and reassigns selection', () => {
         const registry = createDatasetRegistry({ maxDatasets: 3 });
         const a = registry.add(input('A'));

@@ -12,6 +12,8 @@ export { validateWorkflowFields, assertValidWorkflowFields } from './utils/workf
 export type { IWorkflowFieldIssue } from './utils/workflowValidate';
 export { getGlobalConfig } from './config';
 export { DataSourceSegmentComponent } from './dataSource';
+export { SheetFilterEditor } from './fields/sheetFilterEditor';
+export type { SheetFilterEditorProps } from './fields/sheetFilterEditor';
 export * from './models/visSpecHistory';
 export * from './dataSourceProvider';
 export { getComputation } from './computation/clientComputation';
