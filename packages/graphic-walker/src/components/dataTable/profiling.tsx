@@ -1,7 +1,7 @@
 import React, { ComponentType, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { format } from 'd3-format';
 import type { IAnalyticType, IComputationFunction, IFilterRule, ISemanticType } from '../../interfaces';
+import { formatApprox, formatNumber } from './profilingFormat';
 import { profileNonmialField, profileQuantitativeField, wrapComputationWithTag, type IQuantitativeProfileBin } from '../../computation';
 import { _unstable_encodeRuleValue, cn, formatDate, isNotEmpty } from '../../utils';
 import { parsedOffsetDate } from '../../lib/op/offset';
@@ -41,23 +41,7 @@ const ACCENT = {
 
 const formatCount = (n: number) => n.toLocaleString();
 
-const siFormatter = format('.3~s');
-const decimalFormatter = format(',.2~f');
-const smallFormatter = format('.3~g');
-export function formatNumber(x: number) {
-    if (!Number.isFinite(x)) return `${x}`;
-    const abs = Math.abs(x);
-    if (abs >= 1e5) return siFormatter(x);
-    if (abs >= 1 || x === 0) return decimalFormatter(x);
-    return smallFormatter(x);
-}
-
-const approxFormatter = format(',.3~r');
-/** A glanceable summary number, e.g. an average. */
-function formatApprox(x: number) {
-    if (!Number.isFinite(x)) return `${x}`;
-    return Math.abs(x) >= 1e5 ? siFormatter(x) : approxFormatter(x);
-}
+export { formatNumber } from './profilingFormat';
 
 /** Integer percentages that always add up to 100 (largest remainder). */
 function toPercents(counts: number[], total: number) {
@@ -261,7 +245,8 @@ function binIsOn(bin: IQuantitativeProfileBin, rule?: IFilterRule | null) {
 }
 
 function QuantitativeProfiling({ computation, field, analyticType, rule, onSelectRange }: FieldProfilingProps & ProfilingInteractionProps) {
-    const { t } = useTranslation('translation', { keyPrefix: 'data_table' });
+    const { t, i18n } = useTranslation('translation', { keyPrefix: 'data_table' });
+    const language = i18n.language;
     const { data: stat, loading } = useProfile(() => profileQuantitativeField(wrapComputationWithTag(computation, 'profiling'), field), [computation, field]);
 
     if (!isNotEmpty(stat)) {
@@ -283,8 +268,8 @@ function QuantitativeProfiling({ computation, field, analyticType, rule, onSelec
     if (stat.min === stat.max) {
         return (
             <>
-                <Constant>{formatNumber(stat.min)}</Constant>
-                <Caption>{t('avg', { value: formatApprox(stat.mean) })}</Caption>
+                <Constant>{formatNumber(stat.min, language)}</Constant>
+                <Caption>{t('avg', { value: formatApprox(stat.mean, language) })}</Caption>
             </>
         );
     }
@@ -302,7 +287,7 @@ function QuantitativeProfiling({ computation, field, analyticType, rule, onSelec
                         const on = binIsOn(bin, rule);
                         const lo = bin.min ?? bin.from;
                         const hi = bin.max ?? bin.to;
-                        const label = `${formatNumber(bin.from)} – ${formatNumber(bin.to)}`;
+                        const label = `${formatNumber(bin.from, language)} – ${formatNumber(bin.to, language)}`;
                         const interactive = onSelectRange && bin.count > 0;
                         return (
                             <button
@@ -342,11 +327,11 @@ function QuantitativeProfiling({ computation, field, analyticType, rule, onSelec
                     })}
                 </div>
                 <div className="mt-[5px] flex justify-between text-[11px] leading-3 tabular-nums text-muted-foreground">
-                    <span>{formatNumber(stat.min)}</span>
-                    <span>{formatNumber(stat.max)}</span>
+                    <span>{formatNumber(stat.min, language)}</span>
+                    <span>{formatNumber(stat.max, language)}</span>
                 </div>
             </div>
-            <Caption>{t('avg', { value: formatApprox(stat.mean) })}</Caption>
+            <Caption>{t('avg', { value: formatApprox(stat.mean, language) })}</Caption>
         </div>
     );
 }

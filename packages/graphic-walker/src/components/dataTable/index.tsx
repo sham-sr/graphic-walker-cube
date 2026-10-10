@@ -159,7 +159,8 @@ function TruncateDector(props: { value: string }) {
 }
 
 function useRuleDescription(displayOffset?: number) {
-    const { t } = useTranslation('translation', { keyPrefix: 'data_table' });
+    const { t, i18n } = useTranslation('translation', { keyPrefix: 'data_table' });
+    const language = i18n.language;
     return useCallback(
         (rule: IFilterRule) => {
             switch (rule.type) {
@@ -170,7 +171,7 @@ function useRuleDescription(displayOffset?: number) {
                     return rule.type === 'not in' ? `≠ ${text}` : text;
                 }
                 case 'range':
-                    return `${rule.value[0] === null ? '…' : formatNumber(rule.value[0])} – ${rule.value[1] === null ? '…' : formatNumber(rule.value[1])}`;
+                    return `${rule.value[0] === null ? '…' : formatNumber(rule.value[0], language)} – ${rule.value[1] === null ? '…' : formatNumber(rule.value[1], language)}`;
                 case 'temporal range': {
                     const format = (x: number | null) => (x === null ? '…' : formatDate(parsedOffsetDate(displayOffset, rule.offset)(x)));
                     return `${format(rule.value[0])} – ${format(rule.value[1])}`;
@@ -179,7 +180,7 @@ function useRuleDescription(displayOffset?: number) {
                     return `/${rule.value}/`;
             }
         },
-        [t, displayOffset]
+        [t, displayOffset, language]
     );
 }
 
