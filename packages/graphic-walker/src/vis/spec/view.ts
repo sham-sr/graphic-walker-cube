@@ -123,6 +123,9 @@ export function getSingleView(props: SingleViewProps) {
         text,
         displayOffset,
         vegaConfig,
+        dataSource,
+        locale: props.locale,
+        datasetFields: props.datasetFields,
     });
     if (defaultAggregated) {
         channelAggregate(encoding, fields);

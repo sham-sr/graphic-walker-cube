@@ -52,6 +52,68 @@ describe('toEchartsOption', () => {
         zeroScale: true,
     };
 
+    test('visible tooltips append to document.body and are not confined', () => {
+        const pay: IViewField = {
+            fid: 'pay',
+            name: 'Pay',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const bar = toEchartsOption({
+            ...base,
+            geomType: 'bar',
+            rows: [cash],
+            columns: [dateField],
+            chrome: resolveChartChrome(),
+        });
+        const pie = toEchartsOption({
+            ...base,
+            geomType: 'arc',
+            rows: [],
+            columns: [],
+            color: pay,
+            theta: cash,
+            chrome: resolveChartChrome(),
+        });
+        const region: IViewField = {
+            fid: 'region',
+            name: 'Регион',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const month: IViewField = {
+            fid: 'month',
+            name: 'Месяц',
+            analyticType: 'dimension',
+            semanticType: 'nominal',
+        };
+        const heatmap = toEchartsOption({
+            ...base,
+            geomType: 'rect',
+            rows: [region],
+            columns: [month],
+            color: cash,
+            dataSource: [{ month: '2025-01', region: 'Самара', [getMeaAggKey(CASH, 'sum')]: 10 }],
+            chrome: resolveChartChrome(),
+        });
+
+        for (const option of [bar, pie, heatmap]) {
+            const tooltip = option.tooltip as {
+                appendTo?: string;
+                confine?: boolean;
+                trigger?: string;
+                extraCssText?: string;
+            };
+            expect(tooltip.appendTo).toBe('body');
+            expect(tooltip.confine).toBe(false);
+            expect(tooltip.extraCssText).toContain('z-index: 10000');
+        }
+        expect((bar.tooltip as { trigger?: string }).trigger).toBe('axis');
+        expect((pie.tooltip as { trigger?: string }).trigger).toBe('item');
+        expect((heatmap.tooltip as { trigger?: string }).trigger).toBe('item');
+        expect((bar.tooltip as { backgroundColor?: string }).backgroundColor).toBe('#ffffff');
+    });
+
     test('combo overlay uses a second line series and dual axis when requested', () => {
         const option = toEchartsOption({
             ...base,
@@ -299,11 +361,12 @@ describe('toEchartsOption', () => {
         });
         const xAxis = option.xAxis as { type?: string };
         const yAxis = option.yAxis as { type?: string };
-        const series = (option.series as Array<{ encode?: { x?: string; y?: string }; label?: { position?: string } }>)[0];
+        const series = (option.series as Array<{ encode?: { x?: string; y?: string }; data?: unknown[]; label?: { position?: string } }>)[0];
         expect(xAxis.type).toBe('value');
         expect(yAxis.type).toBe('category');
-        expect(series.encode?.x).toBe(getMeaAggKey(CASH, 'sum'));
-        expect(series.encode?.y).toBe(DATE);
+        expect((option.yAxis as { data?: string[] }).data?.length).toBeGreaterThan(0);
+        expect(series.encode).toBeUndefined();
+        expect(series.data?.length).toBeGreaterThan(0);
         expect(series.label?.position).toBeUndefined();
     });
 
@@ -622,7 +685,7 @@ describe('toEchartsOption', () => {
         const series = option.series as Array<{ type?: string; data?: Array<[number, number, number]> }>;
         expect(series).toHaveLength(1);
         expect(series[0]?.type).toBe('heatmap');
-        expect(series[0]?.data).toEqual(expect.arrayContaining([[0, 0, 10], [1, 0, 30], [0, 1, 20]]));
+        expect(series[0]?.data).toEqual(expect.arrayContaining([[0, 1, 10], [1, 1, 30], [0, 0, 20]]));
         const visualMap = option.visualMap as { type?: string; min?: number; max?: number; inRange?: { color?: string[] } };
         expect(visualMap.type).toBe('continuous');
         expect(visualMap.min).toBe(10);
@@ -631,7 +694,7 @@ describe('toEchartsOption', () => {
         const yAxis = option.yAxis as { type?: string; name?: string; data?: string[] };
         expect(yAxis.type).toBe('category');
         expect(yAxis.name).toBe('Регион');
-        expect(yAxis.data).toEqual(['Самара', 'Казань']);
+        expect(yAxis.data).toEqual(['Казань', 'Самара']);
     });
 
     test('y axis title gap clears long tick labels', () => {
@@ -658,9 +721,62 @@ describe('toEchartsOption', () => {
             chrome: resolveChartChrome(),
         });
         const wideGap = (wide.yAxis as { nameGap?: number }).nameGap ?? 0;
-        const narrowGap = ((narrow.yAxis as Array<{ nameGap?: number }>)[0]?.nameGap) ?? 0;
+        const narrowAxis = (narrow.yAxis as Array<{ nameGap?: number }>)[0];
+        const narrowGap = narrowAxis?.nameGap ?? 0;
+        const narrowGrid = narrow.grid as { left?: number; containLabel?: boolean };
         expect(wideGap).toBeGreaterThan(120);
         expect(narrowGap).toBeGreaterThan(52);
         expect(wideGap).toBeGreaterThan(narrowGap);
+        expect(narrowGrid.containLabel).toBe(false);
+        expect(narrowGrid.left ?? 0).toBeGreaterThan(narrowGap);
+    });
+
+    test('orders weekday and hour axes of a heatmap', () => {
+        const weekday: IViewField = { fid: 'weekday', name: 'День', analyticType: 'dimension', semanticType: 'nominal' };
+        const hour: IViewField = { fid: 'hour', name: 'Час', analyticType: 'dimension', semanticType: 'nominal' };
+        const load: IViewField = { fid: 'load', name: 'Нагрузка', analyticType: 'measure', semanticType: 'quantitative', aggName: 'sum' };
+        const option = toEchartsOption({
+            ...base,
+            locale: 'ru-RU',
+            geomType: 'rect',
+            rows: [weekday],
+            columns: [hour],
+            color: load,
+            dataSource: [
+                { weekday: 'суббота', hour: '17', load_sum: 9 },
+                { weekday: 'четверг', hour: '7', load_sum: 4 },
+                { weekday: 'пятница', hour: '6', load_sum: 3 },
+                { weekday: 'вторник', hour: '18', load_sum: 8 },
+                { weekday: 'среда', hour: '0', load_sum: 1 },
+                { weekday: 'понедельник', hour: '3', load_sum: 2 },
+                { weekday: 'воскресенье', hour: '1', load_sum: 5 },
+                { weekday: 'понедельник', hour: '2', load_sum: 6 },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        expect((option.yAxis as { data?: string[] }).data).toEqual(['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье']);
+        expect((option.xAxis as { data?: string[] }).data).toEqual(['0', '1', '2', '3', '6', '7', '17', '18']);
+    });
+
+    test('orders a nominal bar axis even without a color channel', () => {
+        const weekday: IViewField = { fid: 'weekday', name: 'День', analyticType: 'dimension', semanticType: 'nominal' };
+        const option = toEchartsOption({
+            ...base,
+            locale: 'ru-RU',
+            geomType: 'bar',
+            rows: [cash],
+            columns: [weekday],
+            dataSource: [
+                { weekday: 'Среда', [getMeaAggKey(CASH, 'sum')]: 3 },
+                { weekday: 'Понедельник', [getMeaAggKey(CASH, 'sum')]: 1 },
+                { weekday: 'Воскресенье', [getMeaAggKey(CASH, 'sum')]: 7 },
+                { weekday: 'Вторник', [getMeaAggKey(CASH, 'sum')]: 2 },
+            ],
+            chrome: resolveChartChrome(),
+        });
+        expect((option.grid as { left?: number }).left).toBe(56);
+        expect((option.xAxis as { data?: string[] }).data).toEqual(['Понедельник', 'Вторник', 'Среда', 'Воскресенье']);
+        const series = option.series as Array<{ data?: unknown[] }>;
+        expect(series[0]?.data).toEqual([1, 2, 3, 7]);
     });
 });

@@ -26,6 +26,7 @@ export interface IPivotTableQueryInput {
     collapsedPaths: readonly IPivotTablePath[];
     /** Aggregated leaf data that has already been queried by a parent renderer. */
     viewData?: readonly IRow[];
+    locale?: string;
 }
 
 export interface IPivotTableBuildResult {
@@ -46,7 +47,8 @@ export type PivotTableModelBuilder = (
         type: 'ascending' | 'descending';
         mode: 'row' | 'column';
     },
-    rollupMeasures?: IPivotRollupMeasure[]
+    rollupMeasures?: IPivotRollupMeasure[],
+    categoryContext?: { locale?: string; datasetFields?: readonly IViewField[] }
 ) => Promise<IPivotTableBuildResult>;
 
 const buildPivotTableModelInWorker: PivotTableModelBuilder = async (...args) => {
@@ -244,6 +246,8 @@ export async function queryPivotTable(
         assertUniqueRawCells(viewData, viewDimensions);
     }
 
+    const pivotSort = getPivotSort(input.rows, input.columns, input.defaultAggregated);
+    const locale = input.locale || 'en-US';
     const result = await buildModel(
         dimsInRow,
         dimsInColumn,
@@ -251,10 +255,10 @@ export async function queryPivotTable(
         [],
         collapsedPaths.map(createPivotPathKey),
         totals,
-        getPivotSort(input.rows, input.columns, input.defaultAggregated),
-        toRollupMeasures(viewMeasures, input.defaultAggregated, fields)
+        pivotSort,
+        toRollupMeasures(viewMeasures, input.defaultAggregated, fields),
+        { locale, datasetFields: fields }
     );
-
     return {
         leftTree: result.lt,
         topTree: result.tt,

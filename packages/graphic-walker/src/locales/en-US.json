@@ -230,6 +230,11 @@
             "stdev": "Standard Deviation",
             "variance": "Variance"
         },
+        "category_order": {
+            "from_api": "Order from API",
+            "reset": "Reset order",
+            "empty": "API returned no order"
+        },
         "filter_type": {
             "one_of": "Value set",
             "one_of_desc": "Select values specified",
@@ -367,7 +372,8 @@
                     "height": "Height"
                 },
                 "table": {
-                    "summary": "Show summary"
+                    "summary": "Show summary",
+                    "font": "Table font size"
                 },
                 "geography": "Geography Configuration",
                 "geography_settings": {

@@ -1,5 +1,6 @@
 import { DATE_TIME_DRILL_LEVELS } from '../../constants';
-import { IPaintMap, IPaintMapV2, IRow, IViewField } from '../../interfaces';
+import { IField, IPaintMap, IPaintMapV2, IRow, IViewField } from '../../interfaces';
+import { datasetCategoryOrder, resolveCategoryDomain } from '../../sort/categoryOrder';
 import { isNotEmpty } from '../../utils';
 import { NULL_FIELD } from './field';
 export interface IEncodeProps {
@@ -20,6 +21,9 @@ export interface IEncodeProps {
     text: IViewField;
     displayOffset?: number;
     vegaConfig?: any;
+    dataSource?: readonly IRow[];
+    locale?: string;
+    datasetFields?: readonly Pick<IField, 'fid' | 'categoryOrder'>[];
 }
 export function availableChannels(geomType: string): Set<string> {
     if (geomType === 'text') {
@@ -157,5 +161,27 @@ export function channelEncode(props: IEncodeProps) {
             }
         }
     }
+    applyCategoryDomains(encoding, props);
     return encoding;
+}
+
+function applyCategoryDomains(encoding: { [key: string]: any }, props: IEncodeProps) {
+    if (!props.dataSource) return;
+    const locale = props.locale ?? 'en-US';
+    for (const channel of Object.keys(encoding)) {
+        if (encoding[channel].sort) continue;
+        const field = props[channel] as IViewField | undefined;
+        if (!field || field === NULL_FIELD || !field.fid || field.analyticType === 'measure') continue;
+        if (field.semanticType === 'quantitative') continue;
+        if (field.sort === 'ascending' || field.sort === 'descending') continue;
+        if (field.expression?.op === 'paint') continue;
+        encoding[channel].sort = resolveCategoryDomain({
+            field,
+            values: props.dataSource.map((row) => row[field.fid]),
+            rows: props.dataSource,
+            locale,
+            sheetOrder: field.categoryOrder,
+            datasetOrder: datasetCategoryOrder(field, props.datasetFields),
+        }).values;
+    }
 }

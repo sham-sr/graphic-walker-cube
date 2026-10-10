@@ -15,9 +15,9 @@ import { buildPivotTable } from "./buildPivotTable"
  * @param {MessageEvent<{ dimsInRow: import('../interfaces').IViewField[]; dimsInColumn: import('../interfaces').IViewField[]; allData: import('../interfaces').IRow[]; aggData: import('../interfaces').IRow[]; collapsedKeyList: string[]; showTableSummary: boolean; totals?: { rows?: 'off' | 'grand' | 'all'; columns?: 'off' | 'grand' | 'all' } }>} e
  */
 const main = e => {
-    const { dimsInRow, dimsInColumn, allData, aggData, collapsedKeyList, showTableSummary, totals, sort, rollupMeasures } = e.data;
+    const { dimsInRow, dimsInColumn, allData, aggData, collapsedKeyList, showTableSummary, totals, sort, rollupMeasures, categoryContext } = e.data;
     try {
-        const ans = buildPivotTable(dimsInRow, dimsInColumn, allData, aggData, collapsedKeyList, totals ?? showTableSummary, sort, rollupMeasures);
+        const ans = buildPivotTable(dimsInRow, dimsInColumn, allData, aggData, collapsedKeyList, totals ?? showTableSummary, sort, rollupMeasures, categoryContext);
         self.postMessage(ans);
     } catch (error) {
         self.postMessage(error instanceof Error ? error.message : String(error));

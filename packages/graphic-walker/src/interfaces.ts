@@ -54,6 +54,7 @@ export interface IMutField {
     disable?: boolean;
     semanticType: ISemanticType;
     analyticType: IAnalyticType;
+    categoryOrder?: CategoryOrder;
     path?: string[];
     offset?: number;
 }
@@ -185,6 +186,24 @@ export interface IExpression {
 
 export type IGeoRole = 'longitude' | 'latitude' | 'none';
 
+/** Порядок категорий измерения. Общий для визуализаций датасета, если не перекрыт полкой. */
+export interface CategoryOrder {
+    /** fid скрытого поля ранга в той же строке. Меньше — раньше. */
+    by?: string;
+    /** Готовый список подписей. */
+    order?: string[];
+}
+
+/** Запрос порядка категорий у внешнего API. */
+export interface ICategoryOrderRequest {
+    field: { fid: string; name: string; semanticType: ISemanticType };
+    /** Идентификатор датасета хоста, если известен. */
+    datasetId?: string;
+}
+
+/** Провайдер порядка категорий. null — у API нет порядка для поля. */
+export type ICategoryOrderProvider = (request: ICategoryOrderRequest) => Promise<CategoryOrder | null>;
+
 export interface IField {
     /**
      * fid: key in data record
@@ -200,6 +219,7 @@ export interface IField {
     aggName?: string;
     semanticType: ISemanticType;
     analyticType: IAnalyticType;
+    categoryOrder?: CategoryOrder;
     cmp?: string;
     geoRole?: IGeoRole;
     computed?: boolean;
@@ -455,6 +475,8 @@ export interface IVisualLayout {
      * Pivot date headers: localized by grain (`human`, default) or truncated ISO (`technical`).
      */
     pivotDateFormat?: 'human' | 'technical';
+    /** Pivot table body font size preset (px). Omitted charts use 12px / 32px row height. */
+    pivotFontSize?: 10 | 12 | 14 | 16;
     /** Show value labels on marks. */
     chartShowLabels?: boolean;
     /** Overlay a second measure as a line, optionally on an independent axis. */
@@ -1058,6 +1080,12 @@ export interface IVizProps {
     channelScales?: IChannelScales;
     scales?: IChannelScales;
     experimentalFeatures?: IExperimentalFeatures;
+    /**
+     * Провайдер порядка категорий с хоста.
+     * Без него редактор не показывает действие на пилюле измерения.
+     * `datasetId` в запросе необязателен: у GraphicWalker нет id датасета хоста, его подставляет встройка.
+     */
+    categoryOrderProvider?: ICategoryOrderProvider;
     hideProfiling?: boolean;
 }
 

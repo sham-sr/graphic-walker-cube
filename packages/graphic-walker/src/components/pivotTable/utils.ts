@@ -61,13 +61,30 @@ function insertNode(
     insertNode(child, childIndex, layerKeys, nodeData, depth + 1, collapsedKeySet, sort);
 }
 
-function comparePivotSortValues(left: PivotTableValue, right: PivotTableValue, reverse: boolean): number {
+function pivotLabel(value: PivotTableValue): string {
+    return value === null || value === undefined ? '' : String(value);
+}
+
+function domainIndexes(domains?: Readonly<Record<string, readonly string[]>>): ReadonlyMap<string, ReadonlyMap<string, number>> {
+    const indexes = new Map<string, Map<string, number>>();
+    if (!domains) return indexes;
+    for (const [fid, domain] of Object.entries(domains)) {
+        const index = new Map<string, number>();
+        domain.forEach((label, position) => {
+            if (!index.has(label)) index.set(label, position);
+        });
+        indexes.set(fid, index);
+    }
+    return indexes;
+}
+
+function comparePivotSortValues(left: PivotTableValue, right: PivotTableValue, reverse: boolean, locale = 'en-US'): number {
     if (typeof left === 'number' && typeof right === 'number') {
         if (left === right || (Number.isNaN(left) && Number.isNaN(right))) return 0;
         const cmp = left < right ? -1 : 1;
         return reverse ? -cmp : cmp;
     }
-    const cmp = String(left).localeCompare(String(right));
+    const cmp = String(left ?? '').localeCompare(String(right ?? ''), locale, { numeric: true, sensitivity: 'base' });
     return reverse ? -cmp : cmp;
 }
 
@@ -75,17 +92,28 @@ function sortNestTree(
     node: INestNode,
     depth: number,
     layerCount: number,
-    sort?: {
-        fid: string;
-        type: 'ascending' | 'descending';
-    }
+    sort: { fid: string; type: 'ascending' | 'descending' } | undefined,
+    indexes: ReadonlyMap<string, ReadonlyMap<string, number>>,
+    locale: string
 ) {
     if (node.children.length > 1) {
-        const reverse = depth === layerCount - 1 && sort?.type === 'descending';
-        node.children.sort((left, right) => comparePivotSortValues(left.sort, right.sort, reverse));
+        const measureLeaf = depth === layerCount - 1 && Boolean(sort);
+        const reverse = measureLeaf && sort?.type === 'descending';
+        const index = measureLeaf ? undefined : indexes.get(node.children[0].fieldKey);
+        node.children.sort((left, right) => {
+            if (measureLeaf) return comparePivotSortValues(left.sort, right.sort, reverse, locale);
+            if (index) {
+                const leftIndex = index.get(pivotLabel(left.value));
+                const rightIndex = index.get(pivotLabel(right.value));
+                if (leftIndex !== undefined && rightIndex !== undefined && leftIndex !== rightIndex) {
+                    return leftIndex < rightIndex ? -1 : 1;
+                }
+            }
+            return comparePivotSortValues(left.value, right.value, false, locale);
+        });
     }
     for (const child of node.children) {
-        sortNestTree(child, depth + 1, layerCount, sort);
+        sortNestTree(child, depth + 1, layerCount, sort, indexes, locale);
     }
 }
 
@@ -135,7 +163,9 @@ export function buildNestTree(
         fid: string;
         type: 'ascending' | 'descending';
     },
-    dataWithoutSort?: IRow[]
+    dataWithoutSort?: IRow[],
+    domains?: Readonly<Record<string, readonly string[]>>,
+    locale = 'en-US'
 ): INestNode {
     const collapsedKeySet = new Set(collapsedKeyList);
     const childIndex = new Map<INestNode, Map<string, INestNode>>();
@@ -159,7 +189,7 @@ export function buildNestTree(
             insertNode(tree, childIndex, layerKeys, row, 0, collapsedKeySet, { fid: '', type: sort?.type ?? 'ascending' });
         }
     }
-    sortNestTree(tree, 0, layerKeys.length, sort);
+    sortNestTree(tree, 0, layerKeys.length, sort, domainIndexes(domains), locale);
     insertSummaryNodes(tree, coercePivotTotalsMode(showSummary));
     return tree;
 }

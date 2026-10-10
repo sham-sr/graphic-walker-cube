@@ -5,7 +5,7 @@ import * as op from 'rxjs/operators';
 import { expressionFunction, type ScenegraphEvent } from 'vega';
 import styled from 'styled-components';
 import { useVegaExportApi } from '../utils/vegaApiExport';
-import { IViewField, IRow, IStackMode, VegaGlobalConfig, IVegaChartRef, IChannelScales, IDarkMode, IConfigScaleSet } from '../interfaces';
+import { IField, IViewField, IRow, IStackMode, VegaGlobalConfig, IVegaChartRef, IChannelScales, IDarkMode, IConfigScaleSet } from '../interfaces';
 import { getVegaTimeFormatRules } from './temporalFormat';
 import canvasSize from 'canvas-size';
 import { Errors, useReporter } from '../utils/reportError';
@@ -13,6 +13,7 @@ import { toVegaSpec } from '../lib/vega';
 import type { ChartChrome } from './spec/chartChrome';
 import { useResizeDetector } from 'react-resize-detector';
 import { startTask } from '../utils';
+import { scheduleRafResize } from '../utils/rafResize';
 import { themeContext } from '@/store/theme';
 import { format } from 'd3-format';
 
@@ -97,6 +98,7 @@ interface ReactVegaProps {
     displayOffset?: number;
     chrome?: Partial<ChartChrome>;
     extraTooltipFields?: readonly IViewField[];
+    datasetFields?: readonly Pick<IField, 'fid' | 'categoryOrder'>[];
 }
 
 const click$ = new Subject<ScenegraphEvent>();
@@ -156,6 +158,7 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
         displayOffset,
         chrome,
         extraTooltipFields,
+        datasetFields,
     } = props;
     const [viewPlaceholders, setViewPlaceholders] = useState<React.RefObject<HTMLDivElement>[]>([]);
     const mediaTheme = useContext(themeContext);
@@ -262,6 +265,8 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
                 displayOffset,
                 chrome,
                 extraTooltipFields,
+                locale,
+                datasetFields,
             }),
         [
             guardedCols,
@@ -287,6 +292,8 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
             vegaHeight,
             chrome,
             extraTooltipFields,
+            locale,
+            datasetFields,
         ]
     );
 
@@ -544,22 +551,25 @@ const ReactVega = forwardRef<IReactVegaHandler, ReactVegaProps>(function ReactVe
         if (layoutMode === 'auto') {
             return;
         }
-        const cols = Math.max(colRepeatFields.length, 1);
-        const rowsCount = Math.max(rowRepeatFields.length, 1);
-        const many = vegaRefs.current.length > 1;
-        const targetW = Math.max(((areaWidth || width) / (many ? cols : 1)) - 8, many ? 80 : 120);
-        const targetH = Math.max(((areaHeight || height) / (many ? rowsCount : 1)) - 8, many ? 80 : 120);
-        for (const item of vegaRefs.current) {
-            const view = item?.view;
-            if (!view) continue;
-            try {
-                if (view.width() > 0) {
-                    view.width(targetW).height(targetH).runAsync();
+        const resizeViews = () => {
+            const cols = Math.max(colRepeatFields.length, 1);
+            const rowsCount = Math.max(rowRepeatFields.length, 1);
+            const many = vegaRefs.current.length > 1;
+            const targetW = Math.max(((areaWidth || width) / (many ? cols : 1)) - 8, many ? 80 : 120);
+            const targetH = Math.max(((areaHeight || height) / (many ? rowsCount : 1)) - 8, many ? 80 : 120);
+            for (const item of vegaRefs.current) {
+                const view = item?.view;
+                if (!view) continue;
+                try {
+                    if (view.width() > 0) {
+                        view.width(targetW).height(targetH).runAsync();
+                    }
+                } catch {
+                    // view not ready yet
                 }
-            } catch {
-                // view not ready yet
             }
-        }
+        };
+        return scheduleRafResize(resizeViews);
     }, [areaWidth, areaHeight, layoutMode, width, height, colRepeatFields.length, rowRepeatFields.length]);
 
     const containerRef = useRef<HTMLDivElement>(null);

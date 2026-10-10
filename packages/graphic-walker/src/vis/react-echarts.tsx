@@ -12,11 +12,12 @@ import {
 } from 'echarts/components';
 import { CanvasRenderer, SVGRenderer } from 'echarts/renderers';
 import { useResizeDetector } from 'react-resize-detector';
-import type { IRow, IStackMode, IViewField, VegaGlobalConfig } from '../interfaces';
+import type { IField, IRow, IStackMode, IViewField, VegaGlobalConfig } from '../interfaces';
 import type { IReactVegaHandler } from './react-vega';
 import type { ChartChrome } from './spec/chartChrome';
 import { themeContext } from '@/store/theme';
 import { toEchartsViews } from './echarts/toEchartsOption';
+import { scheduleRafResize } from '../utils/rafResize';
 
 echarts.use([
     BarChart,
@@ -56,6 +57,7 @@ interface ReactEchartsProps {
     width: number;
     height: number;
     locale?: string;
+    datasetFields?: readonly Pick<IField, 'fid' | 'categoryOrder'>[];
     useSvg?: boolean;
     zeroScale?: boolean;
 }
@@ -88,6 +90,7 @@ const ReactEcharts = forwardRef<IReactVegaHandler, ReactEchartsProps>(function R
                 mediaTheme,
                 zeroScale: props.zeroScale ?? true,
                 locale: props.locale,
+                datasetFields: props.datasetFields,
             }),
         [
             props.geomType,
@@ -108,6 +111,7 @@ const ReactEcharts = forwardRef<IReactVegaHandler, ReactEchartsProps>(function R
             props.vegaConfig,
             props.zeroScale,
             props.locale,
+            props.datasetFields,
             mediaTheme,
         ]
     );
@@ -117,9 +121,13 @@ const ReactEcharts = forwardRef<IReactVegaHandler, ReactEchartsProps>(function R
             if (!el) {
                 return null;
             }
+            // Ячейка сетки ещё может быть 0×0: без width/height echarts.init пишет предупреждение.
+            const size = chartPixelSize(el, props.layoutMode, props.width, props.height);
             return echarts.init(el, undefined, {
                 renderer: props.useSvg ? 'svg' : 'canvas',
                 locale: props.locale?.startsWith('zh') ? 'ZH' : undefined,
+                width: size.width,
+                height: size.height,
             });
         });
         chartsRef.current = charts;
@@ -127,6 +135,8 @@ const ReactEcharts = forwardRef<IReactVegaHandler, ReactEchartsProps>(function R
             charts.forEach((chart) => chart?.dispose());
             chartsRef.current = [];
         };
+        // Размер только для первого кадра: дальше chart.resize, без пересоздания инстанса.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [views.options.length, props.useSvg, props.locale]);
 
     useEffect(() => {
@@ -137,11 +147,25 @@ const ReactEcharts = forwardRef<IReactVegaHandler, ReactEchartsProps>(function R
                 return;
             }
             chart.setOption(option, { notMerge: true });
-            const width = Math.max(el.clientWidth || areaWidth || props.width, 80);
-            const height = Math.max(el.clientHeight || areaHeight || props.height, props.layoutMode === 'auto' ? 200 : 80);
-            chart.resize({ width, height });
+            chart.resize(chartPixelSize(el, props.layoutMode, props.width, props.height, areaWidth, areaHeight));
         });
-    }, [views, areaWidth, areaHeight, props.layoutMode, props.width, props.height]);
+        // areaWidth/areaHeight — отдельный rAF-эффект ниже, без лишнего setOption при ресайзе плитки.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [views, props.layoutMode, props.width, props.height]);
+
+    useEffect(() => {
+        const resizeCharts = () => {
+            views.options.forEach((_, index) => {
+                const chart = chartsRef.current[index];
+                const el = hostsRef.current[index];
+                if (!chart || !el) {
+                    return;
+                }
+                chart.resize(chartPixelSize(el, props.layoutMode, props.width, props.height, areaWidth, areaHeight));
+            });
+        };
+        return scheduleRafResize(resizeCharts);
+    }, [areaWidth, areaHeight, props.layoutMode, props.width, props.height, views.options.length]);
 
     useImperativeHandle(ref, () => ({
         getSVGData: async () => collectUrls(chartsRef.current, { type: 'svg' }),
@@ -186,6 +210,20 @@ const ReactEcharts = forwardRef<IReactVegaHandler, ReactEchartsProps>(function R
         </div>
     );
 });
+
+function chartPixelSize(
+    el: HTMLElement,
+    layoutMode: string,
+    width: number,
+    height: number,
+    areaWidth?: number,
+    areaHeight?: number,
+): { width: number; height: number } {
+    return {
+        width: Math.max(el.clientWidth || areaWidth || width || 0, 80),
+        height: Math.max(el.clientHeight || areaHeight || height || 0, layoutMode === 'auto' ? 200 : 80),
+    };
+}
 
 function collectUrls(charts: Array<echarts.ECharts | null>, opts: { type: 'svg' | 'png'; pixelRatio?: number }): string[] {
     return charts

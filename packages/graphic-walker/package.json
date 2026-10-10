@@ -27,7 +27,8 @@
   },
   "sideEffects": [
     "./dist/graphic-walker.es.js",
-    "./dist/graphic-walker.umd.js"
+    "./dist/graphic-walker.umd.js",
+    "./src/sort/calendars.ts"
   ],
   "main": "./dist/graphic-walker.umd.js",
   "module": "./dist/graphic-walker.es.js",

@@ -60,6 +60,26 @@ function demoDatasetFallbackPlugin() {
   };
 }
 
+// Vite 4 собирает inline-воркер как Blob([atob(base64)]).
+// atob даёт бинарную строку, а Blob кодирует её в UTF-8 ещё раз: кириллица словаря в сводной портится.
+function inlineWorkerUtf8Plugin() {
+  return {
+    name: 'inline-worker-utf8',
+    renderChunk(code: string) {
+      const next = code
+        .replace(
+          /new Blob\(\[atob\(([^)]+)\)\], \{ type: "text\/javascript;charset=utf-8" \}\)/g,
+          'new Blob([Uint8Array.from(atob($1), (c) => c.charCodeAt(0))], { type: "text/javascript;charset=utf-8" })'
+        )
+        .replaceAll(
+          'new Worker("data:application/javascript;base64,"',
+          'new Worker("data:application/javascript;charset=utf-8;base64,"'
+        );
+      return next === code ? null : { code: next, map: null };
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
@@ -70,6 +90,7 @@ export default defineConfig({
   },
   plugins: [
     demoDatasetFallbackPlugin(),
+    inlineWorkerUtf8Plugin(),
     react(),
     // Declarations are emitted by `tspc --build` in the package `build` script.
     // @rollup/plugin-typescript here resolves `@kanaries/graphic-walker` against dist mid-build and fails.

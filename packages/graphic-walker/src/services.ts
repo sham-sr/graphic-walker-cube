@@ -165,7 +165,8 @@ export const buildPivotTableService = async (
         type: 'ascending' | 'descending';
         mode: 'row' | 'column';
     },
-    rollupMeasures?: IPivotRollupMeasure[]
+    rollupMeasures?: IPivotRollupMeasure[],
+    categoryContext?: { locale?: string; datasetFields?: readonly { fid: string; categoryOrder?: { by?: string; order?: string[] } }[] }
 ): Promise<{ lt: INestNode; tt: INestNode; cube: IPivotCube }> => {
     const worker = new BuildMetricTableWorker();
     const totals = pivotTotalsFromInput(showTableSummary);
@@ -180,6 +181,7 @@ export const buildPivotTableService = async (
             totals,
             sort,
             rollupMeasures,
+            categoryContext,
         });
         return res;
     } catch (error) {

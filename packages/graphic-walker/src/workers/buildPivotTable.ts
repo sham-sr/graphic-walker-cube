@@ -7,7 +7,44 @@ import {
     type IPivotRollupMeasure,
 } from '../components/pivotTable/cube';
 import { pivotTotalsFromInput, type PivotTableTotalsArg } from '../components/pivotTable/display';
-import { IViewField, IRow } from '../interfaces';
+import { IField, IViewField, IRow } from '../interfaces';
+import { datasetCategoryOrder, resolveCategoryDomain } from '../sort/categoryOrder';
+
+export interface PivotCategoryContext {
+    locale?: string;
+    datasetFields?: readonly Pick<IField, 'fid' | 'categoryOrder'>[];
+}
+
+function categoryDomains(
+    fields: readonly IViewField[],
+    rows: readonly IRow[],
+    context?: PivotCategoryContext
+): Record<string, readonly string[]> {
+    const locale = context?.locale || 'en-US';
+    const domains: Record<string, readonly string[]> = {};
+    for (const field of fields) {
+        if (!field.fid || field.analyticType === 'measure') continue;
+        const seen = new Set<string>();
+        const values: unknown[] = [];
+        for (const row of rows) {
+            if (!Object.prototype.hasOwnProperty.call(row, field.fid)) continue;
+            const label = row[field.fid] === null || row[field.fid] === undefined ? '' : String(row[field.fid]);
+            if (seen.has(label)) continue;
+            seen.add(label);
+            values.push(row[field.fid]);
+        }
+        const datasetOrder = datasetCategoryOrder(field, context?.datasetFields);
+        domains[field.fid] = resolveCategoryDomain({
+            field,
+            values,
+            rows,
+            locale,
+            sheetOrder: field.categoryOrder,
+            datasetOrder,
+        }).values;
+    }
+    return domains;
+}
 
 const getFirstVisibleValuePath = (item: INestNode): INestNode[] => {
     const child = item.children.find((node) => node.kind === 'value');
@@ -61,7 +98,8 @@ export function buildPivotTable(
         type: 'ascending' | 'descending';
         mode: 'row' | 'column';
     },
-    rollupMeasures?: IPivotRollupMeasure[]
+    rollupMeasures?: IPivotRollupMeasure[],
+    categoryContext?: PivotCategoryContext
 ): IBuildPivotTableResult {
     const totals = pivotTotalsFromInput(showTableSummary);
     const dimensionKeys = [...dimsInRow, ...dimsInColumn].map((field) => field.fid);
@@ -69,6 +107,8 @@ export function buildPivotTable(
     const groupingSets = getAllPivotGroupingSets(dimsInRow, dimsInColumn);
     const cube = buildPivotCube(allData, aggData, dimensionKeys, groupingSets, measures);
     const cubeRows = sort ? [...allData, ...aggData, ...Object.values(cube.cells)] : allData;
+    const domains = categoryDomains([...dimsInRow, ...dimsInColumn], allData, categoryContext);
+    const locale = categoryContext?.locale || 'en-US';
 
     let lt: INestNode;
     let tt: INestNode;
@@ -77,7 +117,11 @@ export function buildPivotTable(
             dimsInColumn.map((d) => d.fid),
             allData,
             collapsedKeyList,
-            totals.columns
+            totals.columns,
+            undefined,
+            undefined,
+            domains,
+            locale
         );
         const firstColumnPath = getFirstVisibleValuePath(tt);
         if (dimsInColumn.length > 0 && firstColumnPath.length > 0) {
@@ -90,7 +134,9 @@ export function buildPivotTable(
                 collapsedKeyList,
                 totals.rows,
                 sort,
-                rest
+                rest,
+                domains,
+                locale
             );
         } else {
             lt = buildNestTree(
@@ -98,7 +144,10 @@ export function buildPivotTable(
                 allData,
                 collapsedKeyList,
                 totals.rows,
-                sort
+                sort,
+                undefined,
+                domains,
+                locale
             );
         }
     } else {
@@ -106,7 +155,11 @@ export function buildPivotTable(
             dimsInRow.map((d) => d.fid),
             allData,
             collapsedKeyList,
-            totals.rows
+            totals.rows,
+            undefined,
+            undefined,
+            domains,
+            locale
         );
         const firstRowPath = getFirstVisibleValuePath(lt);
         if (sort && dimsInRow.length > 0 && firstRowPath.length > 0) {
@@ -119,7 +172,9 @@ export function buildPivotTable(
                 collapsedKeyList,
                 totals.columns,
                 sort,
-                rest
+                rest,
+                domains,
+                locale
             );
         } else {
             tt = buildNestTree(
@@ -127,7 +182,10 @@ export function buildPivotTable(
                 allData,
                 collapsedKeyList,
                 totals.columns,
-                sort
+                sort,
+                undefined,
+                domains,
+                locale
             );
         }
     }

@@ -1,16 +1,19 @@
-import { BarsArrowDownIcon, BarsArrowUpIcon, ChevronUpDownIcon } from '@heroicons/react/24/outline';
+import { BarsArrowDownIcon, BarsArrowUpIcon, ChevronUpDownIcon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { observer } from 'mobx-react-lite';
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DraggableProvided } from '@kanaries/react-beautiful-dnd';
 import { COUNT_FIELD_ID, MEA_KEY_ID, MEA_VAL_ID } from '../../constants';
 import { IAggregator, IDraggableViewStateKey } from '../../interfaces';
 import { useVizStore } from '../../store';
+import { useCategoryOrderProvider } from '../../store/context';
 import { Pill } from '../components';
 import { GLOBAL_CONFIG } from '../../config';
 import DropdownContext from '../../components/dropdownContext';
 import SelectContext, { type ISelectContextOption } from '../../components/selectContext';
 import { refMapper } from '../fieldsContext';
+import { useNotifications } from '../../components/notifications';
+import { hasCategoryOrderPayload, showCategoryOrderApi } from './categoryOrderApi';
 
 interface PillProps {
     provided: DraggableProvided;
@@ -23,13 +26,27 @@ const OBPill: React.FC<PillProps> = (props) => {
     const { config, allFields } = vizStore;
     const field = vizStore.allEncodings[dkey.id][fIndex];
     const { t } = useTranslation('translation', { keyPrefix: 'constant.aggregator' });
+    const { t: tCategoryOrder } = useTranslation('translation', { keyPrefix: 'constant.category_order' });
+    const categoryOrderProvider = useCategoryOrderProvider();
+    const { notify } = useNotifications();
+    const categoryOrderLoadingRef = useRef(false);
 
     const aggregationOptions = useMemo(() => {
         return GLOBAL_CONFIG.AGGREGATOR_LIST.map((op) => ({
             value: op,
             label: t(op),
         }));
-    }, []);
+    }, [t]);
+
+    const categoryOrderOptions = useMemo(() => {
+        const options = [{ value: 'from_api', label: tCategoryOrder('from_api') }];
+        if (field.categoryOrder) {
+            options.push({ value: 'reset', label: tCategoryOrder('reset') });
+        }
+        return options;
+    }, [field.categoryOrder, tCategoryOrder]);
+
+    const showCategoryOrder = showCategoryOrderApi(categoryOrderProvider, field);
 
     const foldOptions = useMemo<ISelectContextOption[]>(() => {
         const validFoldBy = allFields.filter((f) => f.analyticType === 'measure' && f.fid !== MEA_VAL_ID);
@@ -40,6 +57,33 @@ const OBPill: React.FC<PillProps> = (props) => {
     }, [allFields]);
 
     const folds = field.fid === MEA_KEY_ID ? config.folds ?? [] : null;
+
+    const handleCategoryOrderSelect = (value: string) => {
+        if (value === 'reset') {
+            vizStore.setFieldCategoryOrder(dkey.id, fIndex, undefined);
+            return;
+        }
+        if (value !== 'from_api' || !categoryOrderProvider || categoryOrderLoadingRef.current) {
+            return;
+        }
+        categoryOrderLoadingRef.current = true;
+        void categoryOrderProvider({
+            field: { fid: field.fid, name: field.name, semanticType: field.semanticType },
+        })
+            .then((order) => {
+                if (hasCategoryOrderPayload(order)) {
+                    vizStore.setFieldCategoryOrder(dkey.id, fIndex, order ?? undefined);
+                } else {
+                    notify('info', tCategoryOrder('empty'));
+                }
+            })
+            .catch((err: unknown) => {
+                console.warn(err);
+            })
+            .finally(() => {
+                categoryOrderLoadingRef.current = false;
+            });
+    };
 
     return (
         <Pill
@@ -72,6 +116,16 @@ const OBPill: React.FC<PillProps> = (props) => {
                     <span className="bg-transparent float-right focus:outline-none focus: dark:focus: flex items-center ml-2">
                         {field.aggName || ''}
                         <ChevronUpDownIcon className="w-3" />
+                    </span>
+                </DropdownContext>
+            )}
+            {showCategoryOrder && (
+                <DropdownContext options={categoryOrderOptions} onSelect={handleCategoryOrderSelect}>
+                    <span
+                        className="float-right flex items-center ml-1"
+                        onPointerDown={(event) => event.stopPropagation()}
+                    >
+                        <ListBulletIcon className="w-3" aria-hidden />
                     </span>
                 </DropdownContext>
             )}

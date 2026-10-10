@@ -19,6 +19,7 @@ import {
     IField,
     IPaintMapV2,
     IDefaultConfig,
+    CategoryOrder,
 } from '../interfaces';
 import type { FeatureCollection } from 'geojson';
 import { arrayEqual, createCountField, createVirtualFields, isNotEmpty } from '../utils';
@@ -63,6 +64,7 @@ export enum Methods {
     replaceWithNLPQuery,
     // appended at the end: enum values are serialized in exported timelines
     replaceChart,
+    setFieldCategoryOrder,
 }
 export type PropsMap = {
     [Methods.setConfig]: KVTuple<IVisualConfigNew>;
@@ -92,6 +94,7 @@ export type PropsMap = {
     [Methods.editAllField]: [string, Partial<IField>];
     [Methods.replaceWithNLPQuery]: [string, string];
     [Methods.replaceChart]: [PartialChart];
+    [Methods.setFieldCategoryOrder]: [normalKeys, number, CategoryOrder | undefined];
 };
 // ensure propsMap has all keys of methods
 type assertPropsMap = AssertSameKey<PropsMap, { [a in Methods]: any }>;
@@ -209,6 +212,16 @@ const actions: {
     [Methods.setLayout]: (data, kvs) => mutPath(data, 'layout', (l) => Object.assign({}, l, Object.fromEntries(kvs))),
     [Methods.setFieldAggregator]: (data, encoding, index, aggName) =>
         mutPath(data, `encodings.${encoding}`, (f) => replace(f, index, (x) => ({ ...x, aggName }))),
+    [Methods.setFieldCategoryOrder]: (data, encoding, index, order) =>
+        mutPath(data, `encodings.${encoding}`, (f) =>
+            replace(f, index, (x) => {
+                if (order === undefined) {
+                    const { categoryOrder: _removed, ...rest } = x;
+                    return rest;
+                }
+                return { ...x, categoryOrder: order };
+            })
+        ),
     [Methods.setGeoData]: (data, geojson, geoKey, geoUrl) => mutPath(data, 'layout', (l) => ({ ...l, geojson, geoKey, geoUrl })),
     [Methods.setCoordSystem]: (data, system) =>
         mutPath(data, 'config', (c) => ({
@@ -585,13 +598,29 @@ function viewFieldFromMeta(f: IMutField): IViewField {
         analyticType: f.analyticType,
         offset: f.offset,
     };
+    if (f.categoryOrder) field.categoryOrder = f.categoryOrder;
     return f.analyticType === 'measure' ? { ...field, aggName: 'sum' } : field;
 }
 
+function sameCategoryOrder(left: IViewField['categoryOrder'], right: IViewField['categoryOrder']): boolean {
+    return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
 function syncPoolEntry(entry: IViewField, f: IMutField): IViewField {
-    const { name, basename, semanticType, offset } = viewFieldFromMeta(f);
-    if (entry.name === name && entry.basename === basename && entry.semanticType === semanticType && entry.offset === offset) return entry;
-    return { ...entry, name, basename, semanticType, offset };
+    const next = viewFieldFromMeta(f);
+    if (
+        entry.name === next.name &&
+        entry.basename === next.basename &&
+        entry.semanticType === next.semanticType &&
+        entry.offset === next.offset &&
+        sameCategoryOrder(entry.categoryOrder, next.categoryOrder)
+    ) {
+        return entry;
+    }
+    const updated: IViewField = { ...entry, name: next.name, basename: next.basename, semanticType: next.semanticType, offset: next.offset };
+    if (next.categoryOrder) updated.categoryOrder = next.categoryOrder;
+    else delete updated.categoryOrder;
+    return updated;
 }
 
 /** Keeps the dimension/measure pools of a chart in line with the dataset meta; returns the same chart when nothing changed. */

@@ -1,5 +1,6 @@
 import { ISegmentKey, type IMutField } from '../interfaces';
 import { newChart } from '../models/visSpecHistory';
+import { resolveCategoryDomain } from '../sort/categoryOrder';
 import { VizSpecStore } from './visualSpecStore';
 
 const META: IMutField[] = [
@@ -175,6 +176,36 @@ describe('VizSpecStore metadata updates', () => {
         store.setMeta(META);
 
         expect(store.currentVis.layout.renderer).toBe('observable-plot');
+    });
+});
+
+describe('VizSpecStore setFieldCategoryOrder', () => {
+    test('writes categoryOrder to shelf field, exports it, and undo removes it', () => {
+        const store = new VizSpecStore(META);
+        store.moveField('dimensions', 0, 'columns', 0);
+        const order = { order: ['B', 'A', 'C'] };
+        store.setFieldCategoryOrder('columns', 0, order);
+
+        expect(store.currentEncodings.columns[0].categoryOrder).toEqual(order);
+        expect(store.exportCurrentChart()).toContain('"order":["B","A","C"]');
+
+        store.undo();
+        expect(store.currentEncodings.columns[0].categoryOrder).toBeUndefined();
+    });
+
+    test('resolveCategoryDomain uses sheet categoryOrder from the field', () => {
+        const store = new VizSpecStore(META);
+        store.moveField('dimensions', 0, 'columns', 0);
+        store.setFieldCategoryOrder('columns', 0, { order: ['В', 'А', 'Б'] });
+        const field = store.currentEncodings.columns[0];
+
+        const values = resolveCategoryDomain({
+            field: { fid: field.fid, semanticType: field.semanticType },
+            values: ['А', 'Б', 'В'],
+            locale: 'ru-RU',
+            sheetOrder: field.categoryOrder,
+        }).values;
+        expect(values).toEqual(['В', 'А', 'Б']);
     });
 });
 

@@ -42,6 +42,7 @@ import {
     IPaintMapV2,
     IDefaultConfig,
     FieldIdentifier,
+    CategoryOrder,
 } from '../interfaces';
 import { GLOBAL_CONFIG } from '../config';
 import { COUNT_FIELD_ID, DATE_TIME_DRILL_LEVELS, DATE_TIME_FEATURE_LEVELS, PAINT_FIELD_ID, MEA_KEY_ID, MEA_VAL_ID } from '../constants';
@@ -101,6 +102,10 @@ export class VizSpecStore {
     defaultConfig: IDefaultConfig | undefined;
     /** fields highlighted in the field list (Tableau-style multi-select feeding Auto Viz); UI state, not part of the undo timeline */
     selectedFieldIds: string[] = [];
+    /** When set, the filter editor field dropdown lists only these fids. Null keeps the full dataset. */
+    filterFieldAllowlist: readonly string[] | null = null;
+    /** Счётчик подтверждений диалога фильтра (`writeFilter`); для embed-редактора листа. */
+    filterWriteEpoch = 0;
 
     onMetaChange?: (fid: string, diffMeta: Partial<IMutField>) => void;
 
@@ -504,6 +509,60 @@ export class VizSpecStore {
         this.visList[this.visIndex] = performers.reorderField(this.visList[this.visIndex], stateKey, sourceIndex, destinationIndex);
     }
 
+    /** Ограничить выпадающий список полей фильтра. `null` — весь датасет. */
+    setFilterFieldAllowlist(fids: readonly string[] | null): void {
+        this.filterFieldAllowlist = fids;
+    }
+
+    /** Copy a sheet field onto the filter shelf and open its editor. Same path as a drag onto Filters. */
+    appendSheetFilter(fid: string): void {
+        const existing = this.viewFilters.findIndex((field) => field.fid === fid);
+        if (existing >= 0) {
+            this.setFilterEditing(existing);
+            return;
+        }
+        const keys: Array<keyof Omit<DraggableFieldState, 'filters'>> = [
+            'rows',
+            'columns',
+            'color',
+            'opacity',
+            'size',
+            'shape',
+            'theta',
+            'radius',
+            'longitude',
+            'latitude',
+            'geoId',
+            'details',
+            'text',
+            'dimensions',
+            'measures',
+        ];
+        const encodings = this.currentEncodings;
+        for (const key of keys) {
+            const list = encodings[key];
+            if (!Array.isArray(list)) {
+                continue;
+            }
+            const index = list.findIndex((field) => field.fid === fid);
+            if (index < 0) {
+                continue;
+            }
+            const field = list[index];
+            if (
+                !field ||
+                field.fid === MEA_KEY_ID ||
+                field.fid === MEA_VAL_ID ||
+                field.fid === COUNT_FIELD_ID ||
+                field.aggName === 'expr'
+            ) {
+                return;
+            }
+            this.moveField(key, index, 'filters', encodings.filters.length);
+            return;
+        }
+    }
+
     moveField(sourceKey: keyof DraggableFieldState, sourceIndex: number, destinationKey: keyof DraggableFieldState, destinationIndex: number) {
         if (sourceKey === 'filters') {
             return this.removeField(sourceKey, sourceIndex);
@@ -558,6 +617,7 @@ export class VizSpecStore {
 
     writeFilter(index: number, rule: IFilterRule | null) {
         this.visList[this.visIndex] = performers.writeFilter(this.visList[this.visIndex], index, rule);
+        this.filterWriteEpoch += 1;
     }
 
     transpose() {
@@ -636,6 +696,10 @@ export class VizSpecStore {
 
     setFieldAggregator(stateKey: keyof Omit<DraggableFieldState, 'filters'>, index: number, aggName: IAggregator) {
         this.visList[this.visIndex] = performers.setFieldAggregator(this.visList[this.visIndex], stateKey, index, aggName);
+    }
+
+    setFieldCategoryOrder(stateKey: keyof Omit<DraggableFieldState, 'filters'>, index: number, order: CategoryOrder | undefined) {
+        this.visList[this.visIndex] = performers.setFieldCategoryOrder(this.visList[this.visIndex], stateKey, index, order);
     }
 
     setFilterAggregator(index: number, aggName: IAggregator | '') {
