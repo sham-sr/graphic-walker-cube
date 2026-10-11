@@ -1,6 +1,6 @@
 {
   "name": "@kanaries/graphic-walker",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "scripts": {
     "dev:front_end": "vite --host",
     "dev": "npm run dev:front_end",
@@ -126,7 +126,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "optionalDependencies": {
-    "@kanaries/duckdb-computation": "0.0.3"
+    "@kanaries/duckdb-computation": "0.0.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

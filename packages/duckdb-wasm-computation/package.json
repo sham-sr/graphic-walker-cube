@@ -1,6 +1,6 @@
 {
     "name": "@kanaries/duckdb-computation",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "type": "module",
     "main": "dist/duckdb-computation.js",
     "types": "dist/index.d.ts",
@@ -16,7 +16,7 @@
     },
     "devDependencies": {
         "@duckdb/duckdb-wasm": "^1.28.0",
-        "@kanaries/graphic-walker": "0.5.5",
+        "@kanaries/graphic-walker": "0.5.6",
         "@kanaries/gw-dsl-parser": "^0.1.48-rc3",
         "apache-arrow": "^17.0.0",
         "nanoid": "^5.0.1",
