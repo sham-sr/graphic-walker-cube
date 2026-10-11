@@ -1,4 +1,4 @@
-import { resolveChart } from '@kanaries/graphic-walker';
+import { resolveHistoryChart } from './chartHistory';
 import type { DatasetRegistry } from './datasetRegistry';
 import type { WalkerChartInfo } from './contract';
 
@@ -12,16 +12,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function isHistoryExport(value: unknown): boolean {
+function isHistoryExport(value: unknown): value is Record<string, unknown> {
     return isRecord(value) && isRecord(value.base) && Array.isArray(value.timeline);
 }
 
-function chartFromHistory(raw: string): Record<string, unknown> | null {
-    try {
-        return resolveChart(raw) as unknown as Record<string, unknown>;
-    } catch {
+function chartFromHistory(value: Record<string, unknown>, raw: string): Record<string, unknown> | null {
+    const base = value.base;
+    if (!isRecord(base)) {
         return null;
     }
+    const timeline = value.timeline;
+    if (Array.isArray(timeline) && timeline.length > 0) {
+        return resolveHistoryChart(raw) ?? base;
+    }
+    return base;
 }
 
 /** Graphic Walker persists visDict as exportFullRaw strings, or as IChart-like objects. */
@@ -34,16 +38,12 @@ export function chartFromPersistedSpec(item: unknown): Record<string, unknown> |
             return null;
         }
         if (isHistoryExport(parsed)) {
-            return chartFromHistory(item);
+            return chartFromHistory(parsed, item);
         }
         return isRecord(parsed) ? parsed : null;
     }
     if (isHistoryExport(item)) {
-        try {
-            return chartFromHistory(JSON.stringify(item));
-        } catch {
-            return null;
-        }
+        return chartFromHistory(item, JSON.stringify(item));
     }
     return isRecord(item) ? item : null;
 }

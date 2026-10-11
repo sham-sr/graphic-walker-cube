@@ -11,6 +11,7 @@ import type {
 import { GW_DEFAULT_EXPERIMENTAL_FEATURES, GW_DEFAULT_TOOLBAR_EXCLUDE, GW_EMBED_ENHANCE_API } from './contract';
 import type { ChartRendererExport, TableExportHandle } from './chartExport';
 import { isTableExportFormat, readChartExport, readTableGrid, runTableExport } from './chartExport';
+import { loadResolveChart } from './chartHistory';
 import { patchChartFilterSpecs } from './chartFilters';
 import { ChartTileApp } from './chartTile';
 import { chartKindFromSpec, findChartSpec, listChartsFromRegistry } from './chartSpecs';
@@ -145,6 +146,7 @@ export interface CreateGraphicWalkerHostDeps {
 }
 
 export async function warmupGraphicWalker(): Promise<void> {
+    await loadResolveChart();
     await initDuckdb();
 }
 
@@ -153,6 +155,7 @@ export async function createGraphicWalkerHost(
     options: GraphicWalkerHostOptions,
     deps?: CreateGraphicWalkerHostDeps
 ): Promise<GraphicWalkerHost> {
+    await loadResolveChart();
     const queryCache = createQueryCache();
     const computations = new Map<string, TileComputation>();
     const dropComputation = (providerId: string): void => {

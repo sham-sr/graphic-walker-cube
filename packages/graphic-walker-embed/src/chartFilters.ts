@@ -1,4 +1,5 @@
 import type { WalkerChartFilterPatch, WalkerFilterRuleType } from './contract';
+import { resolveHistoryChart } from './chartHistory';
 import { chartFromPersistedSpec } from './chartSpecs';
 
 /** Serialized `Methods.writeFilter` in Graphic Walker `exportFullRaw` timelines. */
@@ -101,8 +102,22 @@ function patchHistory(
     return baseChanged || appended;
 }
 
+function resolvedChart(resolvable: unknown): Record<string, unknown> | null {
+    if (typeof resolvable === 'string') {
+        try {
+            const parsed = JSON.parse(resolvable) as unknown;
+            if (isHistory(parsed) && parsed.timeline.length > 0) {
+                return resolveHistoryChart(resolvable) ?? chartFromPersistedSpec(resolvable);
+            }
+        } catch {
+            return null;
+        }
+    }
+    return chartFromPersistedSpec(resolvable);
+}
+
 function patchParsed(parsed: unknown, resolvable: unknown, visId: string, patches: readonly WalkerChartFilterPatch[]): unknown {
-    const resolved = chartFromPersistedSpec(resolvable);
+    const resolved = resolvedChart(resolvable);
     if (!resolved || resolved.visId !== visId) {
         return parsed;
     }
@@ -158,8 +173,8 @@ export function patchChartFilterSpecs(
         return patched;
     });
     const nextJson = touched ? JSON.stringify(nextItems) : specsJson;
-    const chart = chartFromPersistedSpec(
-        (touched ? nextItems : parsed).find((item) => chartFromPersistedSpec(item)?.visId === visId) ?? null
+    const chart = resolvedChart(
+        (touched ? nextItems : parsed).find((item) => resolvedChart(item)?.visId === visId) ?? null
     );
     return { specsJson: nextJson, fids: chart ? chartFilterFids(chart) : [] };
 }

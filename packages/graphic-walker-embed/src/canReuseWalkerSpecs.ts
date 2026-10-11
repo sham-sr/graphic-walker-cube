@@ -4,7 +4,6 @@
  */
 
 import type { WalkerField } from './contract';
-import { chartFromPersistedSpec } from './chartSpecs';
 
 const EMPTY_SPECS = '[]';
 
@@ -26,12 +25,35 @@ function collectFids(value: unknown, fids: Set<string>): void {
     }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function specRoots(chart: unknown): unknown[] {
+    let value = chart;
+    if (typeof value === 'string') {
+        try {
+            value = JSON.parse(value);
+        } catch {
+            return [];
+        }
+    }
+    if (isRecord(value) && isRecord(value.base) && Array.isArray(value.timeline)) {
+        return [value.base, value.timeline];
+    }
+    if (isRecord(value) && value.encodings) {
+        return [value.encodings];
+    }
+    return [value];
+}
+
 function encodingFids(specs: unknown): string[] {
     if (!Array.isArray(specs)) return [];
     const fids = new Set<string>();
     for (const chart of specs) {
-        const record = chartFromPersistedSpec(chart);
-        if (record?.encodings) collectFids(record.encodings, fids);
+        for (const root of specRoots(chart)) {
+            collectFids(root, fids);
+        }
     }
     return [...fids];
 }
